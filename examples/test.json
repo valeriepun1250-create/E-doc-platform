@@ -1,0 +1,148 @@
+{
+  "form": {
+    "specialty": "NS",
+    "title": "Extended Care Program - Home Visit",
+    "description": "Comprehensive OT home visit assessment and functional evaluation.",
+    "schema": {
+      "sections": [
+        {
+          "title": "Visit Information",
+          "questions": [
+            { "id": "visit_accompany", "label": "Home visit accompanied by", "type": "short_text" },
+            {
+              "id": "visit_type",
+              "label": "Visit type",
+              "type": "multiple_choice",
+              "options": ["1st visit", "2nd visit", "3rd visit", "Phone FU"],
+              "reportTemplate": "Type of contact: {answer}."
+            },
+            { "id": "zoom_nurse", "label": "Zoom conducted with Nurse?", "type": "yes_no" }
+          ]
+        },
+        {
+          "title": "Social History and Home Environment",
+          "questions": [
+            {
+              "id": "living_arrangement",
+              "label": "Living arrangement",
+              "type": "multiple_choice",
+              "options": ["Lives with", "Live alone", "Day time alone", "OAHR"],
+              "reportTemplate": "Living status: {answer}."
+            },
+            {
+              "id": "lift_access",
+              "label": "Lift access",
+              "type": "multiple_choice",
+              "options": ["Direct lift landing", "Non-direct lift landing FOS", "No lift", "F"],
+              "reportTemplate": "Building access: {answer}."
+            },
+            {
+              "id": "financial_status",
+              "label": "Financial / Allowances",
+              "type": "checkbox",
+              "options": ["Family support", "Own saving", "CSSA", "Disability Allowance", "Old Age Allowance", "OALA"],
+              "reportTemplate": "Financial support: {answer}."
+            },
+            {
+              "id": "social_support",
+              "label": "Social support",
+              "type": "checkbox",
+              "options": ["MOW", "Home Help (Personal care)", "Home Help (Household)", "Home Help (Escort)"],
+              "reportTemplate": "Social support services: {answer}."
+            }
+          ]
+        },
+        {
+          "title": "Premorbid Function",
+          "questions": [
+            { "id": "premorbid_badl", "label": "BADL Status", "type": "multiple_choice", "options": ["Independent", "Assistance", "Dependent"] },
+            { "id": "premorbid_walk_aid", "label": "Walking Aid", "type": "short_text" },
+            { "id": "premorbid_outdoor", "label": "Outdoor Mobility", "type": "multiple_choice", "options": ["Independent", "Assistance", "Dependent"] },
+            { "id": "premorbid_iadl", "label": "IADL Status", "type": "multiple_choice", "options": ["Independent", "Assistance", "Dependent"] },
+            { "id": "occupation", "label": "Occupation", "type": "short_text" },
+            { "id": "dominant_hand", "label": "Dominant Hand", "type": "multiple_choice", "options": ["Right", "Left"] },
+            { "id": "main_complaint", "label": "Main Complaint", "type": "long_text" }
+          ]
+        },
+        {
+          "title": "Mental and Cognitive Function",
+          "questions": [
+            { "id": "mental_state", "label": "Mental State", "type": "multiple_choice", "options": ["Alert", "Confused", "Drowsy", "Stupor"] },
+            { "id": "follow_command", "label": "Follow Command", "type": "multiple_choice", "options": ["1 step", "2 steps", "3 steps", "Not follow command"] },
+            { "id": "speech", "label": "Speech", "type": "multiple_choice", "options": ["Normal", "Expressive dysphasia", "Receptive dysphasia", "Dysarthria"] },
+            { "id": "amt_total", "label": "AMT Total Score", "type": "rating", "min": 0, "max": 10, "reportTemplate": "AMT Score: {answer}/10." },
+            { "id": "clock_drawing", "label": "Clock Drawing Test", "type": "rating", "min": 0, "max": 10, "reportTemplate": "Clock Drawing Test: {answer}/10." },
+            { "id": "moca_total", "label": "MoCA Total Score", "type": "rating", "min": 0, "max": 30, "reportTemplate": "HK-MoCA: {answer}/30." },
+            { "id": "moca_classification", "label": "MoCA Classification", "type": "multiple_choice", "options": [">16th percentile", "</=16th percentile (Minor NCD)", "</=7th percentile (MCI)", "</=2nd percentile (Major NCD)"] }
+          ]
+        },
+        {
+          "title": "Physical and Balance Assessment",
+          "questions": [
+            { "id": "physical_power", "label": "Power", "type": "short_text" },
+            { "id": "physical_tone", "label": "Tone", "type": "short_text" },
+            { "id": "physical_pain", "label": "Pain", "type": "short_text", "hint": "Note location if present" },
+            { "id": "sensory_vision", "label": "Vision", "type": "multiple_choice", "options": ["NAD", "Impaired"] },
+            { "id": "sensory_hearing", "label": "Hearing", "type": "multiple_choice", "options": ["NAD", "Mild Impairment", "Moderate Impairment", "Severe Impairment", "On hearing aids"] },
+            { "id": "balance_sitting", "label": "Balance (Sitting)", "type": "multiple_choice", "options": ["Good", "Fair", "Poor"] },
+            { "id": "balance_standing", "label": "Balance (Standing)", "type": "multiple_choice", "options": ["Good", "Fair", "Poor"] },
+            { "id": "sls_left", "label": "Single Leg Stance (Left) - seconds", "type": "number" },
+            { "id": "sls_right", "label": "Single Leg Stance (Right) - seconds", "type": "number" },
+            { "id": "overall_fall_risk", "label": "Overall Fall Risk (Aspire)", "type": "multiple_choice", "options": ["High", "Medium", "Low"] }
+          ]
+        },
+        {
+          "title": "Fall History and Risk",
+          "questions": [
+            { "id": "fall_history_count", "label": "Number of falls (recent 1 year)", "type": "number" },
+            { "id": "fall_description", "label": "Description of recent fall", "type": "long_text" },
+            { "id": "stratify_score", "label": "Stratify Risk Tool Score", "type": "rating", "min": 0, "max": 5 },
+            { "id": "stratify_level", "label": "Stratify Risk Level", "type": "multiple_choice", "options": ["Low risk (0)", "Moderate risk (1)", "High risk (2+)"] },
+            { "id": "fes_icon", "label": "10-item Icon FES (/40)", "type": "number" },
+            { "id": "fes_standard", "label": "FES (/100)", "type": "number" }
+          ]
+        },
+        {
+          "title": "Functional Assessment (MBI & Lawton)",
+          "questions": [
+            { "id": "mbi_total", "label": "Modified Barthel Index Total", "type": "rating", "min": 0, "max": 100, "reportTemplate": "MBI Total: {answer}/100" },
+            { "id": "lawton_total", "label": "Lawton IADL Total", "type": "rating", "min": 0, "max": 27, "reportTemplate": "Lawton IADL: {answer}/27" }
+          ]
+        },
+        {
+          "title": "Home Assessment",
+          "questions": [
+            { "id": "env_outdoor", "label": "Outdoor environment", "type": "long_text" },
+            { "id": "env_living", "label": "Living room", "type": "long_text" },
+            { "id": "env_bedroom", "label": "Bedroom", "type": "long_text" },
+            { "id": "env_bathroom", "label": "Bathroom / Toilet", "type": "long_text" },
+            { "id": "env_kitchen", "label": "Kitchen", "type": "long_text" }
+          ]
+        },
+        {
+          "title": "Impression and Recommendations",
+          "questions": [
+            { "id": "ot_comment", "label": "OT Comment", "type": "long_text" },
+            { "id": "problems_identified", "label": "Problems Identified", "type": "checkbox", "options": ["Patient incompetency", "Carer incompetency", "Environmental problem"] },
+            {
+              "id": "recommendations",
+              "label": "Recommendations",
+              "type": "checkbox",
+              "options": [
+                "Post discharge 2 weeks home visit",
+                "Phone follow up",
+                "Follow up aids prescription",
+                "Carer education",
+                "Home-based training",
+                "OPD training",
+                "Community reintegration training",
+                "Discharge and follow up"
+              ],
+              "reportTemplate": "Plan: {answer}."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

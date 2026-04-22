@@ -1,0 +1,63 @@
+{
+  "form": {
+    "specialty": "Medical",
+    "title": "General medical admission clerking",
+    "description": "Sample import — delete or modify to suit your ward.",
+    "schema": {
+      "sections": [
+        {
+          "title": "Social history",
+          "questions": [
+            { "id": "occupation", "label": "Occupation", "type": "short_text" },
+            { "id": "lives_with", "label": "Lives with", "type": "short_text" },
+            { "id": "smoker", "label": "Smoker?", "type": "yes_no",
+              "reportTemplate": "Smoking: {answer}." },
+            { "id": "etoh_units", "label": "Alcohol (units/week)", "type": "number" }
+          ]
+        },
+        {
+          "title": "Premorbid function",
+          "questions": [
+            {
+              "id": "mobility",
+              "label": "Mobility",
+              "type": "multiple_choice",
+              "options": ["Independent", "Stick", "Frame", "Wheelchair", "Bedbound"],
+              "reportTemplate": "Premorbid mobility: {answer}."
+            },
+            {
+              "id": "adls",
+              "label": "ADLs",
+              "type": "checkbox",
+              "options": ["Feeding", "Dressing", "Bathing", "Toileting", "Transfers"]
+            }
+          ]
+        },
+        {
+          "title": "Mental state",
+          "questions": [
+            { "id": "amts", "label": "AMTS", "type": "rating", "min": 0, "max": 10,
+              "reportTemplate": "AMTS {answer}/10." },
+            { "id": "mood", "label": "Mood", "type": "short_text" }
+          ]
+        },
+        {
+          "title": "Physical examination",
+          "questions": [
+            { "id": "bp", "label": "BP (mmHg)", "type": "short_text" },
+            { "id": "hr", "label": "HR", "type": "number" },
+            { "id": "chest", "label": "Chest exam", "type": "long_text" },
+            { "id": "abdo", "label": "Abdominal exam", "type": "long_text" }
+          ]
+        },
+        {
+          "title": "Impression & plan",
+          "questions": [
+            { "id": "impression", "label": "Impression", "type": "long_text" },
+            { "id": "plan", "label": "Plan", "type": "long_text" }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Edoc — Assessment Forms</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Edoc</h1>
+    <span class="tag">Assessment Form Platform</span>
+  </div>
+  <nav id="nav">
+    <button data-view="browse" class="active">Forms</button>
+    <button data-view="history">History</button>
+    <button data-view="admin" id="adminTab">Admin</button>
+  </nav>
+</header>
+
+<main id="app"></main>
+
+<!-- Templates -->
+<template id="tpl-browse">
+  <section class="view">
+    <div class="row">
+      <label>Specialty:
+        <select id="specFilter">
+          <option value="">All</option>
+          <option>Medical</option>
+          <option>NS</option>
+          <option>Ortho</option>
+        </select>
+      </label>
+    </div>
+    <div id="formList" class="card-list"></div>
+  </section>
+</template>
+
+<template id="tpl-fill">
+  <section class="view">
+    <button class="back">&larr; Back</button>
+    <h2 id="fTitle"></h2>
+    <p id="fDesc" class="muted"></p>
+    <form id="fillForm"></form>
+    <div class="actions">
+      <button type="button" id="btnSaveCopy" class="primary">Save &amp; Copy report</button>
+      <button type="button" id="btnPreview">Preview report</button>
+    </div>
+    <pre id="reportPreview" class="report" hidden></pre>
+  </section>
+</template>
+
+<template id="tpl-history">
+  <section class="view">
+    <h2>History</h2>
+    <p class="muted">Saved locally on this device.</p>
+    <div id="historyList" class="card-list"></div>
+  </section>
+</template>
+
+<template id="tpl-admin-login">
+  <section class="view">
+    <h2>Admin login</h2>
+    <form id="loginForm" class="stack">
+      <label>Password <input type="password" id="pw" required /></label>
+      <button class="primary">Log in</button>
+      <p id="loginErr" class="err"></p>
+    </form>
+  </section>
+</template>
+
+<template id="tpl-admin">
+  <section class="view">
+    <div class="row between">
+      <h2>Admin</h2>
+      <div>
+        <button id="btnLogout">Log out</button>
+      </div>
+    </div>
+    <div class="row">
+      <button id="btnNew" class="primary">+ New form</button>
+      <button id="btnImport">Import .json file</button>
+      <button id="btnPaste">Paste JSON</button>
+      <input type="file" id="fileImport" accept=".json" hidden />
+    </div>
+    <div id="pasteArea" class="stack" hidden>
+      <label>Paste the full import JSON (same shape as a <code>.json</code> file — must contain a top-level <code>form</code> object)</label>
+      <textarea id="pasteJson" rows="12" placeholder='{"form": {"specialty": "Medical", "title": "...", "schema": {"sections": []}}}'></textarea>
+      <div class="row">
+        <button id="btnPasteImport" class="primary">Import pasted JSON</button>
+        <button id="btnPasteCancel">Cancel</button>
+      </div>
+      <p id="pasteErr" class="err"></p>
+    </div>
+    <div id="adminFormList" class="card-list"></div>
+  </section>
+</template>
+
+<template id="tpl-edit">
+  <section class="view">
+    <button class="back">&larr; Back</button>
+    <h2 id="eTitle">New form</h2>
+    <div class="stack">
+      <label>Specialty
+        <select id="eSpecialty">
+          <option>Medical</option><option>NS</option><option>Ortho</option>
+        </select>
+      </label>
+      <label>Title <input id="eFormTitle" /></label>
+      <label>Description <textarea id="eFormDesc" rows="2"></textarea></label>
+    </div>
+
+    <h3>Sections</h3>
+    <div id="eSections"></div>
+    <button id="btnAddSection">+ Add section</button>
+
+    <div class="actions">
+      <button id="btnSaveForm" class="primary">Save form</button>
+      <button id="btnDeleteForm" class="danger" hidden>Delete</button>
+    </div>
+    <p id="eErr" class="err"></p>
+  </section>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>

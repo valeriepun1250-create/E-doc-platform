@@ -1,0 +1,7 @@
+node_modules/
+edoc.db
+edoc.db-wal
+edoc.db-shm
+.env
+.DS_Store
+*.log

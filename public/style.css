@@ -1,0 +1,104 @@
+:root {
+  --fg: #1b1f24;
+  --muted: #6a737d;
+  --bg: #f6f8fa;
+  --card: #ffffff;
+  --border: #d0d7de;
+  --primary: #1f6feb;
+  --primary-fg: #ffffff;
+  --danger: #cf222e;
+  --ok: #1a7f37;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { margin: 0; font-size: 20px; color: var(--primary); }
+.tag { color: var(--muted); font-size: 13px; }
+nav button {
+  background: transparent; border: 1px solid transparent; padding: 6px 12px;
+  margin-left: 4px; border-radius: 6px; cursor: pointer; font-size: 14px;
+}
+nav button.active { background: var(--primary); color: white; }
+nav button:not(.active):hover { background: #eaeef2; }
+
+main { max-width: 860px; margin: 0 auto; padding: 20px; }
+.view { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+
+button {
+  background: var(--card); border: 1px solid var(--border); padding: 6px 12px;
+  border-radius: 6px; cursor: pointer; font-size: 14px;
+}
+button:hover { background: #f3f4f6; }
+button.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+button.primary:hover { filter: brightness(1.05); }
+button.danger { background: var(--danger); color: white; border-color: var(--danger); }
+button.back { background: none; border: none; color: var(--primary); padding: 0 0 10px 0; }
+
+label { display: block; font-size: 13px; color: var(--muted); margin: 6px 0; }
+input[type=text], input[type=password], input[type=number], input[type=date],
+textarea, select, input:not([type]) {
+  width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; font-family: inherit; background: white; color: var(--fg);
+}
+textarea { resize: vertical; }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+.stack > * + * { margin-top: 10px; }
+.actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+.muted { color: var(--muted); }
+.err { color: var(--danger); font-size: 13px; min-height: 18px; }
+
+.card-list { display: grid; gap: 10px; margin-top: 14px; }
+.card {
+  border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: white;
+}
+.card h3 { margin: 0 0 4px 0; font-size: 15px; }
+.card .meta { font-size: 12px; color: var(--muted); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px;
+  background: #ddf4ff; color: #0969da; margin-right: 6px;
+}
+.badge.NS { background: #fff1e5; color: #bc4c00; }
+.badge.Ortho { background: #dafbe1; color: #1a7f37; }
+
+.section-block {
+  border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  margin: 10px 0; background: #fafbfc;
+}
+.q-block {
+  border: 1px dashed var(--border); border-radius: 6px; padding: 10px; margin-top: 10px;
+  background: white;
+}
+.q-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+.q-meta { font-size: 12px; color: var(--muted); }
+.opts-list { display: grid; gap: 4px; }
+
+.report {
+  background: #0d1117; color: #c9d1d9; padding: 14px; border-radius: 8px;
+  white-space: pre-wrap; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px; margin-top: 14px;
+}
+
+.qfill { margin: 12px 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: white; }
+.qfill .label { font-weight: 600; margin-bottom: 6px; }
+.qfill .hint { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.rating { display: flex; gap: 4px; flex-wrap: wrap; }
+.rating button { min-width: 36px; }
+.rating button.sel { background: var(--primary); color: white; border-color: var(--primary); }
+.checks { display: grid; gap: 4px; }
+
+h2 { margin-top: 0; }
+h3 { margin: 18px 0 8px; }
