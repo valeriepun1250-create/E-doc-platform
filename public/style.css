@@ -31,7 +31,32 @@ nav button {
 nav button.active { background: var(--primary); color: white; }
 nav button:not(.active):hover { background: #eaeef2; }
 
-main { max-width: 860px; margin: 0 auto; padding: 20px; }
+main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+.new-case {
+  background: #f0f7ff; border: 1px solid #c7e0ff; border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 18px;
+}
+.new-case h3 { margin: 0 0 8px; font-size: 15px; color: var(--primary); }
+.new-case input, .new-case select { font-size: 14px; }
+
+.case-banner {
+  background: #fff8e1; border: 1px solid #f5d68a; padding: 6px 10px;
+  border-radius: 6px; font-size: 13px; margin-bottom: 10px;
+}
+
+/* --- Two-column fill-form grid --- */
+.fill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.fill-grid .qfill.full { grid-column: 1 / -1; }
+.fill-grid .qfill.half { grid-column: span 1; }
+@media (max-width: 760px) {
+  .fill-grid { grid-template-columns: 1fr; }
+  .fill-grid .qfill.half { grid-column: 1 / -1; }
+}
 .view { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 
 button {
@@ -89,16 +114,174 @@ textarea { resize: vertical; }
 .report {
   background: #0d1117; color: #c9d1d9; padding: 14px; border-radius: 8px;
   white-space: pre-wrap; font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 13px; margin-top: 14px;
+  font-size: 13px; margin-top: 14px; line-height: 1.45;
+  overflow-x: auto;
 }
 
 .qfill { margin: 12px 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: white; }
+.qfill.heading {
+  border: none; background: transparent; padding: 0;
+  margin: 14px 0 4px; font-size: 15px; font-weight: 700; color: var(--primary);
+  border-bottom: 1px solid var(--border); padding-bottom: 4px;
+}
 .qfill .label { font-weight: 600; margin-bottom: 6px; }
 .qfill .hint { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .rating { display: flex; gap: 4px; flex-wrap: wrap; }
 .rating button { min-width: 36px; }
 .rating button.sel { background: var(--primary); color: white; border-color: var(--primary); }
-.checks { display: grid; gap: 4px; }
+.checks {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  align-items: center;
+}
+.checks > label { margin: 0; }
+/* Nested groups (sub-options under a multi/checkbox option) keep their indented column. */
+.checks .sub-checks, .checks .sub-options {
+  flex-basis: 100%;
+}
+/* If an option has its own detail input or sub-checkbox group, give it its own row. */
+.checks > label:has(.detail-input),
+.checks > label:has(.sub-checks) {
+  flex-basis: 100%;
+}
 
 h2 { margin-top: 0; }
 h3 { margin: 18px 0 8px; }
+
+/* --- Section tabs for fill view --- */
+.tabs {
+  display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border); margin-bottom: 14px;
+  scrollbar-width: thin;
+}
+.tab {
+  white-space: nowrap; padding: 8px 14px; border: 1px solid var(--border);
+  border-bottom: none; border-radius: 6px 6px 0 0; background: #f1f3f5;
+  color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 500;
+}
+.tab:hover { background: #e9ecef; color: var(--fg); }
+.tab.active {
+  background: var(--card); color: var(--primary);
+  border-color: var(--border); border-bottom: 2px solid var(--card);
+  position: relative; top: 1px;
+}
+.section-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);
+}
+.section-nav button[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* --- sub_score table --- */
+table.subscore {
+  width: 100%; border-collapse: collapse; margin-top: 6px;
+}
+table.subscore td {
+  border-bottom: 1px solid var(--border); padding: 6px 8px; vertical-align: middle;
+}
+table.subscore tr:last-child td { border-bottom: none; }
+table.subscore .si-label { font-size: 13px; font-weight: 500; width: 40%; }
+table.subscore .si-val { font-size: 13px; }
+table.subscore .si-max { color: var(--muted); font-size: 12px; margin-left: 4px; }
+table.subscore .total-row td {
+  background: #f6f8fa; font-weight: 600; border-top: 2px solid var(--border);
+}
+table.subscore .rating button { min-width: 32px; padding: 3px 8px; font-size: 12px; }
+
+/* --- per-question comment --- */
+.comment-wrap {
+  margin-top: 8px; font-size: 12px;
+}
+.comment-wrap summary {
+  cursor: pointer; color: var(--primary); list-style: none;
+  user-select: none; padding: 2px 0;
+}
+.comment-wrap summary::before { content: "💬 "; }
+.comment-wrap[open] summary::before { content: "✎ "; }
+.comment-wrap textarea { margin-top: 4px; font-size: 13px; }
+
+textarea.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+}
+textarea.bad { border-color: var(--danger); background: #fff5f5; }
+
+/* --- Other-option inline input (multiple_choice / checkbox) --- */
+.other-row {
+  display: flex; gap: 6px; align-items: center;
+  color: var(--fg);
+}
+.other-row .inline-text {
+  flex: 1; padding: 4px 7px; font-size: 13px;
+}
+
+/* --- Inline sub-options revealed under a selected radio --- */
+.opt-block { display: block; }
+.sub-options {
+  margin: 4px 0 6px 24px; padding: 6px 10px;
+  border-left: 2px solid var(--primary);
+  background: #f6f8fa; border-radius: 0 6px 6px 0;
+  display: grid; gap: 3px;
+}
+
+/* --- composite multi-input field --- */
+.composite-row {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+}
+.composite-part {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px;
+}
+.composite-part input {
+  width: 70px; padding: 4px 6px; font-size: 13px;
+}
+.composite-part input.wide { width: 110px; }
+.composite-part .suffix, .composite-part .prefix { color: var(--muted); font-size: 12px; }
+
+.composite-grid {
+  display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 12px;
+  align-items: center; max-width: 360px;
+}
+.composite-grid .ghdr { color: var(--muted); font-size: 12px; text-align: center; font-weight: 600; }
+.composite-grid .glabel { color: var(--muted); font-size: 12px; font-weight: 600; }
+.composite-grid input { padding: 4px 6px; font-size: 13px; text-align: center; }
+
+/* --- per-question remove (✕) --- */
+.qfill .qhead {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.qfill .qhead .label { flex: 1; }
+.qfill .btn-q-remove {
+  background: transparent; color: var(--danger); border: none;
+  font-size: 13px; padding: 0 4px; cursor: pointer; line-height: 1;
+}
+.qfill .btn-q-remove:hover { color: #a4111c; }
+
+/* --- inline option detail (next to a checked checkbox) --- */
+.detail-input {
+  margin-left: 6px; padding: 3px 6px; font-size: 12px;
+  width: 220px; max-width: 60%;
+}
+
+/* --- nested checkbox sub-options under checkbox --- */
+.checks .sub-checks {
+  margin: 4px 0 6px 24px; padding: 6px 10px;
+  border-left: 2px solid var(--primary);
+  background: #f6f8fa; border-radius: 0 6px 6px 0;
+  display: grid; gap: 3px;
+}
+
+/* --- Subtle danger button (for "Remove section") --- */
+button.subtle {
+  background: transparent; color: var(--danger); border-color: transparent;
+  font-size: 12px; padding: 4px 8px;
+}
+button.subtle:hover { background: #ffeef0; border-color: var(--danger); }
+
+/* --- Restore bar (hidden sections chips) --- */
+.restore-bar {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin-bottom: 8px; font-size: 12px;
+}
+.restore-bar .chip {
+  padding: 2px 10px; border-radius: 999px; background: #f1f3f5;
+  border: 1px dashed var(--border); font-size: 12px; cursor: pointer;
+}
+.restore-bar .chip:hover { background: #e9ecef; }

@@ -113,7 +113,7 @@ function validateSchema(schema) {
   if (!Array.isArray(schema.sections)) throw new Error('schema.sections must be an array');
   const allowed = new Set([
     'short_text', 'long_text', 'number', 'date', 'yes_no',
-    'multiple_choice', 'checkbox', 'rating'
+    'multiple_choice', 'checkbox', 'rating', 'sub_score', 'composite', 'heading'
   ]);
   for (const s of schema.sections) {
     if (!s.title) throw new Error('each section needs a title');
@@ -126,9 +126,51 @@ function validateSchema(schema) {
           (!Array.isArray(q.options) || q.options.length === 0)) {
         throw new Error(`question ${q.id} needs options[]`);
       }
+      if ((q.type === 'multiple_choice' || q.type === 'checkbox') && Array.isArray(q.options)) {
+        for (const o of q.options) {
+          if (typeof o === 'object' && o !== null) {
+            if (!o.value) throw new Error(`question ${q.id}: option object needs "value"`);
+            if (o.subOptions && !Array.isArray(o.subOptions)) {
+              throw new Error(`question ${q.id}: option "${o.value}" subOptions must be an array`);
+            }
+          }
+        }
+      }
+      if (q.type === 'composite') {
+        if (!Array.isArray(q.parts) || q.parts.length === 0) {
+          throw new Error(`composite ${q.id} needs parts[]`);
+        }
+        for (const p of q.parts) {
+          if (!p.id) throw new Error(`composite ${q.id}: each part needs an id`);
+        }
+      }
+      if (q.showIf) {
+        if (typeof q.showIf !== 'object' || !q.showIf.questionId) {
+          throw new Error(`question ${q.id} showIf needs a questionId`);
+        }
+      }
       if (q.type === 'rating') {
         if (typeof q.min !== 'number' || typeof q.max !== 'number' || q.min >= q.max) {
           throw new Error(`question ${q.id} needs numeric min < max`);
+        }
+      }
+      if (q.type === 'sub_score') {
+        if (!Array.isArray(q.items) || q.items.length === 0) {
+          throw new Error(`question ${q.id} needs items[]`);
+        }
+        const mode = q.mode || 'max';
+        if (!['max', 'options'].includes(mode)) {
+          throw new Error(`question ${q.id} mode must be "max" or "options"`);
+        }
+        for (const it of q.items) {
+          if (!it.id || !it.label) throw new Error(`sub_score ${q.id}: each item needs id + label`);
+          if (mode === 'max' && typeof it.max !== 'number') {
+            throw new Error(`sub_score ${q.id} item ${it.id} needs numeric max`);
+          }
+          if (mode === 'options' &&
+              (!Array.isArray(it.options) || it.options.some(v => typeof v !== 'number'))) {
+            throw new Error(`sub_score ${q.id} item ${it.id} needs numeric options[]`);
+          }
         }
       }
     }

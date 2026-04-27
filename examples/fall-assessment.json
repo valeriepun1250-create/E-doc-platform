@@ -1,0 +1,90 @@
+{
+  "form": {
+    "specialty": "Medical",
+    "title": "Fall assessment (template)",
+    "description": "Disease-specific screen — intended as a short add-on to the main assessment.",
+    "schema": {
+      "sections": [
+        {
+          "title": "Fall history",
+          "questions": [
+            { "id": "falls_12m", "label": "Number of falls in the past 12 months", "type": "number" },
+            { "id": "last_fall_date", "label": "Date of most recent fall", "type": "date" },
+            {
+              "id": "fall_circum",
+              "label": "Circumstances of most recent fall",
+              "type": "long_text",
+              "allowComment": false
+            },
+            {
+              "id": "fall_injury",
+              "label": "Injury sustained?",
+              "type": "yes_no",
+              "allowComment": true
+            }
+          ]
+        },
+        {
+          "title": "Morse Fall Scale",
+          "description": "Standard Morse Fall Scale items — total risk shown live.",
+          "questions": [
+            {
+              "id": "morse",
+              "label": "Morse Fall Scale",
+              "type": "sub_score",
+              "mode": "options",
+              "totalMax": 125,
+              "items": [
+                { "id": "hx_fall",    "label": "History of falling (past 3 mo)", "options": [0, 25] },
+                { "id": "secondary",  "label": "Secondary diagnosis",            "options": [0, 15] },
+                { "id": "aid",        "label": "Ambulatory aid (0/15/30)",       "options": [0, 15, 30] },
+                { "id": "iv",         "label": "IV / heparin lock",              "options": [0, 20] },
+                { "id": "gait",       "label": "Gait (normal/weak/impaired)",    "options": [0, 10, 20] },
+                { "id": "mental",     "label": "Mental status",                   "options": [0, 15] }
+              ],
+              "reportTemplate": "Morse Fall Scale {answer}"
+            },
+            {
+              "id": "fall_risk_level",
+              "label": "Risk category",
+              "type": "multiple_choice",
+              "options": ["Low (0–24)", "Moderate (25–44)", "High (≥45)"]
+            }
+          ]
+        },
+        {
+          "title": "Contributing factors",
+          "questions": [
+            {
+              "id": "meds",
+              "label": "Relevant medications",
+              "type": "checkbox",
+              "options": ["Benzodiazepines", "Antihypertensives", "Diuretics",
+                          "Antipsychotics", "Antidepressants", "Hypoglycaemics",
+                          "Opioids", "None"],
+              "allowComment": true
+            },
+            {
+              "id": "vision",
+              "label": "Visual impairment",
+              "type": "yes_no",
+              "allowComment": true
+            },
+            {
+              "id": "footwear",
+              "label": "Appropriate footwear at home",
+              "type": "yes_no",
+              "allowComment": true
+            }
+          ]
+        },
+        {
+          "title": "Recommendation",
+          "questions": [
+            { "id": "fall_rec", "label": "Plan (e.g. PT referral, home modification, medication review)", "type": "long_text" }
+          ]
+        }
+      ]
+    }
+  }
+}

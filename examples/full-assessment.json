@@ -1,0 +1,180 @@
+{
+  "form": {
+    "specialty": "Medical",
+    "title": "Initial holistic assessment (template)",
+    "description": "Covers social/home/premorbid → mental → physical → functional → problems → recommendation. Edit freely.",
+    "schema": {
+      "sections": [
+        {
+          "title": "Social History, Home Environment & Premorbid ADL",
+          "questions": [
+            {
+              "id": "live_with",
+              "label": "Live with",
+              "type": "checkbox",
+              "options": ["Alone", "Spouse", "Child(ren)", "Parent(s)", "Sibling(s)", "Domestic helper"],
+              "allowOther": true,
+              "allowComment": true
+            },
+            {
+              "id": "lift_landing",
+              "label": "Home access",
+              "type": "multiple_choice",
+              "options": [
+                "Direct lift-landing",
+                "Non-direct lift-landing",
+                "No lift-landing"
+              ],
+              "allowComment": true,
+              "commentLabel": "Floor / stairs detail"
+            },
+            {
+              "id": "premorbid_adl",
+              "label": "Premorbid ADL status",
+              "type": "multiple_choice",
+              "options": ["Independent", "Required Assistance", "Dependent"],
+              "allowComment": true,
+              "reportTemplate": "Premorbid ADL: {answer}."
+            },
+            {
+              "id": "premorbid_walk",
+              "label": "Premorbid walking status",
+              "type": "multiple_choice",
+              "options": [
+                "Walk unaided",
+                {
+                  "value": "With aid",
+                  "subOptions": ["Stick", "Quad stick", "Frame", "Rollator", "Trolley"],
+                  "subAllowOther": true
+                },
+                "Chair bound",
+                "Bed bound"
+              ],
+              "reportTemplate": "Premorbid mobility: {answer}."
+            },
+            {
+              "id": "occupation",
+              "label": "Occupation",
+              "type": "multiple_choice",
+              "options": ["Retired"],
+              "allowOther": true,
+              "otherPlaceholder": "occupation"
+            },
+            {
+              "id": "social_other",
+              "label": "Other social notes",
+              "type": "long_text"
+            }
+          ]
+        },
+        {
+          "title": "Mental & Cognitive Function",
+          "questions": [
+            {
+              "id": "orientation",
+              "label": "Oriented to Time / Place / Person",
+              "type": "checkbox",
+              "options": ["Time", "Place", "Person"],
+              "allowComment": true
+            },
+            {
+              "id": "mood",
+              "label": "Mood / affect",
+              "type": "short_text",
+              "allowComment": true
+            },
+            {
+              "id": "cog_screen",
+              "label": "Cognitive screening (sub-scores)",
+              "type": "sub_score",
+              "mode": "max",
+              "items": [
+                { "id": "age",           "label": "Age",              "max": 1 },
+                { "id": "dob",           "label": "Date of birth",    "max": 1 },
+                { "id": "year",          "label": "Year",             "max": 1 },
+                { "id": "month",         "label": "Month",            "max": 1 },
+                { "id": "recall",        "label": "Address recall",   "max": 5 },
+                { "id": "orientation_s", "label": "Orientation",      "max": 10 },
+                { "id": "naming",        "label": "Naming",           "max": 3 },
+                { "id": "comprehension", "label": "Comprehension",    "max": 3 }
+              ],
+              "reportTemplate": "Cognitive screen: {answer}",
+              "allowComment": true
+            }
+          ]
+        },
+        {
+          "title": "Physical Assessment",
+          "questions": [
+            { "id": "bp", "label": "BP (mmHg)", "type": "short_text" },
+            { "id": "hr", "label": "HR", "type": "number" },
+            {
+              "id": "pain",
+              "label": "Pain score (NRS)",
+              "type": "rating",
+              "min": 0, "max": 10,
+              "allowComment": true,
+              "commentLabel": "Location / character"
+            },
+            { "id": "chest", "label": "Chest", "type": "long_text" },
+            { "id": "abdo",  "label": "Abdomen", "type": "long_text" },
+            { "id": "neuro", "label": "Neuro exam", "type": "long_text" },
+            { "id": "msk",   "label": "MSK / limbs", "type": "long_text" }
+          ]
+        },
+        {
+          "title": "Functional Assessment (Modified Barthel Index)",
+          "questions": [
+            {
+              "id": "mbi",
+              "label": "Modified Barthel Index (Surya Shah, 1989)",
+              "type": "sub_score",
+              "mode": "options",
+              "totalMax": 100,
+              "items": [
+                { "id": "bowels",     "label": "Bowels",     "options": [0, 2, 5, 8, 10] },
+                { "id": "bladder",    "label": "Bladder",    "options": [0, 2, 5, 8, 10] },
+                { "id": "grooming",   "label": "Grooming",   "options": [0, 1, 3, 4, 5] },
+                { "id": "toileting",  "label": "Toileting",  "options": [0, 2, 5, 8, 10] },
+                { "id": "feeding",    "label": "Feeding",    "options": [0, 2, 5, 8, 10] },
+                { "id": "dressing",   "label": "Dressing",   "options": [0, 2, 5, 8, 10] },
+                { "id": "bathing",    "label": "Bathing",    "options": [0, 1, 3, 4, 5] },
+                { "id": "transfer",   "label": "Transfer",   "options": [0, 3, 8, 12, 15] },
+                { "id": "mobility",   "label": "Mobility",   "options": [0, 3, 8, 12, 15] },
+                { "id": "wheelchair", "label": "Wheelchair", "options": [0, 1, 3, 4, 5] },
+                { "id": "stairs",     "label": "Stairs",     "options": [0, 2, 5, 8, 10] }
+              ],
+              "reportTemplate": "MBI {answer}",
+              "allowComment": true
+            },
+            {
+              "id": "mbi_overall",
+              "label": "Overall functional level",
+              "type": "multiple_choice",
+              "options": ["Independent", "Supervision", "Mild", "Moderate", "Maximal", "Dependent"]
+            }
+          ]
+        },
+        {
+          "title": "Problem Identification",
+          "questions": [
+            {
+              "id": "problems",
+              "label": "Problem list",
+              "type": "long_text",
+              "hint": "One problem per line."
+            }
+          ]
+        },
+        {
+          "title": "Recommendation",
+          "questions": [
+            { "id": "rec_rehab",   "label": "Rehab plan", "type": "long_text" },
+            { "id": "rec_discharge", "label": "Discharge planning", "type": "long_text" },
+            { "id": "rec_followup",  "label": "Follow-up", "type": "long_text" }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1260 @@
+{
+  "form": {
+    "specialty": "NS",
+    "title": "NS Initial Assessment",
+    "description": "Neurology / Neurosurgery initial assessment.",
+    "schema": {
+      "sections": [
+        {
+          "title": "Vital/Premorbid/Social History",
+          "questions": [
+            {
+              "id": "_h_vitals",
+              "label": "Vital sign",
+              "type": "heading"
+            },
+            {
+              "id": "vitals",
+              "label": "Vital signs",
+              "type": "composite",
+              "width": "full",
+              "parts": [
+                {
+                  "id": "bp_sys",
+                  "label": "BP",
+                  "placeholder": "120",
+                  "suffix": "/"
+                },
+                {
+                  "id": "bp_dia",
+                  "label": "",
+                  "placeholder": "80",
+                  "suffix": " mmHg"
+                },
+                {
+                  "id": "p",
+                  "label": "Pulse",
+                  "placeholder": "78",
+                  "suffix": "/min"
+                },
+                {
+                  "id": "spo2",
+                  "label": "SpO2",
+                  "placeholder": "98",
+                  "suffix": "%"
+                },
+                {
+                  "id": "o2",
+                  "label": "",
+                  "placeholder": "Room Air / L O2",
+                  "wide": true
+                }
+              ],
+              "joinWith": "  ",
+              "reportTemplate": "Vital signs: {answer}"
+            },
+            {
+              "id": "_h_social",
+              "label": "Social History, Home Environment & Premorbid ADL",
+              "type": "heading"
+            },
+            {
+              "id": "lives_with",
+              "label": "Lives with",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Live alone",
+                "Spouse",
+                "Child(ren)",
+                "Parent(s)",
+                "Sibling(s)",
+                "Domestic helper",
+                "Day time alone",
+                "Night time alone",
+                "OAHR",
+                "Hostel"
+              ],
+              "allowOther": true,
+              "allowComment": true,
+              "commentLabel": "Main carer / details"
+            },
+            {
+              "id": "home_access",
+              "label": "Home access",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Direct lift-landing",
+                {
+                  "value": "Non-direct lift-landing",
+                  "subOptions": [],
+                  "subAllowOther": true
+                },
+                {
+                  "value": "No lift",
+                  "subOptions": [],
+                  "subAllowOther": true
+                }
+              ],
+              "allowComment": true,
+              "commentLabel": "Floor / stairs detail"
+            },
+            {
+              "id": "bathing_setup",
+              "label": "Bathing setup",
+              "type": "checkbox",
+              "width": "half",
+              "options": [
+                "Tub",
+                "Shower",
+                "Hot water system"
+              ],
+              "allowOther": true
+            },
+            {
+              "id": "bath_method",
+              "label": "Bath by",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Stand",
+                "Squat",
+                {
+                  "value": "Sit on",
+                  "subOptions": [
+                    "Bath chair",
+                    "Tub board",
+                    "Shower stool"
+                  ],
+                  "subAllowOther": true
+                },
+                "Bedbath"
+              ]
+            },
+            {
+              "id": "premorbid_badl",
+              "label": "Premorbid BADL",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Independent",
+                "Supervision",
+                "Mild Assistance",
+                "Moderate Assistance",
+                "Maximal Assistance",
+                "Dependent"
+              ],
+              "reportTemplate": "Premorbid BADL: {answer}."
+            },
+            {
+              "id": "premorbid_iadl",
+              "label": "Premorbid IADL",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Independent",
+                "Supervision",
+                "Mild Assistance",
+                "Moderate Assistance",
+                "Maximal Assistance",
+                "Dependent"
+              ],
+              "reportTemplate": "Premorbid IADL: {answer}."
+            },
+            {
+              "id": "premorbid_walk",
+              "label": "Premorbid walking status",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Walk unaided",
+                {
+                  "value": "With aid",
+                  "subOptions": [
+                    "Stick",
+                    "Quad stick",
+                    "Frame",
+                    "Rollator",
+                    "Trolley"
+                  ],
+                  "subAllowOther": true
+                },
+                "Chair bound",
+                "Bed bound"
+              ],
+              "reportTemplate": "Premorbid mobility: {answer}."
+            },
+            {
+              "id": "outdoor",
+              "label": "Outdoor mobility",
+              "type": "short_text",
+              "width": "half",
+              "hint": "e.g. independent in community / accompanied / housebound"
+            },
+            {
+              "id": "occupation",
+              "label": "Occupation",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Retired"
+              ],
+              "allowOther": true,
+              "otherPlaceholder": "occupation"
+            },
+            {
+              "id": "financial",
+              "label": "Financial support",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Family support / saving",
+                "Public allowance",
+                "Comprehensive Social Security Assistance",
+                "Disability Allowance",
+                "Old Age Allowance",
+                "Old Age Living Allowance"
+              ],
+              "allowOther": true
+            },
+            {
+              "id": "social_service",
+              "label": "Social service",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Nil",
+                {
+                  "value": "Day Care centre",
+                  "detail": true,
+                  "detailPlaceholder": "name / frequency"
+                },
+                {
+                  "value": "Elderly Centre",
+                  "detail": true,
+                  "detailPlaceholder": "name / frequency"
+                },
+                {
+                  "value": "Respite Services",
+                  "detail": true,
+                  "detailPlaceholder": "name / frequency"
+                },
+                {
+                  "value": "Home Help — Meal on wheels",
+                  "detail": true,
+                  "detailPlaceholder": "frequency"
+                },
+                {
+                  "value": "Home Help — Personal care",
+                  "detail": true,
+                  "detailPlaceholder": "frequency"
+                },
+                {
+                  "value": "Home Help — Household",
+                  "detail": true,
+                  "detailPlaceholder": "frequency"
+                },
+                {
+                  "value": "Home Help — Escort",
+                  "detail": true,
+                  "detailPlaceholder": "frequency"
+                }
+              ],
+              "allowOther": true
+            },
+            {
+              "id": "assistive_devices",
+              "label": "Assistive devices",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Nil",
+                "Safety alarm",
+                "Commode",
+                "Handrail",
+                {
+                  "value": "Walking aids",
+                  "subOptions": [
+                    "Stick",
+                    "Quad stick",
+                    "Frame",
+                    "Rollator"
+                  ],
+                  "subAllowOther": true
+                },
+                "Wheelchair"
+              ],
+              "allowOther": true
+            }
+          ]
+        },
+        {
+          "title": "Mental & Cognitive Function",
+          "questions": [
+            {
+              "id": "gcs",
+              "label": "GCS",
+              "type": "composite",
+              "width": "half",
+              "parts": [
+                {
+                  "id": "e",
+                  "label": "E",
+                  "placeholder": "1-4"
+                },
+                {
+                  "id": "v",
+                  "label": "V",
+                  "placeholder": "1-5"
+                },
+                {
+                  "id": "m",
+                  "label": "M",
+                  "placeholder": "1-6"
+                }
+              ],
+              "joinWith": " ",
+              "reportTemplate": "GCS: {answer}"
+            },
+            {
+              "id": "mental_state",
+              "label": "Mental state",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Alert",
+                "Confused",
+                "Drowsy",
+                "Stupor"
+              ],
+              "allowComment": true
+            },
+            {
+              "id": "follow_cmd",
+              "label": "Follow command",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "1 step",
+                "2 steps",
+                "3 steps",
+                "Not follow command"
+              ],
+              "reportTemplate": "Follow command: {answer}."
+            },
+            {
+              "id": "orientation",
+              "label": "Orientated to",
+              "type": "checkbox",
+              "width": "half",
+              "options": [
+                "Name",
+                "Age",
+                "Time",
+                "Place",
+                "Person"
+              ]
+            },
+            {
+              "id": "cog_status",
+              "label": "Cognitive assessment status",
+              "type": "multiple_choice",
+              "width": "full",
+              "options": [
+                "Performed",
+                "Failed to assess due to poor GCS",
+                "Declined",
+                "Not applicable"
+              ]
+            },
+            {
+              "id": "amt",
+              "label": "Abbreviated Mental Test (AMT)",
+              "type": "sub_score",
+              "mode": "options",
+              "totalMax": 10,
+              "removable": true,
+              "width": "full",
+              "hint": "Cut-off <6 indicates further evaluation for possible cognitive impairment.",
+              "items": [
+                {
+                  "id": "age",
+                  "label": "Age",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "time",
+                  "label": "Time",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "addr",
+                  "label": "Address for recall",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "year",
+                  "label": "Current year",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "place",
+                  "label": "Place",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "recog",
+                  "label": "Recognition of two persons",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "dob",
+                  "label": "Date of birth",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "festival",
+                  "label": "Date of mid-Autumn festival",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "leader",
+                  "label": "Name of present Governor / leader",
+                  "options": [
+                    0,
+                    1
+                  ]
+                },
+                {
+                  "id": "count_back",
+                  "label": "Count from 20 to 1 backwards",
+                  "options": [
+                    0,
+                    1
+                  ]
+                }
+              ],
+              "reportTemplate": "AMT: Total score: {answer} (Cut-off <6 indicates further evaluation for possibility of cognitive impairment)",
+              "showIf": {
+                "questionId": "cog_status",
+                "equals": "Performed"
+              }
+            },
+            {
+              "id": "cdt",
+              "label": "Clock Drawing Test (CDT)",
+              "type": "rating",
+              "min": 0,
+              "max": 10,
+              "removable": true,
+              "width": "full",
+              "hint": "Cut-off 4. Sensitivity 83% / specificity 79% for dementia screening. Lower score indicates lower cognitive function.",
+              "reportTemplate": "Clock Drawing Test (CDT): {answer} (Cut-off 4)",
+              "showIf": {
+                "questionId": "cog_status",
+                "equals": "Performed"
+              }
+            },
+            {
+              "id": "moca",
+              "label": "HK-Montreal Cognitive Assessment (MoCA)",
+              "type": "sub_score",
+              "mode": "max",
+              "totalMax": 30,
+              "removable": true,
+              "width": "full",
+              "items": [
+                {
+                  "id": "visuospatial",
+                  "label": "Visuospatial / Executive",
+                  "max": 5
+                },
+                {
+                  "id": "naming",
+                  "label": "Naming",
+                  "max": 3
+                },
+                {
+                  "id": "attention",
+                  "label": "Attention",
+                  "max": 6
+                },
+                {
+                  "id": "language",
+                  "label": "Language",
+                  "max": 3
+                },
+                {
+                  "id": "abstraction",
+                  "label": "Abstraction",
+                  "max": 2
+                },
+                {
+                  "id": "recall",
+                  "label": "Delayed Recall",
+                  "max": 5
+                },
+                {
+                  "id": "orientation",
+                  "label": "Orientation",
+                  "max": 6
+                }
+              ],
+              "reportTemplate": "MoCA: Total score: {answer}",
+              "showIf": {
+                "questionId": "cog_status",
+                "equals": "Performed"
+              }
+            },
+            {
+              "id": "moca_band",
+              "label": "MoCA percentile band",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                ">16th percentile",
+                "≤16th percentile: DSM-5 mild NCD",
+                "≤7th percentile: Petersen MCI",
+                "≤2nd percentile: DSM-5 major NCD"
+              ],
+              "reportTemplate": "Interpretation: {answer}.",
+              "showIf": {
+                "questionId": "cog_status",
+                "equals": "Performed"
+              }
+            },
+            {
+              "id": "cog_impression",
+              "label": "Cognitive impression",
+              "type": "long_text",
+              "width": "half",
+              "showIf": {
+                "questionId": "cog_status",
+                "equals": "Performed"
+              }
+            },
+            {
+              "id": "speech",
+              "label": "Speech",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Normal",
+                "Expressive dysphasia",
+                "Receptive dysphasia",
+                "Dysarthria"
+              ],
+              "allowOther": true
+            }
+          ]
+        },
+        {
+          "title": "Physical Assessment",
+          "questions": [
+            {
+              "id": "complaint",
+              "label": "Major complaint / others",
+              "type": "long_text",
+              "width": "full"
+            },
+            {
+              "id": "power",
+              "label": "Power",
+              "type": "composite",
+              "layout": "grid-2x2",
+              "width": "half",
+              "rowHeaders": [
+                "Upper",
+                "Lower"
+              ],
+              "colHeaders": [
+                "Right",
+                "Left"
+              ],
+              "parts": [
+                {
+                  "id": "rul",
+                  "placeholder": "5"
+                },
+                {
+                  "id": "lul",
+                  "placeholder": "5"
+                },
+                {
+                  "id": "rll",
+                  "placeholder": "5"
+                },
+                {
+                  "id": "lll",
+                  "placeholder": "5"
+                }
+              ],
+              "reportTemplate": "Power — R UL: {rul}; L UL: {lul}; R LL: {rll}; L LL: {lll}"
+            },
+            {
+              "id": "tone",
+              "label": "Tone",
+              "type": "short_text",
+              "width": "half",
+              "hint": "e.g. normal / increased on left side"
+            },
+            {
+              "id": "coordination",
+              "label": "Coordination",
+              "type": "short_text",
+              "width": "half",
+              "hint": "e.g. NAD / dysmetria L UL"
+            },
+            {
+              "id": "balance_sit",
+              "label": "Balance — Sitting",
+              "type": "checkbox",
+              "width": "half",
+              "options": [
+                "Good",
+                "Fair",
+                "Poor"
+              ],
+              "combineAdjacent": true
+            },
+            {
+              "id": "balance_stand",
+              "label": "Balance — Standing",
+              "type": "checkbox",
+              "width": "half",
+              "options": [
+                "Good",
+                "Fair",
+                "Poor"
+              ],
+              "combineAdjacent": true
+            },
+            {
+              "id": "transfer_lie_sit",
+              "label": "Transfer — Lie to sit",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Independent",
+                "Supervision",
+                "Mild Assistance",
+                "Moderate Assistance",
+                "Maximal Assistance",
+                "Dependent",
+                {
+                  "value": "Aid",
+                  "subOptions": [
+                    "Stick",
+                    "Quad stick",
+                    "Frame",
+                    "Rollator",
+                    "Walking belt",
+                    "Hoist"
+                  ],
+                  "subAllowOther": true
+                }
+              ]
+            },
+            {
+              "id": "transfer_sit_stand",
+              "label": "Transfer — Sit to stand",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Independent",
+                "Supervision",
+                "Mild Assistance",
+                "Moderate Assistance",
+                "Maximal Assistance",
+                "Dependent",
+                {
+                  "value": "Aid",
+                  "subOptions": [
+                    "Stick",
+                    "Quad stick",
+                    "Frame",
+                    "Rollator",
+                    "Walking belt",
+                    "Hoist"
+                  ],
+                  "subAllowOther": true
+                }
+              ]
+            },
+            {
+              "id": "ambulation",
+              "label": "Ambulation",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Independent",
+                "Supervision",
+                "Mild Assistance",
+                "Moderate Assistance",
+                "Maximal Assistance",
+                "Dependent",
+                {
+                  "value": "Aid",
+                  "subOptions": [
+                    "Stick",
+                    "Quad stick",
+                    "Frame",
+                    "Rollator",
+                    "Walking belt"
+                  ],
+                  "subAllowOther": true
+                }
+              ]
+            },
+            {
+              "id": "vision",
+              "label": "Vision",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Normal"
+              ],
+              "allowOther": true,
+              "otherPlaceholder": "describe deficit"
+            },
+            {
+              "id": "hearing",
+              "label": "Hearing",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "Normal",
+                {
+                  "value": "Impaired",
+                  "subOptions": [
+                    "Left",
+                    "Right",
+                    "Bilateral"
+                  ]
+                },
+                "Deaf"
+              ]
+            },
+            {
+              "id": "fthue",
+              "label": "Hand function — FTHUE",
+              "type": "rating",
+              "min": 0,
+              "max": 7,
+              "width": "half",
+              "hint": "Functional Test for the Hemiplegic Upper Extremity",
+              "reportTemplate": "Hand function (FTHUE): {answer}"
+            },
+            {
+              "id": "sensation",
+              "label": "Sensation / Proprioception",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "NAD"
+              ],
+              "allowOther": true,
+              "otherPlaceholder": "describe deficit"
+            }
+          ]
+        },
+        {
+          "title": "Functional Assessment (Modified Barthel Index)",
+          "questions": [
+            {
+              "id": "mbi",
+              "label": "Modified Barthel Index",
+              "type": "sub_score",
+              "mode": "options",
+              "totalMax": 100,
+              "width": "full",
+              "items": [
+                {
+                  "id": "bowels",
+                  "label": "Bowels",
+                  "options": [
+                    0,
+                    2,
+                    5,
+                    8,
+                    10
+                  ]
+                },
+                {
+                  "id": "bladder",
+                  "label": "Bladder",
+                  "options": [
+                    0,
+                    2,
+                    5,
+                    8,
+                    10
+                  ]
+                },
+                {
+                  "id": "grooming",
+                  "label": "Grooming",
+                  "options": [
+                    0,
+                    1,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "toileting",
+                  "label": "Toileting",
+                  "options": [
+                    0,
+                    2,
+                    5,
+                    8,
+                    10
+                  ]
+                },
+                {
+                  "id": "feeding",
+                  "label": "Feeding",
+                  "options": [
+                    0,
+                    2,
+                    5,
+                    8,
+                    10
+                  ]
+                },
+                {
+                  "id": "dressing",
+                  "label": "Dressing",
+                  "options": [
+                    0,
+                    2,
+                    5,
+                    8,
+                    10
+                  ]
+                },
+                {
+                  "id": "bathing",
+                  "label": "Bathing",
+                  "options": [
+                    0,
+                    1,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "transfer",
+                  "label": "Transfer",
+                  "options": [
+                    0,
+                    3,
+                    8,
+                    12,
+                    15
+                  ]
+                },
+                {
+                  "id": "mobility",
+                  "label": "Mobility",
+                  "options": [
+                    0,
+                    3,
+                    8,
+                    12,
+                    15
+                  ]
+                },
+                {
+                  "id": "wheelchair",
+                  "label": "Wheelchair",
+                  "options": [
+                    0,
+                    1,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "stairs",
+                  "label": "Stairs",
+                  "options": [
+                    0,
+                    2,
+                    5,
+                    8,
+                    10
+                  ]
+                }
+              ],
+              "reportTemplate": "Modified Barthel Index: {answer}"
+            },
+            {
+              "id": "mbi_bladder_foley",
+              "label": "Bladder qualifier",
+              "type": "checkbox",
+              "width": "half",
+              "options": [
+                "Foley"
+              ],
+              "allowOther": true,
+              "showIf": {
+                "questionId": "mbi",
+                "itemId": "bladder",
+                "equals": 0
+              }
+            },
+            {
+              "id": "mbi_feeding_rt",
+              "label": "Feeding qualifier",
+              "type": "checkbox",
+              "width": "half",
+              "options": [
+                "R/T"
+              ],
+              "allowOther": true,
+              "showIf": {
+                "questionId": "mbi",
+                "itemId": "feeding",
+                "equals": 0
+              }
+            },
+            {
+              "id": "mbi_overall",
+              "label": "Overall functional level",
+              "type": "multiple_choice",
+              "width": "full",
+              "options": [
+                "Independent",
+                "Supervision",
+                "Mild Assistance",
+                "Moderate Assistance",
+                "Maximal Assistance",
+                "Dependent"
+              ],
+              "reportTemplate": "Overall: {answer}."
+            }
+          ]
+        },
+        {
+          "title": "Fall Assessment",
+          "questions": [
+            {
+              "id": "fall_risk",
+              "label": "Fall risk",
+              "type": "multiple_choice",
+              "width": "half",
+              "options": [
+                "No",
+                {
+                  "value": "Yes",
+                  "subOptions": [
+                    "Low",
+                    "High"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "fall_factors",
+              "label": "Risk factors",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Dizziness",
+                "LL weakness",
+                "Cognitive problem",
+                "Gait disturbance",
+                "History of fall",
+                "Poor safety awareness"
+              ],
+              "allowOther": true,
+              "showIf": {
+                "questionId": "fall_risk",
+                "equals": "Yes"
+              }
+            },
+            {
+              "id": "fall_history",
+              "label": "Fall in recent year",
+              "type": "yes_no",
+              "width": "half"
+            },
+            {
+              "id": "fall_freq",
+              "label": "Fall frequency",
+              "type": "short_text",
+              "width": "half",
+              "hint": "e.g. 1 fall in 6 months",
+              "showIf": {
+                "questionId": "fall_history",
+                "equals": "Yes"
+              }
+            },
+            {
+              "id": "fall_notes",
+              "label": "Fall details",
+              "type": "long_text",
+              "width": "full",
+              "showIf": {
+                "questionId": "fall_history",
+                "equals": "Yes"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Home Discharge Readiness Assessment (HDRS)",
+          "description": "Three factors — describe each sub-item, then give a single 1–5 rating for the whole factor. Final Level of Readiness 1–6.",
+          "questions": [
+            {
+              "id": "hdrs_f1_attitude",
+              "label": "Factor 1 — Patient attitude",
+              "type": "short_text",
+              "width": "half"
+            },
+            {
+              "id": "hdrs_f1_competency",
+              "label": "Factor 1 — Patient sense of competency",
+              "type": "short_text",
+              "width": "half"
+            },
+            {
+              "id": "hdrs_f1_rating",
+              "label": "Factor 1 rating (Patient)",
+              "type": "rating",
+              "min": 1,
+              "max": 5,
+              "width": "full",
+              "reportTemplate": "Factor 1 (Patient): {answer}"
+            },
+            {
+              "id": "hdrs_f2_availability",
+              "label": "Factor 2 — Availability of carer",
+              "type": "short_text",
+              "width": "half"
+            },
+            {
+              "id": "hdrs_f2_attitude",
+              "label": "Factor 2 — Carer attitude and competency",
+              "type": "short_text",
+              "width": "half"
+            },
+            {
+              "id": "hdrs_f2_rating",
+              "label": "Factor 2 rating (Carer)",
+              "type": "rating",
+              "min": 1,
+              "max": 5,
+              "width": "full",
+              "reportTemplate": "Factor 2 (Carer): {answer}"
+            },
+            {
+              "id": "hdrs_f3_safety",
+              "label": "Factor 3 — Specific home safety",
+              "type": "short_text",
+              "width": "half"
+            },
+            {
+              "id": "hdrs_f3_env",
+              "label": "Factor 3 — Specific home environment",
+              "type": "short_text",
+              "width": "half"
+            },
+            {
+              "id": "hdrs_f3_rating",
+              "label": "Factor 3 rating (Environment)",
+              "type": "rating",
+              "min": 1,
+              "max": 5,
+              "width": "full",
+              "reportTemplate": "Factor 3 (Environment): {answer}"
+            },
+            {
+              "id": "hdrs_level",
+              "label": "Level of Readiness",
+              "type": "rating",
+              "min": 1,
+              "max": 6,
+              "width": "full",
+              "hint": "Overall HDRS readiness level (1 = lowest, 6 = highest).",
+              "reportTemplate": "Level of Readiness: {answer}",
+              "allowComment": true,
+              "commentLabel": "Notes / conditions"
+            }
+          ]
+        },
+        {
+          "title": "OT Comment",
+          "questions": [
+            {
+              "id": "ot_complaint",
+              "label": "C/o",
+              "type": "long_text",
+              "width": "full"
+            },
+            {
+              "id": "ot_adl_bi",
+              "label": "ADL — mBI / 100",
+              "type": "number",
+              "width": "half",
+              "hint": "0 to 100",
+              "reportTemplate": "ADL: mBI {answer}/100"
+            },
+            {
+              "id": "ot_cognitive",
+              "label": "Cognitive",
+              "type": "long_text",
+              "width": "half"
+            },
+            {
+              "id": "ot_suggestion",
+              "label": "Suggestion",
+              "type": "long_text",
+              "width": "full"
+            }
+          ]
+        },
+        {
+          "title": "Problem Identification",
+          "questions": [
+            {
+              "id": "problems",
+              "label": "Problems",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Nil if medically stable",
+                "Nil",
+                {
+                  "value": "Patient Factor",
+                  "subOptions": [
+                    "Impaired ADL function",
+                    "Impaired cognition",
+                    "Impaired physical stability",
+                    "Impaired safety awareness"
+                  ],
+                  "subAllowOther": true
+                },
+                {
+                  "value": "Environmental Factor",
+                  "subOptions": [
+                    "Limited accessibility",
+                    "Risky home environment"
+                  ],
+                  "subAllowOther": true
+                },
+                {
+                  "value": "Social Factor",
+                  "subOptions": [
+                    "Lack of competent caregiver",
+                    "Live alone / Daytime / Nighttime alone"
+                  ],
+                  "subAllowOther": true
+                }
+              ],
+              "allowOther": true
+            }
+          ]
+        },
+        {
+          "title": "Recommendation",
+          "questions": [
+            {
+              "id": "treatment_done",
+              "label": "Treatment",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Pre-op assessment done",
+                "Pre-LP assessment done",
+                "Bilateral TED stocking given for post-op use"
+              ],
+              "allowOther": true
+            },
+            {
+              "id": "treatment_plan",
+              "label": "Treatment plan",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Post-op assessment",
+                "Post-LP assessment",
+                "Check TED stocking",
+                "Further assessment if stable",
+                "Basic ADL Training / maintenance",
+                "Cognitive / orientation training",
+                "Fall Prevention education / training",
+                "Limb function maintenance / positioning",
+                {
+                  "value": "Pressure injury prevention / check",
+                  "detail": true,
+                  "detailPlaceholder": "site / details"
+                },
+                {
+                  "value": "Aids prescription",
+                  "detail": true,
+                  "detailPlaceholder": "aid type"
+                },
+                "Home safety recommendation / Visit",
+                "Carer interview / education / training"
+              ],
+              "allowOther": true
+            },
+            {
+              "id": "recommendation",
+              "label": "Recommendation",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Functionally fit home",
+                {
+                  "value": "Home with carer / maid / supervision",
+                  "detail": true,
+                  "detailPlaceholder": "from whom"
+                },
+                "Convalescent rehabilitation",
+                {
+                  "value": "Continue training",
+                  "detail": true,
+                  "detailPlaceholder": "1 to 2 days / details"
+                },
+                "Not applicable, pending further assessment"
+              ],
+              "allowOther": true
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
