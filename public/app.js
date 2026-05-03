@@ -1799,29 +1799,36 @@
         const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
         return `Cognitive assessment: ${status}.${userText}`;
       }
-      const parts = [];
+      const lines = [];
       const amtQ = allQs.amt, amt = answers.amt;
       if (amtQ && !isEmptyAnswer(amtQ, amt)) {
-        parts.push(`AMT ${formatAnswer(amtQ, amt)} (Cut-off 6/10)`);
+        lines.push(`AMT Total score: ${formatAnswer(amtQ, amt)} (Cut-off 6/10)`);
+        const bd = subScoreBreakdownLines(amtQ, amt, undefined, answers);
+        if (bd.length) lines.push(...bd);
       }
       const cdtQ = allQs.cdt, cdt = answers.cdt;
       if (cdtQ && !isEmptyAnswer(cdtQ, cdt)) {
-        parts.push(`CDT ${formatAnswer(cdtQ, cdt)} (Cut-off 4)`);
+        lines.push(`CDT ${formatAnswer(cdtQ, cdt)} (Cut-off 4)`);
       }
       const mocaQ = allQs.moca, moca = answers.moca;
       if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
-        let s = `MoCA ${formatAnswer(mocaQ, moca)}`;
+        let header = `MoCA Total score: ${formatAnswer(mocaQ, moca)}`;
         const inner = [];
         const cut = answers.moca_cutoff;
         if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
         const bandQ = allQs.moca_band, band = answers.moca_band;
         if (bandQ && !isEmptyAnswer(bandQ, band)) inner.push(formatAnswer(bandQ, band));
-        if (inner.length) s += ` (${inner.join(', ')})`;
-        parts.push(s);
+        if (inner.length) header += ` (${inner.join(', ')})`;
+        lines.push(header);
+        const bd = subScoreBreakdownLines(mocaQ, moca, undefined, answers);
+        if (bd.length) lines.push(...bd);
+      }
+      if (!lines.length) {
+        const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
+        return userText.trim() ? `Cognitive:${userText}` : null;
       }
       const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
-      if (!parts.length) return userText.trim() ? `Cognitive:${userText}` : null;
-      return `Cognitive: ${parts.join('; ')}.${userText}`;
+      return `Cognitive:\n${lines.join('\n')}${userText ? '\n' + userText : ''}`;
     },
   };
 
