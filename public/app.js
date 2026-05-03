@@ -1,23 +1,51 @@
-// Edoc frontend — vanilla JS SPA
+// Edoc frontend — vanilla JS SPA (pure front-end build).
+// Forms are read as static JSON files from ./forms/, listed in ./forms/index.json.
 (() => {
   const app = document.getElementById('app');
   const nav = document.getElementById('nav');
-  const state = { admin: false, view: 'browse', currentForm: null };
+  const state = { view: 'browse', currentForm: null };
   const HISTORY_KEY = 'edoc_history_v1';
+  const FORMS_DIR = 'forms/';
+
+  // ---------- forms loader (replaces former /api/forms backend) ----------
+  // Each form file is { specialty, title, description?, schema }. The id is the
+  // filename (e.g. "ns-initial-assessment.json"). forms/index.json is a flat array
+  // of filenames; we fetch each to surface metadata in the browse list.
+  let _formsCache = null;
+  async function fetchJSON(url) {
+    const res = await fetch(url, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`Failed to load ${url} (${res.status})`);
+    return res.json();
+  }
+  async function listForms({ specialty } = {}) {
+    if (!_formsCache) {
+      const manifest = await fetchJSON(FORMS_DIR + 'index.json');
+      const items = await Promise.all(manifest.map(async (file) => {
+        try {
+          const f = await fetchJSON(FORMS_DIR + file);
+          return {
+            id: file,
+            specialty: f.specialty,
+            title: f.title,
+            description: f.description || '',
+          };
+        } catch (e) {
+          console.warn('skip form', file, e);
+          return null;
+        }
+      }));
+      _formsCache = items.filter(Boolean)
+        .sort((a, b) => (a.specialty || '').localeCompare(b.specialty || '')
+          || (a.title || '').localeCompare(b.title || ''));
+    }
+    return specialty ? _formsCache.filter(f => f.specialty === specialty) : _formsCache;
+  }
+  async function loadForm(id) {
+    const f = await fetchJSON(FORMS_DIR + id);
+    return { id, specialty: f.specialty, title: f.title, description: f.description || '', schema: f.schema };
+  }
 
   // ---------- helpers ----------
-  const api = async (url, opts = {}) => {
-    const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      ...opts,
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || 'Request failed');
-    }
-    return res.json();
-  };
   const tpl = id => document.getElementById(id).content.cloneNode(true);
   const uid = () => 'q_' + Math.random().toString(36).slice(2, 9);
   const el = (tag, props = {}, kids = []) => {
@@ -32,14 +60,47 @@
     return e;
   };
 
+  // Saved reports auto-expire 7 days after savedAt. The user can extend the
+  // expiry by another 7 days from the History list.
+  const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+  const expiryFromSavedAt = savedAt => {
+    const t = Date.parse(savedAt);
+    return Number.isFinite(t) ? new Date(t + EXPIRY_MS).toISOString() : null;
+  };
   const history = {
-    load() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; } },
+    load() {
+      let arr;
+      try { arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+      catch { arr = []; }
+      // Backfill expiresAt for older entries that pre-date this feature.
+      let dirty = false;
+      arr.forEach(e => {
+        if (!e.expiresAt) { e.expiresAt = expiryFromSavedAt(e.savedAt); dirty = true; }
+      });
+      // Drop anything past its expiry. Drafts are kept indefinitely.
+      const now = Date.now();
+      const kept = arr.filter(e => {
+        if (e.draft) return true;
+        if (!e.expiresAt) return true;
+        const exp = Date.parse(e.expiresAt);
+        if (!Number.isFinite(exp)) return true;
+        if (exp <= now) { dirty = true; return false; }
+        return true;
+      });
+      if (dirty) localStorage.setItem(HISTORY_KEY, JSON.stringify(kept));
+      return kept;
+    },
     save(arr) { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); },
     add(entry) { const a = history.load(); a.unshift(entry); history.save(a); },
     remove(id) { history.save(history.load().filter(e => e.id !== id)); },
     update(id, patch) {
       const a = history.load().map(e => e.id === id ? { ...e, ...patch } : e);
       history.save(a);
+    },
+    extend(id) {
+      // Push expiry to 7 days from now (whichever is later than current expiry).
+      const newExpiry = new Date(Date.now() + EXPIRY_MS).toISOString();
+      history.update(id, { expiresAt: newExpiry });
     },
   };
 
@@ -55,31 +116,24 @@
     [...nav.querySelectorAll('button')].forEach(b =>
       b.classList.toggle('active', b.dataset.view === v));
     if (v === 'browse') renderBrowse();
-    else if (v === 'history') renderHistory();
-    else if (v === 'admin') renderAdmin();
     else if (v === 'fill') renderFill(arg);
-    else if (v === 'edit') renderEdit(arg);
+    else if (v === 'report') renderReport(arg);
   }
 
-  // ---------- browse ----------
+  // ---------- browse (single page: Create new case + History) ----------
   async function renderBrowse() {
     app.innerHTML = '';
     app.appendChild(tpl('tpl-browse'));
-    const sel = app.querySelector('#specFilter');
-    const list = app.querySelector('#formList');
     const ncCaseId = app.querySelector('#ncCaseId');
     const ncDate   = app.querySelector('#ncDate');
     const ncForm   = app.querySelector('#ncForm');
     const ncErr    = app.querySelector('#ncErr');
 
-    // Default the date to today (YYYY-MM-DD).
     ncDate.value = new Date().toISOString().slice(0, 10);
 
-    // Populate the form dropdown once with all forms; this stays independent of the
-    // specialty filter below so the case picker isn't gated by it.
-    const allForms = await api('/api/forms');
+    const allForms = await listForms();
     for (const f of allForms) {
-      ncForm.appendChild(el('option', { value: String(f.id) }, [`[${f.specialty}] ${f.title}`]));
+      ncForm.appendChild(el('option', { value: f.id }, [`[${f.specialty}] ${f.title}`]));
     }
 
     app.querySelector('#ncStart').onclick = () => {
@@ -88,36 +142,10 @@
       const formId = ncForm.value;
       if (!caseId) { ncErr.textContent = 'Ward / Bed number is required.'; return; }
       if (!formId) { ncErr.textContent = 'Pick an assessment form.'; return; }
-      setView('fill', { formId: Number(formId), caseId, assessmentDate: ncDate.value });
+      setView('fill', { formId, caseId, assessmentDate: ncDate.value });
     };
 
-    const load = async () => {
-      const q = sel.value ? `?specialty=${encodeURIComponent(sel.value)}` : '';
-      const forms = await api('/api/forms' + q);
-      list.innerHTML = '';
-      if (!forms.length) {
-        list.appendChild(el('p', { class: 'muted' }, ['No forms yet.']));
-        return;
-      }
-      for (const f of forms) {
-        const card = el('div', { class: 'card' }, [
-          el('div', {}, [
-            el('div', {}, [
-              el('span', { class: 'badge ' + f.specialty }, [f.specialty]),
-              el('strong', {}, [f.title]),
-            ]),
-            el('div', { class: 'meta' }, [f.description || '']),
-          ]),
-          el('button', {
-            class: 'primary',
-            onclick: () => setView('fill', f.id),
-          }, ['Use']),
-        ]);
-        list.appendChild(card);
-      }
-    };
-    sel.addEventListener('change', load);
-    load();
+    renderHistoryList(app.querySelector('#historyList'));
   }
 
   // ---------- fill a form ----------
@@ -131,20 +159,20 @@
     if (typeof idOrHistoryEntry === 'object' && idOrHistoryEntry !== null) {
       if (idOrHistoryEntry.answers) {
         // Re-opening a saved history entry.
-        form = await api('/api/forms/' + idOrHistoryEntry.formId);
+        form = await loadForm(idOrHistoryEntry.formId);
         initialAnswers = idOrHistoryEntry.answers;
         historyId = idOrHistoryEntry.id;
         if (initialAnswers.__case) caseInfo = { ...initialAnswers.__case };
       } else if (idOrHistoryEntry.formId) {
         // New-case start: { formId, caseId, assessmentDate }.
-        form = await api('/api/forms/' + idOrHistoryEntry.formId);
+        form = await loadForm(idOrHistoryEntry.formId);
         caseInfo = {
           caseId: idOrHistoryEntry.caseId || '',
           assessmentDate: idOrHistoryEntry.assessmentDate || '',
         };
       }
     } else {
-      form = await api('/api/forms/' + idOrHistoryEntry);
+      form = await loadForm(idOrHistoryEntry);
     }
     state.currentForm = form;
     app.querySelector('#fTitle').textContent = form.title;
@@ -164,13 +192,16 @@
     if (caseInfo) answers.__case = { ...caseInfo };
     const comments = { ...(initialAnswers.__comments || {}) };
     answers.__comments = comments;
-    const hiddenSections = new Set(initialAnswers.__hiddenSections || []);
-    answers.__hiddenSections = [...hiddenSections];
+    // Section-removal feature removed; preserve any old saved markers as-is
+    // so re-opened drafts don't lose data, but no UI exposes it anymore.
+    answers.__hiddenSections = initialAnswers.__hiddenSections || [];
 
     // Global change listeners so showIf-dependent questions can refresh.
     const changeListeners = new Set();
     const onChange = fn => { changeListeners.add(fn); return () => changeListeners.delete(fn); };
     const fireChange = () => changeListeners.forEach(fn => fn());
+    // Flat lookup for prefillFromQuestions / cross references during fill.
+    const formQuestions = flattenQuestions(form);
 
     // Section tabs — avoids one long scroll.
     const tabsBar = el('div', { class: 'tabs' });
@@ -182,18 +213,30 @@
     const sections = form.schema.sections;
 
     function visibleSectionIndexes() {
-      return sections
-        .map((_, i) => i)
-        .filter(i => !hiddenSections.has(sectionKey(sections[i], i)));
+      return sections.map((_, i) => i);
     }
     function sectionKey(s, i) { return s.id || `idx_${i}`; }
+
+    function isSectionFilled(sec) {
+      // If section has been skipped via hideQuestionsIf trigger, treat as filled.
+      if (sec.hideQuestionsIf && evalShowIf(sec.hideQuestionsIf, answers)) return true;
+      const hQ = new Set(answers.__hiddenQuestions || []);
+      for (const q of sec.questions) {
+        if (q.type === 'heading') continue;
+        if (hQ.has(q.id)) continue;
+        if (q.showIf && !evalShowIf(q.showIf, answers)) continue;
+        const a = answers[q.id];
+        if (!isEmptyAnswer(q, a)) return true;
+        if (comments[q.id]) return true;
+      }
+      return false;
+    }
 
     function rebuildTabs() {
       tabsBar.innerHTML = '';
       sections.forEach((s, i) => {
-        const key = sectionKey(s, i);
-        if (hiddenSections.has(key)) return;
         const t = el('button', { class: 'tab', type: 'button' }, [s.title]);
+        if (isSectionFilled(s)) t.classList.add('completed');
         t.onclick = () => renderSection(i);
         tabsBar.appendChild(t);
       });
@@ -202,6 +245,8 @@
       [...tabsBar.children].forEach((t, ti) =>
         t.classList.toggle('active', ti === pos));
     }
+
+    onChange(rebuildTabs);
 
     function renderSection(i) {
       const visIdxs = visibleSectionIndexes();
@@ -215,31 +260,52 @@
       sectionHost.innerHTML = '';
 
       const s = sections[currentIdx];
-      const key = sectionKey(s, currentIdx);
       const sec = el('div', { class: 'section-block' });
 
       const head = el('div', { class: 'row between' }, [
         el('h3', { style: 'margin:0' }, [s.title]),
-        el('button', {
-          class: 'danger subtle',
-          title: 'Skip this section for this assessment',
-          onclick: () => {
-            if (!confirm(`Remove "${s.title}" from this assessment?\n(Can be restored later — tap a hidden section via Restore.)`)) return;
-            hiddenSections.add(key);
-            answers.__hiddenSections = [...hiddenSections];
-            const remaining = visibleSectionIndexes();
-            if (remaining.length) renderSection(remaining[0]);
-            else { rebuildTabs(); renderSection(0); }
-            renderRestoreBar();
-          },
-        }, ['✕ Remove section']),
       ]);
       sec.appendChild(head);
       if (s.description) sec.appendChild(el('p', { class: 'muted' }, [s.description]));
 
       const grid = el('div', { class: 'fill-grid' });
+      let lastWrap = null;
+      // Section-level skip: when the trigger checkbox is ticked, hide all
+      // questions except the trigger itself. We re-evaluate on every change
+      // so checking/unchecking the trigger refreshes the section.
+      // Track which children we hid via skip, so we can restore (without
+      // clobbering showIf-driven hiding) when the trigger is unchecked.
+      const skipHiddenSet = new Set();
+      const refreshSkip = () => {
+        const skip = s.hideQuestionsIf && evalShowIf(s.hideQuestionsIf, answers);
+        const triggerId = s.hideQuestionsIf && s.hideQuestionsIf.questionId;
+        [...grid.children].forEach(child => {
+          const qid = child.dataset.qid;
+          if (!qid) return;
+          if (skip && qid !== triggerId) {
+            child.style.display = 'none';
+            skipHiddenSet.add(child);
+          } else if (skipHiddenSet.has(child)) {
+            // Was hidden by skip; restore. (showIf will re-hide on next fire if needed.)
+            child.style.display = '';
+            skipHiddenSet.delete(child);
+          }
+        });
+      };
       for (const q of s.questions) {
-        grid.appendChild(renderQuestion(q, answers, comments, { onChange, fireChange }));
+        const widget = renderQuestion(q, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+        if (q.id) widget.dataset.qid = q.id;
+        if (q.mergeUp && lastWrap) {
+          widget.classList.add('merged-child');
+          lastWrap.appendChild(widget);
+        } else {
+          grid.appendChild(widget);
+          if (q.type !== 'heading') lastWrap = widget;
+        }
+      }
+      if (s.hideQuestionsIf) {
+        onChange(refreshSkip);
+        refreshSkip();
       }
       sec.appendChild(grid);
 
@@ -248,7 +314,7 @@
       const prev = visibleSectionIndexes()[visPos - 1];
       const next = visibleSectionIndexes()[visPos + 1];
 
-      const nav = el('div', { class: 'section-nav' }, [
+      const navRow = el('div', { class: 'section-nav' }, [
         el('button', {
           onclick: () => renderSection(prev),
           disabled: prev === undefined ? 'disabled' : null,
@@ -260,35 +326,12 @@
           disabled: next === undefined ? 'disabled' : null,
         }, ['Next →']),
       ]);
-      sec.appendChild(nav);
+      sec.appendChild(navRow);
       sectionHost.appendChild(sec);
       sectionHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      fireChange(); // evaluate showIf on initial render
+      fireChange();
     }
 
-    // Bar above tabs listing hidden sections so they can be restored.
-    const restoreBar = el('div', { class: 'restore-bar' });
-    root.insertBefore(restoreBar, tabsBar);
-    function renderRestoreBar() {
-      restoreBar.innerHTML = '';
-      if (!hiddenSections.size) return;
-      restoreBar.appendChild(el('span', { class: 'muted' }, ['Hidden: ']));
-      sections.forEach((s, i) => {
-        const key = sectionKey(s, i);
-        if (!hiddenSections.has(key)) return;
-        const b = el('button', { class: 'chip' }, [s.title, ' ↺']);
-        b.title = 'Restore this section';
-        b.onclick = () => {
-          hiddenSections.delete(key);
-          answers.__hiddenSections = [...hiddenSections];
-          renderRestoreBar();
-          renderSection(i);
-        };
-        restoreBar.appendChild(b);
-      });
-    }
-
-    renderRestoreBar();
     renderSection(visibleSectionIndexes()[0] ?? 0);
 
     app.querySelector('#btnPreview').onclick = () => {
@@ -296,16 +339,10 @@
       pre.hidden = false;
       pre.textContent = buildReport(form, answers);
     };
-    app.querySelector('#btnSaveCopy').onclick = async () => {
+
+    function persistEntry(asDraft) {
       const report = buildReport(form, answers);
-      try {
-        await navigator.clipboard.writeText(report);
-      } catch {
-        // fallback — show preview so user can copy manually
-        const pre = app.querySelector('#reportPreview');
-        pre.hidden = false;
-        pre.textContent = report;
-      }
+      const savedAt = new Date().toISOString();
       const entry = {
         id: historyId || 'h_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
         formId: form.id,
@@ -313,22 +350,85 @@
         specialty: form.specialty,
         answers,
         report,
-        savedAt: new Date().toISOString(),
+        draft: !!asDraft,
+        savedAt,
+        expiresAt: asDraft ? null : expiryFromSavedAt(savedAt),
       };
       if (historyId) history.update(historyId, entry);
-      else history.add(entry);
-      alert('Report copied to clipboard and saved to History.');
+      else { history.add(entry); historyId = entry.id; }
+      return entry;
+    }
+
+    app.querySelector('#btnSaveDraft').onclick = () => {
+      persistEntry(true);
+      alert('Saved as draft. Continue from the History tab any time.');
     };
+
+    app.querySelector('#btnSaveGenerate').onclick = () => {
+      const entry = persistEntry(false);
+      setView('report', { form, answers, entry });
+    };
+  }
+
+  // ---------- report (3-section view with per-section copy) ----------
+  function renderReport(arg) {
+    app.innerHTML = '';
+    app.appendChild(tpl('tpl-report'));
+    const { form, answers, entry } = arg || {};
+    if (!form || !answers) { setView('browse'); return; }
+
+    app.querySelector('.back').onclick = () => setView('browse');
+    app.querySelector('#rTitle').textContent = form.title;
+
+    const c = (answers.__case) || {};
+    const meta = [];
+    if (c.caseId) meta.push('Ward/Bed: ' + c.caseId);
+    if (c.assessmentDate) meta.push('Date: ' + c.assessmentDate);
+    if (entry && entry.savedAt) meta.push('Saved: ' + new Date(entry.savedAt).toLocaleString());
+    app.querySelector('#rMeta').textContent = meta.join('  •  ');
+
+    const parts = buildReportParts(form, answers);
+    const host = app.querySelector('#rParts');
+
+    const renderPart = (heading, text, hint) => {
+      const sec = el('div', { class: 'report-section' });
+      const head = el('div', { class: 'row between' }, [
+        el('h3', { style: 'margin:0' }, [heading]),
+        el('button', {
+          class: 'primary',
+          onclick: async () => {
+            try {
+              await navigator.clipboard.writeText(text);
+              alert(`${heading} copied to clipboard.`);
+            } catch {
+              alert('Copy failed — please select and copy manually.');
+            }
+          },
+          disabled: text ? null : 'disabled',
+        }, ['Copy']),
+      ]);
+      sec.appendChild(head);
+      if (!text) {
+        sec.appendChild(el('p', { class: 'muted' }, [hint || '(empty — nothing was filled in this section.)']));
+      } else {
+        const pre = el('pre', { class: 'report' });
+        pre.textContent = text;
+        sec.appendChild(pre);
+      }
+      host.appendChild(sec);
+    };
+
+    renderPart('Common Assessment', parts.common, '(no assessment notes filled in)');
+    renderPart('Problem Identification', parts.problem);
+    renderPart('Recommendation', parts.recommendation);
   }
 
   function evalShowIf(cond, answers) {
     if (!cond) return true;
     let v = answers[cond.questionId];
-    // Support sub_score item reference: { questionId: "mbi", itemId: "bladder", equals: 0 }
     if (cond.itemId !== undefined) {
       v = (v && typeof v === 'object') ? v[cond.itemId] : undefined;
     }
-    // For checkbox storing option-objects ({value, detail, sub}), match against value strings.
     const matchVal = x => {
       if (Array.isArray(v)) return v.some(it =>
         (typeof it === 'object' && it !== null) ? it.value === x : it === x);
@@ -351,25 +451,71 @@
                    : '';
     const wrap = el('div', { class: 'qfill' + (widthCls ? ' ' + widthCls : '') });
 
+    if (q.type === 'heading') {
+      wrap.classList.add('full', 'heading');
+      wrap.textContent = q.label;
+      return wrap;
+    }
+
     const head = el('div', { class: 'qhead' });
-    head.appendChild(el('div', { class: 'label' }, [q.label + (q.required ? ' *' : '')]));
-    if (q.removable) {
-      const btn = el('button', {
-        type: 'button', class: 'btn-q-remove', title: 'Remove this assessment for this visit',
-        onclick: () => {
-          const hidden = answers.__hiddenQuestions = answers.__hiddenQuestions || [];
-          if (!hidden.includes(q.id)) hidden.push(q.id);
-          delete answers[q.id];
-          wrap.style.display = 'none';
+    if (!q.hideLabel) {
+      head.appendChild(el('div', { class: 'label' }, [q.label + (q.required ? ' *' : '')]));
+    } else {
+      head.appendChild(el('div', { class: 'label' }, ['']));
+    }
+    if (Array.isArray(q.headerInputs) && q.headerInputs.length) {
+      const extras = el('div', { class: 'qhead-extras' });
+      q.headerInputs.forEach(hi => {
+        const wrap = el('label', { class: 'header-extra' });
+        wrap.appendChild(document.createTextNode((hi.label || '') + ': '));
+        const inp = el('input', { type: hi.inputType || 'text', placeholder: hi.placeholder || '' });
+        inp.value = answers[hi.id] != null ? answers[hi.id] : '';
+        inp.oninput = () => {
+          if (inp.value === '') delete answers[hi.id];
+          else answers[hi.id] = inp.value;
           if (ctx && ctx.fireChange) ctx.fireChange();
+        };
+        wrap.appendChild(inp);
+        extras.appendChild(wrap);
+      });
+      head.appendChild(extras);
+    }
+    if (q.removable) {
+      // "Clear" wipes the answer for this question. Used on AMT / CDT / MoCA so
+      // the user can reset a sub-score without losing the question itself.
+      const btn = el('button', {
+        type: 'button', class: 'btn-q-clear', title: 'Clear answer for this assessment',
+        onclick: () => {
+          delete answers[q.id];
+          if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+          else if (ctx && ctx.fireChange) ctx.fireChange();
         },
-      }, ['✕']);
+      }, ['Clear']);
       head.appendChild(btn);
     }
     wrap.appendChild(head);
     if (q.hint) wrap.appendChild(el('div', { class: 'hint' }, [q.hint]));
 
-    // Honour pre-existing hidden state (e.g. when re-opening a saved entry).
+    // Live read-only preview pulling other questions' current answers.
+    // E.g. ot_adl pulls mbi total and mbi_overall. Refreshes on any change.
+    if (Array.isArray(q.prefillFromQuestions) && q.prefillFromQuestions.length) {
+      const prefBox = el('div', { class: 'prefill' });
+      wrap.appendChild(prefBox);
+      const refreshPref = () => {
+        const bits = [];
+        q.prefillFromQuestions.forEach(ref => {
+          const oQ = ctx.formQuestions && ctx.formQuestions[ref.questionId];
+          if (!oQ) return;
+          const refA = answers[ref.questionId];
+          const txt = isEmptyAnswer(oQ, refA) ? '—' : formatAnswer(oQ, refA);
+          bits.push(`${ref.label || oQ.label}: ${txt}`);
+        });
+        prefBox.textContent = bits.length ? 'Auto: ' + bits.join('  •  ') : '';
+      };
+      refreshPref();
+      if (ctx && ctx.onChange) ctx.onChange(refreshPref);
+    }
+
     if (q.removable && Array.isArray(answers.__hiddenQuestions) && answers.__hiddenQuestions.includes(q.id)) {
       wrap.style.display = 'none';
     }
@@ -378,18 +524,35 @@
     const set = v => { answers[q.id] = v; fire(); };
     const cur = answers[q.id];
 
-    // showIf: subscribe to changes and toggle visibility.
     if (q.showIf && ctx && ctx.onChange) {
+      // Hide the widget visually when the showIf condition isn't met. We do
+      // NOT delete the answer here: aggregate widgets like sub_score bind their
+      // closure to answers[q.id] on render, and deleting orphans the binding so
+      // later edits go nowhere. buildReport already filters via showIf, so any
+      // hidden value is naturally excluded from the output.
       const apply = () => {
         const vis = evalShowIf(q.showIf, answers);
         wrap.style.display = vis ? '' : 'none';
-        if (!vis && answers[q.id] !== undefined) {
-          // clear stale answer for hidden branches
-          delete answers[q.id];
-        }
       };
       apply();
       ctx.onChange(apply);
+    }
+
+    // mirrorTo: snapshot this question's answer into another answer key
+    // whenever the user changes it. One-way: source -> mirror. We deliberately
+    // skip the initial render so re-opened drafts with independent picks on
+    // the mirror target aren't overwritten until the user actually edits the
+    // source.
+    if (q.mirrorTo && ctx && ctx.onChange) {
+      let prev = JSON.stringify(answers[q.id]);
+      ctx.onChange(() => {
+        const cur = JSON.stringify(answers[q.id]);
+        if (cur === prev) return;
+        prev = cur;
+        const v = answers[q.id];
+        if (v === undefined) delete answers[q.mirrorTo];
+        else answers[q.mirrorTo] = JSON.parse(JSON.stringify(v));
+      });
     }
 
     switch (q.type) {
@@ -419,26 +582,24 @@
         break;
       }
       case 'yes_no': {
-        const group = el('div', { class: 'row' });
+        const group = el('div', { class: 'checks' });
         ['Yes', 'No'].forEach(v => {
-          const b = el('button', { type: 'button' }, [v]);
-          if (cur === v) b.classList.add('primary');
-          b.onclick = () => {
-            [...group.children].forEach(c => c.classList.remove('primary'));
-            b.classList.add('primary');
-            set(v);
-          };
-          group.appendChild(b);
+          const id = uid();
+          const lab = el('label', { for: id });
+          const r = el('input', { type: 'radio', name: q.id, id });
+          if (cur === v) r.checked = true;
+          r.onchange = () => set(v);
+          lab.appendChild(r);
+          lab.appendChild(document.createTextNode(v));
+          group.appendChild(lab);
         });
         wrap.appendChild(group);
         break;
       }
       case 'multiple_choice': {
         const group = el('div', { class: 'checks' });
-        // Normalize options to objects: { value, subOptions?, subAllowOther? }
         const norm = q.options.map(o => typeof o === 'string' ? { value: o } : o);
         const knownVals = new Set(norm.map(o => o.value));
-        // Current value can be a string ("Retired") or an object ({ value, sub }).
         const curVal = (cur && typeof cur === 'object') ? cur.value : cur;
         const curSub = (cur && typeof cur === 'object' && Array.isArray(cur.sub)) ? [...cur.sub] : [];
         const curOther = (cur && typeof cur === 'object' && cur.other) ? cur.other : '';
@@ -447,7 +608,7 @@
         norm.forEach(opt => {
           const id = uid();
           const wrapOpt = el('div', { class: 'opt-block' });
-          const row = el('label', { for: id, style: 'display:flex;gap:6px;align-items:center;color:var(--fg);' });
+          const row = el('label', { for: id });
           const r = el('input', { type: 'radio', name: q.id, id });
           if (curVal === opt.value) r.checked = true;
           r.onchange = () => {
@@ -458,7 +619,6 @@
           row.appendChild(document.createTextNode(opt.value));
           wrapOpt.appendChild(row);
 
-          // Inline sub-options revealed only when this option is selected.
           if (opt.subOptions) {
             const subBox = el('div', { class: 'sub-options' });
             subBox.style.display = (curVal === opt.value) ? '' : 'none';
@@ -474,7 +634,7 @@
 
             opt.subOptions.forEach(sopt => {
               const sid = uid();
-              const sr = el('label', { for: sid, style: 'display:flex;gap:6px;align-items:center;' });
+              const sr = el('label', { for: sid });
               const c = el('input', { type: 'checkbox', id: sid });
               if (localSub.includes(sopt)) c.checked = true;
               c.onchange = () => {
@@ -504,11 +664,9 @@
               subBox.appendChild(sr);
             }
 
-            // Toggle visibility when this radio becomes (de)selected.
             r.addEventListener('change', () => {
               subBox.style.display = r.checked ? '' : 'none';
             });
-            // Hide also if a sibling radio is selected.
             wrapOpt.dataset.optValue = opt.value;
             wrapOpt.appendChild(subBox);
           }
@@ -516,7 +674,6 @@
           group.appendChild(wrapOpt);
         });
 
-        // Listen for any change in the radio group to hide stale sub-boxes.
         group.addEventListener('change', () => {
           [...group.querySelectorAll('.opt-block')].forEach(ob => {
             const radio = ob.querySelector('input[type=radio]');
@@ -546,8 +703,19 @@
         const group = el('div', { class: 'checks' });
         const curArr = Array.isArray(cur) ? [...cur] : [];
         answers[q.id] = curArr;
-        // Helpers to find / mutate the entry for a given option value, supporting both
-        // plain strings and option-object entries { value, detail?, sub? }.
+        // Optional UX rules: cap number of selected options, and enforce that
+        // they must be adjacent in the option list (used by Balance / Transfer
+        // to express a "good to fair" range).
+        const optValues = q.options.map(o => typeof o === 'string' ? o : o.value);
+        const valueOf = it => (typeof it === 'object' && it !== null) ? it.value : it;
+        const enforceConstraints = (proposedValue) => {
+          const idxs = curArr.map(it => optValues.indexOf(valueOf(it))).filter(i => i >= 0);
+          if (typeof q.maxSelect === 'number' && idxs.length > q.maxSelect) return false;
+          if (q.consecutiveOnly && idxs.length === 2) {
+            if (Math.abs(idxs[0] - idxs[1]) !== 1) return false;
+          }
+          return true;
+        };
         const findIdx = v => curArr.findIndex(it =>
           (typeof it === 'object' && it !== null) ? it.value === v : it === v);
         const getEntry = v => { const i = findIdx(v); return i >= 0 ? curArr[i] : null; };
@@ -560,9 +728,7 @@
         q.options.forEach(rawOpt => {
           const opt = (typeof rawOpt === 'string') ? { value: rawOpt } : rawOpt;
           const id = uid();
-          const row = el('label', {
-            for: id, style: 'display:flex;gap:6px;align-items:center;color:var(--fg);flex-wrap:wrap;',
-          });
+          const row = el('label', { for: id });
           const c = el('input', { type: 'checkbox', id });
           const existing = getEntry(opt.value);
           if (existing) c.checked = true;
@@ -570,7 +736,6 @@
           row.appendChild(c);
           row.appendChild(document.createTextNode(opt.value));
 
-          // Closure state for this option's detail / sub picks / sub other.
           const startObj = (existing && typeof existing === 'object') ? existing : null;
           const localSub = (startObj && Array.isArray(startObj.sub)) ? [...startObj.sub] : [];
           let detailInp = null, subBox = null, subOtherInp = null;
@@ -587,20 +752,48 @@
 
           if (Array.isArray(opt.subOptions) && opt.subOptions.length) {
             subBox = el('div', { class: 'sub-checks' });
-            opt.subOptions.forEach(sopt => {
+            // Sub-options may be plain strings, or objects { value, detail, detailPlaceholder }.
+            // Stored entries in `localSub` mirror that: string when plain, object when detailed.
+            const findSub = sval => localSub.findIndex(it =>
+              (typeof it === 'object' && it !== null) ? it.value === sval : it === sval);
+            opt.subOptions.forEach(rawSopt => {
+              const sopt = (typeof rawSopt === 'string') ? { value: rawSopt } : rawSopt;
               const sid = uid();
-              const sr = el('label', { for: sid, style: 'display:flex;gap:6px;align-items:center;' });
+              const sr = el('label', { for: sid });
               const sc = el('input', { type: 'checkbox', id: sid });
-              if (localSub.includes(sopt)) sc.checked = true;
+              const startIdx = findSub(sopt.value);
+              const startEntry = startIdx >= 0 ? localSub[startIdx] : null;
+              if (startEntry) sc.checked = true;
+              sr.appendChild(sc);
+              sr.appendChild(document.createTextNode(sopt.value));
+
+              let detailInp2 = null;
+              if (sopt.detail) {
+                detailInp2 = el('input', {
+                  type: 'text', class: 'inline-text detail-input',
+                  placeholder: sopt.detailPlaceholder || 'specify',
+                });
+                if (startEntry && typeof startEntry === 'object') {
+                  detailInp2.value = startEntry.detail || '';
+                }
+                detailInp2.style.display = sc.checked ? '' : 'none';
+                sr.appendChild(detailInp2);
+              }
+
+              const writeSub = () => {
+                const i = findSub(sopt.value);
+                if (!sc.checked) { if (i >= 0) localSub.splice(i, 1); return; }
+                const detail = detailInp2 ? detailInp2.value : '';
+                const entry = (sopt.detail && detail) ? { value: sopt.value, detail } : sopt.value;
+                if (i >= 0) localSub[i] = entry; else localSub.push(entry);
+              };
               sc.onchange = () => {
-                const i = localSub.indexOf(sopt);
-                if (sc.checked && i < 0) localSub.push(sopt);
-                else if (!sc.checked && i >= 0) localSub.splice(i, 1);
+                if (detailInp2) detailInp2.style.display = sc.checked ? '' : 'none';
+                writeSub();
                 if (sc.checked) c.checked = true;
                 rebuild();
               };
-              sr.appendChild(sc);
-              sr.appendChild(document.createTextNode(sopt));
+              if (detailInp2) detailInp2.oninput = () => { sc.checked = true; writeSub(); rebuild(); };
               subBox.appendChild(sr);
             });
             if (opt.subAllowOther) {
@@ -631,6 +824,8 @@
             } else {
               const entry = { value: opt.value };
               if (detail) entry.detail = detail;
+              if (detail && opt.detailSuffix) entry.detailSuffix = opt.detailSuffix;
+              if (detail && opt.detailJoiner !== undefined) entry.detailJoiner = opt.detailJoiner;
               if (localSub.length) entry.sub = [...localSub];
               if (other) entry.other = other;
               setEntry(opt.value, entry);
@@ -638,6 +833,26 @@
             fire();
           };
           c.onchange = () => {
+            // If checking this would violate maxSelect / consecutiveOnly, undo
+            // and inform the user. We re-check after rebuild to also handle
+            // the case where the partner item isn't adjacent.
+            if (c.checked) {
+              const idxs = curArr.map(it => optValues.indexOf(valueOf(it))).filter(i => i >= 0);
+              const newIdx = optValues.indexOf(opt.value);
+              const wouldBe = idxs.concat([newIdx]);
+              if (typeof q.maxSelect === 'number' && wouldBe.length > q.maxSelect) {
+                c.checked = false;
+                alert(`Pick at most ${q.maxSelect} option${q.maxSelect === 1 ? '' : 's'}.`);
+                return;
+              }
+              if (q.consecutiveOnly && wouldBe.length === 2) {
+                if (Math.abs(wouldBe[0] - wouldBe[1]) !== 1) {
+                  c.checked = false;
+                  alert('Selections must be two adjacent levels.');
+                  return;
+                }
+              }
+            }
             if (detailInp) detailInp.style.display = c.checked ? '' : 'none';
             if (subBox)    subBox.style.display    = c.checked ? '' : 'none';
             rebuild();
@@ -648,7 +863,6 @@
         });
         if (q.allowOther) {
           const id = uid();
-          const knownOpts = new Set(q.options);
           const existingOther = curArr.find(v => typeof v === 'string' && v.startsWith('Other: '));
           const row = el('label', { for: id, class: 'other-row' });
           const c = el('input', { type: 'checkbox', id });
@@ -658,12 +872,12 @@
           const txt = el('input', { type: 'text', placeholder: q.otherPlaceholder || 'please specify', class: 'inline-text' });
           if (existingOther) txt.value = existingOther.replace(/^Other:\s*/, '');
           const syncOther = () => {
-            // Remove any previous Other entry, then optionally add current text.
             for (let i = curArr.length - 1; i >= 0; i--) {
-              if (typeof curArr[i] === 'string' && curArr[i].startsWith('Other:')) curArr.splice(i, 1);
+              if (typeof curArr[i] === 'string' && (curArr[i] === 'Other' || curArr[i].startsWith('Other:'))) {
+                curArr.splice(i, 1);
+              }
             }
             if (c.checked && txt.value.trim()) curArr.push('Other: ' + txt.value.trim());
-            else if (c.checked) curArr.push('Other');
             fire();
           };
           c.onchange = syncOther;
@@ -676,6 +890,7 @@
       }
       case 'rating': {
         const group = el('div', { class: 'rating' });
+        const buttons = [];
         for (let i = q.min; i <= q.max; i++) {
           const b = el('button', { type: 'button' }, [String(i)]);
           if (cur === i) b.classList.add('sel');
@@ -683,8 +898,26 @@
             set(i);
             [...group.children].forEach(c => c.classList.remove('sel'));
             b.classList.add('sel');
+            if (otherInp) otherInp.value = '';
           };
           group.appendChild(b);
+          buttons.push(b);
+        }
+        let otherInp = null;
+        if (q.allowOther) {
+          // Inline "Other: ___" input — typing it overrides the numeric chip.
+          const lbl = el('span', { class: 'rating-other' }, ['Other: ']);
+          otherInp = el('input', {
+            type: 'text', class: 'inline-text',
+            placeholder: q.otherPlaceholder || 'specify',
+          });
+          if (typeof cur === 'string') otherInp.value = cur;
+          otherInp.oninput = () => {
+            buttons.forEach(c => c.classList.remove('sel'));
+            set(otherInp.value);
+          };
+          group.appendChild(lbl);
+          group.appendChild(otherInp);
         }
         wrap.appendChild(group);
         break;
@@ -699,56 +932,165 @@
               ? Number(it.max || 0)
               : Math.max(...(it.options || [0]))), 0);
 
+        // For items flagged allowNA + defaultNA, ensure NA is the initial state
+        // when the answer hasn't been set yet (re-opened drafts keep their values).
+        q.items.forEach(it => {
+          if (it.allowNA && it.defaultNA && curObj[it.id] === undefined) {
+            curObj[it.id] = 'NA';
+          }
+        });
+
         const table = el('table', { class: 'subscore' });
         const totalCell = el('strong', {}, ['0']);
+        const totalSuffix = el('span', { class: 'si-pending' }, ['']);
+        // Track each row's chip-row so we can re-paint after exclusiveWith flips.
+        const rowRefs = {};
 
         function refreshTotal() {
           const t = Object.values(curObj).reduce((a, v) =>
             a + (typeof v === 'number' ? v : 0), 0);
           totalCell.textContent = String(t);
+          if (q.pendingPolicy) {
+            const ignore = new Set(q.pendingPolicy.ignoreItems || []);
+            const incomplete = q.items.some(it => ignore.has(it.id) ? false : typeof curObj[it.id] !== 'number');
+            totalSuffix.textContent = incomplete
+              ? '  ' + (q.pendingPolicy.pendingText || 'pending further assessment later')
+              : '';
+            totalCell.textContent = (incomplete ? '≥' : '') + String(t);
+          }
+        }
+
+        function repaintRow(itemId) {
+          const ref = rowRefs[itemId];
+          if (!ref) return;
+          const v = curObj[itemId];
+          [...ref.row.children].forEach(c => c.classList.remove('sel'));
+          ref.btnByVal.forEach((btn, val) => { if (val === v) btn.classList.add('sel'); });
+          if (ref.naBtn) ref.naBtn.classList.toggle('sel', v === 'NA');
+          if (ref.numInp) ref.numInp.value = (typeof v === 'number') ? v : '';
         }
 
         q.items.forEach(it => {
           const tr = el('tr');
           tr.appendChild(el('td', { class: 'si-label' }, [it.label]));
           const valCell = el('td', { class: 'si-val' });
+          const row = el('div', { class: 'rating' });
+          const btnByVal = new Map();
+          let naBtn = null, numInp = null;
+
+          const setVal = (newVal) => {
+            curObj[it.id] = newVal;
+            // exclusiveWith: when this item gets a numeric value, partner is forced to NA.
+            if (typeof newVal === 'number' && it.exclusiveWith) {
+              const partner = q.items.find(x => x.id === it.exclusiveWith);
+              if (partner && partner.allowNA) {
+                curObj[partner.id] = 'NA';
+                repaintRow(partner.id);
+              }
+            }
+            repaintRow(it.id);
+            refreshTotal();
+            fire();
+          };
+
           if (mode === 'options') {
-            const row = el('div', { class: 'rating' });
             it.options.forEach(v => {
               const b = el('button', { type: 'button' }, [String(v)]);
               if (curObj[it.id] === v) b.classList.add('sel');
-              b.onclick = () => {
-                curObj[it.id] = v;
-                [...row.children].forEach(c => c.classList.remove('sel'));
-                b.classList.add('sel');
-                refreshTotal();
-              };
+              b.onclick = () => setVal(v);
               row.appendChild(b);
+              btnByVal.set(v, b);
             });
             valCell.appendChild(row);
             valCell.appendChild(el('span', { class: 'si-max' }, ['/' + Math.max(...it.options)]));
           } else {
-            const inp = el('input', {
+            numInp = el('input', {
               type: 'number', min: '0', max: String(it.max),
-              value: curObj[it.id] ?? '',
+              value: (typeof curObj[it.id] === 'number') ? curObj[it.id] : '',
             });
-            inp.style.width = '70px';
-            inp.oninput = () => {
-              const n = inp.value === '' ? undefined : Math.max(0, Math.min(Number(it.max), Number(inp.value)));
-              if (n === undefined) delete curObj[it.id];
-              else curObj[it.id] = n;
+            numInp.style.width = '70px';
+            numInp.oninput = () => {
+              if (numInp.value === '') {
+                if (it.allowNA && it.defaultNA) curObj[it.id] = 'NA';
+                else delete curObj[it.id];
+              } else {
+                const n = Math.max(0, Math.min(Number(it.max), Number(numInp.value)));
+                setVal(n);
+                return;
+              }
               refreshTotal();
+              fire();
             };
-            valCell.appendChild(inp);
+            valCell.appendChild(numInp);
             valCell.appendChild(el('span', { class: 'si-max' }, ['/' + it.max]));
           }
+
+          if (it.allowNA) {
+            naBtn = el('button', { type: 'button', class: 'na-chip' }, ['Not assessed']);
+            if (curObj[it.id] === 'NA') naBtn.classList.add('sel');
+            naBtn.onclick = () => setVal('NA');
+            (mode === 'options' ? row : valCell).appendChild(naBtn);
+          }
+
+          // Inline qualifier tickbox (e.g. Bowels: Stoma; Bladder: Foley; Feeding: R/T).
+          // Stored at top-level answers[qualifier.id] as a boolean. Ticking the
+          // qualifier auto-sets the item's score to 0 (clinically the qualifier
+          // implies dependence for that ADL item).
+          if (it.qualifier) {
+            const qchk = el('input', { type: 'checkbox' });
+            qchk.checked = !!answers[it.qualifier.id];
+            qchk.onchange = () => {
+              if (qchk.checked) {
+                answers[it.qualifier.id] = true;
+                setVal(0);
+              } else {
+                delete answers[it.qualifier.id];
+                fire();
+              }
+            };
+            const qlbl = el('label', { class: 'subscore-qualifier' });
+            qlbl.appendChild(qchk);
+            qlbl.appendChild(document.createTextNode(' ' + it.qualifier.label));
+            valCell.appendChild(qlbl);
+          }
+
+          rowRefs[it.id] = { row, btnByVal, naBtn, numInp };
           tr.appendChild(valCell);
           table.appendChild(tr);
         });
 
+        const totalCellWrap = el('td', { class: 'si-val' },
+          [totalCell, el('span', { class: 'si-max' }, ['/' + totalMax]), totalSuffix]);
+
+        // totalExtras: extra inline fields rendered on the total row, bound to
+        // separate top-level answer keys. Used for things like a MoCA cut-off
+        // input sitting next to the total.
+        if (Array.isArray(q.totalExtras)) {
+          q.totalExtras.forEach(ex => {
+            const sep = el('span', { class: 'total-extra-sep' }, ['  ']);
+            const lbl = el('span', { class: 'total-extra-label' }, [(ex.label || '') + ': ']);
+            const inp = el('input', {
+              type: ex.inputType || 'number',
+              placeholder: ex.placeholder || '',
+              class: 'total-extra-input',
+            });
+            if (answers[ex.id] !== undefined && answers[ex.id] !== null) inp.value = answers[ex.id];
+            inp.oninput = () => {
+              if (inp.value === '') delete answers[ex.id];
+              else answers[ex.id] = ex.inputType === 'text' ? inp.value : Number(inp.value);
+              fire();
+            };
+            const suf = ex.suffix ? el('span', { class: 'si-max' }, [ex.suffix]) : null;
+            totalCellWrap.appendChild(sep);
+            totalCellWrap.appendChild(lbl);
+            totalCellWrap.appendChild(inp);
+            if (suf) totalCellWrap.appendChild(suf);
+          });
+        }
+
         const totalRow = el('tr', { class: 'total-row' }, [
           el('td', {}, ['Total']),
-          el('td', {}, [totalCell, el('span', { class: 'si-max' }, ['/' + totalMax])]),
+          totalCellWrap,
         ]);
         table.appendChild(totalRow);
         wrap.appendChild(table);
@@ -760,7 +1102,6 @@
         answers[q.id] = curObj;
 
         if (q.layout === 'grid-2x2' && q.parts.length === 4) {
-          // 4 parts in a 2x2 grid with row/col headers (e.g. Power: R/L × Upper/Lower).
           const grid = el('div', { class: 'composite-grid' });
           const cols = q.colHeaders || ['', ''];
           const rows = q.rowHeaders || ['', ''];
@@ -793,6 +1134,7 @@
               placeholder: p.placeholder || '',
             });
             if (p.wide) inp.classList.add('wide');
+            if (p.extraWide) { inp.classList.add('extra-wide'); part.classList.add('extra-wide'); }
             inp.value = curObj[p.id] != null ? curObj[p.id] : '';
             inp.oninput = () => {
               if (inp.value === '') delete curObj[p.id];
@@ -805,6 +1147,222 @@
           });
           wrap.appendChild(row);
         }
+        break;
+      }
+      case 'fthue_grade': {
+        // Visualised FTHUE 1–7 selector for both hands. Renders a small
+        // reference table (level / task description) and two button rows for
+        // Right / Left. Storage shape: { r, l }.
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        answers[q.id] = curObj;
+
+        const levels = q.levels || [
+          { n: 1, task: 'None' },
+          { n: 2, task: 'A: Associated reactions; B: Hand into Lap' },
+          { n: 3, task: 'C: Arm Clearance During Shirt Tuck; D: Hold a Pouch' },
+          { n: 4, task: 'E: Stabilize a Jar and Open the Lid; F: Show a Rag Twisting Action' },
+          { n: 5, task: 'G: "Blocks and Box"; H: Eat with a Spoon' },
+          { n: 6, task: 'I: Box on Shelf; J: Drink from Glass' },
+          { n: 7, task: 'K: Key Turning; L1: Use Chopsticks (Dominant); L2: Clamp Cloth Pins (Non-dominant)' },
+        ];
+
+        const refTable = el('table', { class: 'fthue-ref' });
+        const refHead = el('tr');
+        ['Level', 'Task'].forEach(h => refHead.appendChild(el('th', {}, [h])));
+        refTable.appendChild(refHead);
+        levels.forEach(lv => {
+          refTable.appendChild(el('tr', {}, [
+            el('td', { class: 'fthue-lvl' }, [String(lv.n)]),
+            el('td', { class: 'fthue-task' }, [lv.task]),
+          ]));
+        });
+        wrap.appendChild(refTable);
+
+        const sel = el('div', { class: 'fthue-selectors' });
+        const sideRefs = {};
+        const drawSide = (side, label) => {
+          const row = el('div', { class: 'fthue-side-row' });
+          row.appendChild(el('span', { class: 'fthue-side-label' }, [label + ':']));
+          const btnRow = el('div', { class: 'rating' });
+          const buttons = [];
+          for (let i = 1; i <= 7; i++) {
+            const b = el('button', { type: 'button' }, [String(i)]);
+            if (curObj[side] === i) b.classList.add('sel');
+            b.onclick = () => {
+              curObj[side] = i;
+              buttons.forEach(c => c.classList.remove('sel'));
+              b.classList.add('sel');
+              fire();
+            };
+            btnRow.appendChild(b);
+            buttons.push(b);
+          }
+          row.appendChild(btnRow);
+          sideRefs[side] = { row, buttons };
+          sel.appendChild(row);
+        };
+        drawSide('r', 'Right');
+        drawSide('l', 'Left');
+        wrap.appendChild(sel);
+        break;
+      }
+      case 'hdrs_table': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        answers[q.id] = curObj;
+
+        const computeFactor = (a, b) => {
+          if (a == null || a === '' || b == null || b === '') return null;
+          return Math.floor((Number(a) + Number(b)) / 2);
+        };
+        const LEVEL_NAMES = {
+          1: 'Very Low', 2: 'Low', 3: 'Moderate Low',
+          4: 'Moderate High', 5: 'High', 6: 'Very High',
+        };
+        const computeLevel = (f1, f2, f3) => {
+          if (f1 == null || f2 == null || f3 == null) return null;
+          const total = f1 + f2 + f3;
+          let lvl;
+          if (total <= 5) lvl = 1;
+          else if (total <= 7) lvl = 2;
+          else if (total <= 9) lvl = 3;
+          else if (total <= 11) lvl = 4;
+          else if (total <= 13) lvl = 5;
+          else lvl = 6;
+          if ((f1 === 1 || f2 === 1 || f3 === 1) && lvl > 1) lvl -= 1;
+          return lvl;
+        };
+
+        const factors = q.factors || [
+          { title: 'Factor 1\nPatient attitude and sense of competency',
+            elements: [
+              { id: 'f1_e1', label: 'Patient attitude' },
+              { id: 'f1_e2', label: 'Patient sense of competency' },
+            ],
+            ratingId: 'f1_rating' },
+          { title: 'Factor 2\nCarer attitude and sense of competency',
+            elements: [
+              { id: 'f2_e1', label: 'Availability of carer' },
+              { id: 'f2_e2', label: 'Carer attitude and competency' },
+            ],
+            ratingId: 'f2_rating' },
+          { title: 'Factor 3\nHome safety and environment',
+            elements: [
+              { id: 'f3_e1', label: 'Specific home safety' },
+              { id: 'f3_e2', label: 'Specific home environment' },
+            ],
+            ratingId: 'f3_rating' },
+        ];
+        const elementMax = q.elementMax || 5;
+        const factorMax = q.factorMax || 5;
+        const levelId = q.levelId || 'level';
+
+        const computedCells = { factor: {}, level: null };
+
+        const recompute = () => {
+          factors.forEach(f => {
+            const sc = computeFactor(curObj[f.elements[0].id], curObj[f.elements[1].id]);
+            if (sc == null) delete curObj[f.ratingId]; else curObj[f.ratingId] = sc;
+            const cell = computedCells.factor[f.ratingId];
+            if (cell) {
+              cell.querySelector('.hdrs-comp-val').textContent = sc == null ? '—' : String(sc);
+            }
+          });
+          const fs = factors.map(f => curObj[f.ratingId]);
+          const lvl = computeLevel(fs[0], fs[1], fs[2]);
+          if (lvl == null) { delete curObj[levelId]; delete curObj[levelId + '_name']; }
+          else { curObj[levelId] = lvl; curObj[levelId + '_name'] = LEVEL_NAMES[lvl]; }
+          if (computedCells.level) {
+            const valEl = computedCells.level.querySelector('.hdrs-comp-val');
+            const nameEl = computedCells.level.querySelector('.hdrs-comp-name');
+            valEl.textContent = lvl == null ? '—' : `Level ${lvl}`;
+            nameEl.textContent = lvl == null ? '' : LEVEL_NAMES[lvl];
+          }
+        };
+
+        function elementCell(key, max) {
+          const wrap = el('div', { class: 'hdrs-num' });
+          const inp = el('input', {
+            type: 'number', min: '1', max: String(max),
+            placeholder: '1-' + max, inputmode: 'numeric',
+          });
+          inp.value = (curObj[key] != null && curObj[key] !== '') ? curObj[key] : '';
+          inp.oninput = () => {
+            if (inp.value === '') { delete curObj[key]; }
+            else {
+              const n = Math.max(1, Math.min(max, Number(inp.value)));
+              curObj[key] = n;
+            }
+            recompute();
+            fire();
+          };
+          wrap.appendChild(inp);
+          wrap.appendChild(el('span', { class: 'hdrs-num-max' }, ['/' + max]));
+          return wrap;
+        }
+
+        function computedCell(initVal, max) {
+          const wrap = el('div', { class: 'hdrs-comp' });
+          wrap.appendChild(el('span', { class: 'hdrs-comp-val' },
+            [initVal == null ? '—' : String(initVal)]));
+          if (max) wrap.appendChild(el('span', { class: 'hdrs-comp-max' }, ['/' + max]));
+          return wrap;
+        }
+
+        function levelCell(initLvl) {
+          const wrap = el('div', { class: 'hdrs-comp hdrs-comp-level' });
+          wrap.appendChild(el('div', { class: 'hdrs-comp-val' },
+            [initLvl == null ? '—' : `Level ${initLvl}`]));
+          wrap.appendChild(el('div', { class: 'hdrs-comp-name' },
+            [initLvl == null ? '' : LEVEL_NAMES[initLvl]]));
+          return wrap;
+        }
+
+        const table = el('table', { class: 'hdrs-table' });
+        const thead = el('thead');
+        const hr = el('tr');
+        ['Factors', 'Elements', 'Element ratings', 'Factor ratings', 'Level of Readiness']
+          .forEach(t => hr.appendChild(el('th', {}, [t])));
+        thead.appendChild(hr);
+        table.appendChild(thead);
+
+        const tbody = el('tbody');
+        const totalRows = factors.reduce((a, f) => a + f.elements.length, 0);
+        let bodyRowIdx = 0;
+        factors.forEach((f, fi) => {
+          f.elements.forEach((elt, ei) => {
+            const tr = el('tr');
+            if (ei === 0) {
+              const tdF = el('td', { rowspan: String(f.elements.length), class: 'factor-cell' });
+              const lines = (f.title || '').split('\n');
+              lines.forEach((ln, i) => {
+                if (i > 0) tdF.appendChild(el('br'));
+                tdF.appendChild(i === 0 ? el('strong', {}, [ln]) : document.createTextNode(ln));
+              });
+              tr.appendChild(tdF);
+            }
+            tr.appendChild(el('td', { class: 'elt-label' }, [elt.label]));
+            const tdER = el('td'); tdER.appendChild(elementCell(elt.id, elementMax)); tr.appendChild(tdER);
+            if (ei === 0) {
+              const tdFR = el('td', { rowspan: String(f.elements.length), class: 'factor-rating' });
+              const cell = computedCell(curObj[f.ratingId] != null ? curObj[f.ratingId] : null, factorMax);
+              computedCells.factor[f.ratingId] = cell;
+              tdFR.appendChild(cell);
+              tr.appendChild(tdFR);
+            }
+            if (bodyRowIdx === 0) {
+              const tdL = el('td', { rowspan: String(totalRows), class: 'level-cell' });
+              const lcell = levelCell(curObj[levelId] != null ? curObj[levelId] : null);
+              computedCells.level = lcell;
+              tdL.appendChild(lcell);
+              tr.appendChild(tdL);
+            }
+            tbody.appendChild(tr);
+            bodyRowIdx++;
+          });
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        recompute();
         break;
       }
     }
@@ -828,6 +1386,36 @@
       wrap.appendChild(details);
     }
 
+    // allowSuspend: append a small toggle + reason field. When on, the question's
+    // normal report line is skipped and the section emits one combined sentence
+    // listing the deduplicated reasons. Stored at answers.__suspended[q.id].
+    if (q.allowSuspend) {
+      const susp = answers.__suspended = answers.__suspended || {};
+      const row = el('div', { class: 'suspend-row' });
+      const cb = el('input', { type: 'checkbox' });
+      const reason = el('input', {
+        type: 'text', class: 'inline-text',
+        placeholder: 'reason (e.g. dizziness, pain, refused)',
+      });
+      const initial = susp[q.id];
+      if (initial !== undefined) { cb.checked = true; reason.value = initial; }
+      const sync = () => {
+        if (cb.checked) susp[q.id] = reason.value;
+        else delete susp[q.id];
+        wrap.classList.toggle('suspended', cb.checked);
+        if (ctx && ctx.fireChange) ctx.fireChange();
+      };
+      cb.onchange = sync;
+      reason.oninput = () => { cb.checked = true; sync(); };
+      const lbl = el('label', { class: 'suspend-label' });
+      lbl.appendChild(cb);
+      lbl.appendChild(document.createTextNode(' Suspend assessment — reason: '));
+      lbl.appendChild(reason);
+      row.appendChild(lbl);
+      wrap.appendChild(row);
+      if (initial !== undefined) wrap.classList.add('suspended');
+    }
+
     return wrap;
   }
 
@@ -835,26 +1423,35 @@
     if (a === undefined || a === null || a === '') return true;
     if (Array.isArray(a) && a.length === 0) return true;
     if (q.type === 'sub_score') {
-      return typeof a !== 'object' || !Object.keys(a || {}).length;
+      if (typeof a !== 'object' || !Object.keys(a || {}).length) return true;
+      // If every recorded value is the NA marker, treat as empty.
+      return !Object.values(a).some(v => typeof v === 'number');
     }
-    if (q.type === 'composite') {
+    if (q.type === 'composite' || q.type === 'hdrs_table' || q.type === 'fthue_grade') {
       if (typeof a !== 'object') return true;
       return !Object.values(a).some(v => v !== '' && v !== undefined && v !== null);
     }
     if (q.type === 'multiple_choice' && typeof a === 'object' && !Array.isArray(a)) {
-      // Object form { value, sub, other }: empty if no value AND no sub picks AND no other text.
       const sub = Array.isArray(a.sub) ? a.sub : [];
       return !a.value && sub.length === 0 && !a.other;
     }
     return false;
   }
 
-  // Render a single checkbox entry (string or {value, detail, sub, other}) as text.
+  // Sub-option entries may be plain strings or { value, detail } objects.
+  function formatSubEntry(sit) {
+    if (typeof sit !== 'object' || sit === null) return String(sit);
+    return sit.detail ? `${sit.value} (${sit.detail})` : String(sit.value);
+  }
+
   function formatCheckEntry(it) {
     if (typeof it !== 'object' || it === null) return String(it);
     let s = it.value;
-    if (it.detail) s += ': ' + it.detail;
-    if (Array.isArray(it.sub) && it.sub.length) s += ' (' + it.sub.join(', ') + ')';
+    if (it.detail) {
+      const joiner = it.detailJoiner !== undefined ? it.detailJoiner : ': ';
+      s += joiner + it.detail + (it.detailSuffix || '');
+    }
+    if (Array.isArray(it.sub) && it.sub.length) s += ' (' + it.sub.map(formatSubEntry).join(', ') + ')';
     if (it.other) s += (it.sub && it.sub.length ? '; ' : ' (') + 'Other: ' + it.other + (it.sub && it.sub.length ? '' : ')');
     return s;
   }
@@ -862,7 +1459,6 @@
   function formatAnswer(q, a) {
     if (isEmptyAnswer(q, a)) return '—';
     if (q.type === 'checkbox' && Array.isArray(a)) {
-      // combineAdjacent: pick adjacent option values from a 3+ option list and emit "X to Y".
       if (q.combineAdjacent && Array.isArray(q.options)) {
         const optVals = q.options.map(o => typeof o === 'string' ? o : o.value);
         const picked = a
@@ -872,8 +1468,10 @@
           const i0 = optVals.indexOf(picked[0]);
           const i1 = optVals.indexOf(picked[1]);
           if (Math.abs(i0 - i1) === 1) {
-            const [hi, lo] = i0 < i1 ? [picked[0], picked[1]] : [picked[1], picked[0]];
-            return `${hi} to ${lo}`;
+            // Output worse-to-better, i.e. higher-index option first
+            // (options are listed best-first, e.g. Good, Fair, Poor).
+            const [better, worse] = i0 < i1 ? [picked[0], picked[1]] : [picked[1], picked[0]];
+            return `${worse} to ${better}`;
           }
         }
         if (picked.length === 1) return picked[0];
@@ -903,6 +1501,20 @@
         : q.items.reduce((x, it) => x + (mode === 'max'
             ? Number(it.max || 0)
             : Math.max(...(it.options || [0]))), 0);
+      // pendingPolicy: when any required item (i.e. items not in `ignoreItems`)
+      // is unrated/NA, the total is reported as `≥X/Y pending further assessment later`.
+      if (q.pendingPolicy) {
+        const ignore = new Set(q.pendingPolicy.ignoreItems || []);
+        const incomplete = q.items.some(it => {
+          if (ignore.has(it.id)) return false;
+          const v = a[it.id];
+          return typeof v !== 'number';
+        });
+        if (incomplete) {
+          const tail = q.pendingPolicy.pendingText || ', pending further assessment later';
+          return `≥${total}/${totalMax}${tail}`;
+        }
+      }
       return `${total}/${totalMax}`;
     }
     if (q.type === 'multiple_choice' && typeof a === 'object' && !Array.isArray(a)) {
@@ -914,531 +1526,549 @@
     return String(a);
   }
 
-  // Compact, semicolon-separated sub-score breakdown that soft-wraps to keep lines short.
-  function subScoreBreakdownLines(q, a, maxLen = 90) {
+  function subScoreBreakdownLines(q, a, maxLen = 90, answers = {}) {
     if (!a || typeof a !== 'object') return [];
     const mode = q.mode || 'max';
-    const parts = q.items
-      .filter(it => a[it.id] !== undefined && a[it.id] !== '')
-      .map(it => {
-        const max = mode === 'max' ? it.max : Math.max(...it.options);
-        return `${it.label}: ${a[it.id]}/${max}`;
+    const naLabel = q.naLabel || 'Not assessed';
+    const includeNA = !!q.includeNAInBreakdown;
+    const itemMax = it => mode === 'max' ? it.max : Math.max(...it.options);
+    const qualifierTag = it => (it.qualifier && answers[it.qualifier.id]) ? ` (${it.qualifier.label})` : '';
+    const formatItem = it => {
+      const v = a[it.id];
+      if (typeof v === 'number') return `${it.label}: ${v}/${itemMax(it)}${qualifierTag(it)}`;
+      if (includeNA) return `${it.label}: ${naLabel}${qualifierTag(it)}`;
+      return null;
+    };
+
+    // combineItems: collapse a set of item ids into one line. Whichever item
+    // has a numeric value is shown; if both are NA the combined label reads NA.
+    const combined = new Set();
+    const combinedRows = [];
+    if (Array.isArray(q.combineItems)) {
+      q.combineItems.forEach(grp => {
+        const items = grp.ids.map(id => q.items.find(x => x.id === id)).filter(Boolean);
+        items.forEach(it => combined.add(it.id));
+        const ratedItem = items.find(it => typeof a[it.id] === 'number');
+        if (ratedItem) {
+          combinedRows.push({ pos: q.items.indexOf(ratedItem),
+            text: `${grp.label}: ${a[ratedItem.id]}/${itemMax(ratedItem)}` });
+        } else if (includeNA) {
+          combinedRows.push({ pos: q.items.indexOf(items[0]),
+            text: `${grp.label}: ${naLabel}` });
+        }
       });
-    const sep = '; ';
+    }
+
+    const parts = [];
+    q.items.forEach((it, idx) => {
+      if (combined.has(it.id)) {
+        // emit combined row at the position of its first member
+        const cr = combinedRows.find(r => r.pos === idx);
+        if (cr) parts.push(cr.text);
+        return;
+      }
+      const t = formatItem(it);
+      if (t) parts.push(t);
+    });
+
+    const sep = q.breakdownSep || '  ';
     const lines = [];
+    // breakdownItemsPerLine: fixed number of items per row, ignoring char width.
+    if (typeof q.breakdownItemsPerLine === 'number' && q.breakdownItemsPerLine > 0) {
+      const n = q.breakdownItemsPerLine;
+      for (let i = 0; i < parts.length; i += n) {
+        lines.push(parts.slice(i, i + n).join(sep));
+      }
+      return lines;
+    }
     let cur = '';
     for (const p of parts) {
       if (!cur) { cur = p; continue; }
-      if ((cur + sep + p).length > maxLen) { lines.push(cur + ';'); cur = p; }
+      if ((cur + sep + p).length > maxLen) { lines.push(cur); cur = p; }
       else cur += sep + p;
     }
     if (cur) lines.push(cur);
     return lines;
   }
 
-  function buildReport(form, answers) {
-    const comments = answers.__comments || {};
-    const hidden = new Set(answers.__hiddenSections || []);
-    const hiddenQ = new Set(answers.__hiddenQuestions || []);
-    const lines = [];
-    lines.push(form.title);
-    const caseInfo = answers.__case;
-    if (caseInfo && (caseInfo.caseId || caseInfo.assessmentDate)) {
+  // Build a flat map of all questions across the form, keyed by id. Used to
+  // resolve cross-references like {q:mbi} in report templates.
+  function flattenQuestions(form) {
+    const map = {};
+    form.schema.sections.forEach(s => {
+      (s.questions || []).forEach(q => { if (q.id) map[q.id] = q; });
+    });
+    return map;
+  }
+
+  // Substitute {q:<id>} placeholders in a template with the formatted answer
+  // of another question. Falls back to "—" when missing.
+  function resolveCrossRefs(template, allQs, answers) {
+    return template.replace(/\{q:([a-zA-Z0-9_]+)\}/g, (m, id) => {
+      const oq = allQs[id];
+      if (!oq) return '';
+      const oa = answers[id];
+      if (isEmptyAnswer(oq, oa)) return '—';
+      return formatAnswer(oq, oa);
+    });
+  }
+
+  // Named custom report composers — invoked when a question has `customReport: "<name>"`.
+  // Return null/undefined to skip the line; otherwise the returned string is pushed.
+  const customReportFns = {
+    // Compact two-line summary for the Premorbid ADL section. Attach this to
+    // ONE question (e.g. premorbid_badl) and set hideInReport on the others
+    // so they don't double-emit. Empty fields are dropped from the output.
+    premorbid_adl(q, a, allQs, answers) {
+      const v = id => {
+        const oq = allQs[id];
+        if (!oq) return null;
+        const ov = answers[id];
+        if (isEmptyAnswer(oq, ov)) return null;
+        return formatAnswer(oq, ov);
+      };
+      const lines = [];
+      const l1 = [];
+      const badl = v('premorbid_badl');
+      const iadl = v('premorbid_iadl');
+      if (badl) l1.push(`BADL: ${badl}.`);
+      if (iadl) l1.push(`IADL: ${iadl}.`);
+      if (l1.length) lines.push(l1.join('  '));
+
+      const l2 = [];
+      const inW = v('indoor_walk');
+      const inA = v('indoor_aid');
+      if (inW) l2.push(inA ? `Walk: ${inW} (Aid: ${inA})` : `Walk: ${inW}`);
+      else if (inA) l2.push(`Aid: ${inA}`);
+      const outW = v('outdoor_walk');
+      const outA = v('outdoor_aid');
+      if (outW) l2.push(outA ? `Outdoor mobility: ${outW} (Aid: ${outA})` : `Outdoor mobility: ${outW}`);
+      else if (outA) l2.push(`Outdoor aid: ${outA}`);
+      const occ = v('occupation');
+      if (occ) l2.push(`Occupation: ${occ}`);
+      if (l2.length) lines.push(l2.join('. ') + (l2[l2.length - 1].endsWith('.') ? '' : '.'));
+
+      return lines.length ? lines.join('\n') : null;
+    },
+    // Lives with + Home access on one line. "Live alone" / "OAHR" emit
+    // bare (no "Lives with" prefix). "Hostel" emits as "Live in Hostel".
+    // Everything else groups under "Lives with <a, b, c>".
+    social_lives_home(q, a, allQs, answers) {
       const parts = [];
-      if (caseInfo.caseId) parts.push('Ward/Bed: ' + caseInfo.caseId);
-      if (caseInfo.assessmentDate) parts.push('Date: ' + caseInfo.assessmentDate);
-      lines.push(parts.join('  |  '));
-    }
+      const lwQ = allQs.lives_with, lw = answers.lives_with;
+      if (lwQ && Array.isArray(lw) && lw.length) {
+        const liveAlone = [], oahr = [], hostel = [], lives = [];
+        lw.forEach(entry => {
+          const v = (typeof entry === 'object' && entry !== null) ? entry.value : entry;
+          const formatted = formatCheckEntry(entry);
+          if (v === 'Live alone') liveAlone.push('Live alone');
+          else if (v === 'OAHR') oahr.push('OAHR');
+          else if (v === 'Hostel') hostel.push('Live in Hostel');
+          else lives.push(formatted);
+        });
+        const segs = [];
+        if (lives.length) segs.push('Lives with ' + lives.join(', '));
+        if (liveAlone.length) segs.push('Live alone');
+        if (oahr.length) segs.push('OAHR');
+        if (hostel.length) segs.push('Live in Hostel');
+        if (segs.length) parts.push(segs.join('; '));
+      }
+      const haQ = allQs.home_access, ha = answers.home_access;
+      if (haQ && !isEmptyAnswer(haQ, ha)) parts.push(`Home access: ${formatAnswer(haQ, ha)}`);
+      const cmts = answers.__comments || {};
+      if (cmts.lives_with) parts.push(`Main carer / details: ${cmts.lives_with}`);
+      if (cmts.home_access) parts.push(`Floor / stairs detail: ${cmts.home_access}`);
+      return parts.length ? parts.join('. ') + '.' : null;
+    },
 
+    // Bathing setup + Bath by on one line.
+    bathing_combo(q, a, allQs, answers) {
+      const parts = [];
+      const sQ = allQs.bathing_setup, s = answers.bathing_setup;
+      if (sQ && !isEmptyAnswer(sQ, s)) parts.push(`Bathing setup: ${formatAnswer(sQ, s)}`);
+      const mQ = allQs.bath_method, m = answers.bath_method;
+      if (mQ && !isEmptyAnswer(mQ, m)) parts.push(`Bath by: ${formatAnswer(mQ, m)}`);
+      return parts.length ? parts.join('. ') + '.' : null;
+    },
+
+    // Mental state + Follow command on one line.
+    mental_followcmd(q, a, allQs, answers) {
+      const parts = [];
+      const msQ = allQs.mental_state, ms = answers.mental_state;
+      if (msQ && !isEmptyAnswer(msQ, ms)) parts.push(`Mental state: ${formatAnswer(msQ, ms)}`);
+      const fcQ = allQs.follow_cmd, fc = answers.follow_cmd;
+      if (fcQ && !isEmptyAnswer(fcQ, fc)) parts.push(`Follow command: ${formatAnswer(fcQ, fc)}`);
+      return parts.length ? parts.join('. ') + '.' : null;
+    },
+
+    // "Cognitive assessment" header line in Mental Function. When Performed,
+    // emit just the header so AMT/CDT/MoCA show below; otherwise emit the
+    // status (e.g. "Cognitive assessment: Failed to assess due to poor GCS.").
+    cog_status_header(q, a) {
+      if (!a) return null;
+      if (a === 'Performed') return 'Cognitive assessment:';
+      return `Cognitive assessment: ${a}.`;
+    },
+
+    // Single multi-line MoCA block: total line with cut-off + Education,
+    // then sub-score breakdown, then Interpretation, then Cognitive impression.
+    moca_full(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const total = formatAnswer(q, a);
+      let header = `MoCA: Total score: ${total}`;
+      const cutoff = answers.moca_cutoff;
+      if (cutoff !== undefined && cutoff !== '' && cutoff !== null) {
+        header += ` (cut-off: ${cutoff}/30)`;
+      }
+      const edu = answers.moca_education;
+      if (edu !== undefined && edu !== '' && edu !== null) {
+        header += ` [Educational level: ${edu}]`;
+      }
+      const lines = [header];
+      const bd = subScoreBreakdownLines(q, a, undefined, answers);
+      if (bd.length) lines.push(...bd);
+      const bandQ = allQs.moca_band, band = answers.moca_band;
+      if (bandQ && !isEmptyAnswer(bandQ, band)) {
+        lines.push(`Interpretation: ${formatAnswer(bandQ, band)}.`);
+      }
+      const impQ = allQs.cog_impression, imp = answers.cog_impression;
+      if (impQ && !isEmptyAnswer(impQ, imp)) {
+        lines.push(`Cognitive impression: ${formatAnswer(impQ, imp)}`);
+      }
+      return lines.join('\n');
+    },
+
+    // Balance: Sitting + Standing on one line.
+    balance_combo(q, a, allQs, answers) {
+      const sitQ = allQs.balance_sit, sit = answers.balance_sit;
+      const stdQ = allQs.balance_stand, std = answers.balance_stand;
+      const parts = [];
+      if (sitQ && !isEmptyAnswer(sitQ, sit)) parts.push(`Sitting: ${formatAnswer(sitQ, sit)}`);
+      if (stdQ && !isEmptyAnswer(stdQ, std)) parts.push(`Standing: ${formatAnswer(stdQ, std)}`);
+      return parts.length ? `Balance: ${parts.join('; ')}` : null;
+    },
+
+    // Transfer: Lie to sit + Sit to stand on one line.
+    transfer_combo(q, a, allQs, answers) {
+      const lsQ = allQs.transfer_lie_sit, ls = answers.transfer_lie_sit;
+      const ssQ = allQs.transfer_sit_stand, ss = answers.transfer_sit_stand;
+      const parts = [];
+      if (lsQ && !isEmptyAnswer(lsQ, ls)) parts.push(`Lie to sit: ${formatAnswer(lsQ, ls)}`);
+      if (ssQ && !isEmptyAnswer(ssQ, ss)) parts.push(`Sit to stand: ${formatAnswer(ssQ, ss)}`);
+      return parts.length ? `Transfer: ${parts.join('; ')}` : null;
+    },
+
+    // Ambulation level + optional Aid suffix.
+    ambulation_combo(q, a, allQs, answers) {
+      const aidQ = allQs.ambulation_aid, aid = answers.ambulation_aid;
+      const aidStr = aidQ && !isEmptyAnswer(aidQ, aid) ? formatAnswer(aidQ, aid) : null;
+      if (isEmptyAnswer(q, a)) {
+        return aidStr ? `Ambulation: (Aid: ${aidStr})` : null;
+      }
+      let line = `Ambulation: ${formatAnswer(q, a)}`;
+      if (aidStr) line += ` (Aid: ${aidStr})`;
+      return line;
+    },
+
+    // Two-line Carer interview block: contact on the first line, care plan on the second.
+    carer_interview(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const contact = a.contact;
+      const plan = a.plan;
+      if (!contact && !plan) return null;
+      const lines = [];
+      let first = 'Carer interview :';
+      if (contact) first += `  Contact person/Phone no.: ${contact}`;
+      lines.push(first);
+      if (plan) lines.push(` Care plan: ${plan}`);
+      return lines.join('\n');
+    },
+
+    // One factor per line in Problem Identification — sub-options stay
+    // formatted in parentheses by formatCheckEntry.
+    problems_factors(q, a) {
+      if (!Array.isArray(a) || !a.length) return null;
+      return a.map(formatCheckEntry).join('\n');
+    },
+
+    cognitive(q, a, allQs, answers) {
+      // If cognitive assessment was not performed, emit just the reason —
+      // skip the AMT/CDT/MoCA breakdown entirely.
+      const status = answers.cog_status;
+      if (status && status !== 'Performed') {
+        const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
+        return `Cognitive assessment: ${status}.${userText}`;
+      }
+      const parts = [];
+      const amtQ = allQs.amt, amt = answers.amt;
+      if (amtQ && !isEmptyAnswer(amtQ, amt)) {
+        parts.push(`AMT ${formatAnswer(amtQ, amt)} (Cut-off 6/10)`);
+      }
+      const cdtQ = allQs.cdt, cdt = answers.cdt;
+      if (cdtQ && !isEmptyAnswer(cdtQ, cdt)) {
+        parts.push(`CDT ${formatAnswer(cdtQ, cdt)} (Cut-off 4)`);
+      }
+      const mocaQ = allQs.moca, moca = answers.moca;
+      if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
+        let s = `MoCA ${formatAnswer(mocaQ, moca)}`;
+        const inner = [];
+        const cut = answers.moca_cutoff;
+        if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
+        const bandQ = allQs.moca_band, band = answers.moca_band;
+        if (bandQ && !isEmptyAnswer(bandQ, band)) inner.push(formatAnswer(bandQ, band));
+        if (inner.length) s += ` (${inner.join(', ')})`;
+        parts.push(s);
+      }
+      const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
+      if (!parts.length) return userText.trim() ? `Cognitive:${userText}` : null;
+      return `Cognitive: ${parts.join('; ')}.${userText}`;
+    },
+  };
+
+  function buildReportBlocks(form, answers) {
+    const comments = answers.__comments || {};
+    const hiddenQ = new Set(answers.__hiddenQuestions || []);
+    const allQs = flattenQuestions(form);
+    const blocks = [];
+    // Report opens directly with the first section's content — no form title
+    // or Ward/Bed/Date banner. Case metadata is still shown in the report
+    // view's <p id="rMeta"> bar above the copyable text.
+    const headerLines = [];
+
+    const suspendedMap = answers.__suspended || {};
     form.schema.sections.forEach((s, si) => {
-      const key = s.id || `idx_${si}`;
-      if (hidden.has(key)) return;
-
-      // Build this section's body first; only emit the section if anything was added.
       const sectionLines = [];
+      // Section-level hideQuestionsIf: when matched, only the trigger question
+      // is rendered in the report — everything else in the section is skipped.
+      const sectionSkip = s.hideQuestionsIf && evalShowIf(s.hideQuestionsIf, answers);
+      const triggerId = sectionSkip ? s.hideQuestionsIf.questionId : null;
+      // Collect deduped reasons from any suspended questions in this section.
+      const sectionReasons = [];
       for (const q of s.questions) {
+        if (q.type === 'heading') continue;
+        if (q.hideInReport) continue;
+        if (sectionSkip && q.id !== triggerId) continue;
         if (hiddenQ.has(q.id)) continue;
         if (q.showIf && !evalShowIf(q.showIf, answers)) continue;
-        if (q.type === 'heading') {
-          // Emit as its own grouped sub-heading (blank line above, label on its own line).
-          if (sectionLines.length) sectionLines.push('');
-          sectionLines.push(q.label);
+        if (q.hideInReportIf && evalShowIf(q.hideInReportIf, answers)) continue;
+        if (q.allowSuspend && q.id in suspendedMap) {
+          const r = (suspendedMap[q.id] || '').trim();
+          if (r && !sectionReasons.includes(r)) sectionReasons.push(r);
           continue;
         }
+        // customReport: lets a question delegate its report line to a named composer.
+        if (q.customReport && customReportFns[q.customReport]) {
+          const out = customReportFns[q.customReport](q, answers[q.id], allQs, answers);
+          if (out) sectionLines.push(out);
+          continue;
+        }
+
+        if (Array.isArray(q.headerInputs)) {
+          for (const hi of q.headerInputs) {
+            const v = answers[hi.id];
+            if (v === undefined || v === '' || v === null) continue;
+            const tpl = hi.reportTemplate || `${hi.label}: {answer}`;
+            sectionLines.push(tpl.replace(/\{answer\}/g, String(v)));
+          }
+        }
+
         const a = answers[q.id];
         const cmt = comments[q.id];
-        const empty = isEmptyAnswer(q, a);
+        let empty = isEmptyAnswer(q, a);
+        // prefillFromQuestions / forceInReport: emit the line even when the
+        // user's own input is blank, so the auto-pulled context still shows.
+        if (empty && (q.forceInReport || (Array.isArray(q.prefillFromQuestions) && q.prefillFromQuestions.length))) {
+          empty = false;
+        }
+
+        if (q.type === 'hdrs_table' && !empty) {
+          const factors = q.factors || [
+            { title: 'Patient',     ratingId: 'f1_rating', elements: [{id:'f1_e1',label:'Patient attitude'},{id:'f1_e2',label:'Patient sense of competency'}] },
+            { title: 'Carer',       ratingId: 'f2_rating', elements: [{id:'f2_e1',label:'Availability of carer'},{id:'f2_e2',label:'Carer attitude and competency'}] },
+            { title: 'Environment', ratingId: 'f3_rating', elements: [{id:'f3_e1',label:'Specific home safety'},{id:'f3_e2',label:'Specific home environment'}] },
+          ];
+          const elementMax = q.elementMax || 5;
+          const factorMax  = q.factorMax  || 5;
+          const levelId    = q.levelId    || 'level';
+          factors.forEach((f, i) => {
+            const eltLine = f.elements
+              .filter(e => a[e.id] !== undefined && a[e.id] !== '')
+              .map(e => `${e.label}: ${a[e.id]}/${elementMax}`)
+              .join('  ');
+            const r = a[f.ratingId];
+            const head = f.title.split('\n')[0].replace(/^Factor \d+\s*/, '');
+            const lbl = f.title.split('\n')[0].startsWith('Factor') ? f.title.split('\n')[0] : `Factor ${i+1} (${head})`;
+            if (r !== undefined && r !== '') {
+              sectionLines.push(`${lbl} — Rating: ${r}/${factorMax}${eltLine ? '  [' + eltLine + ']' : ''}`);
+            } else if (eltLine) {
+              sectionLines.push(`${lbl}  [${eltLine}]`);
+            }
+          });
+          const lvl = a[levelId];
+          if (lvl !== undefined && lvl !== '') {
+            const lname = a[levelId + '_name'] || ({1:'Very Low',2:'Low',3:'Moderate Low',4:'Moderate High',5:'High',6:'Very High'})[lvl];
+            sectionLines.push(`Level of Readiness: Level ${lvl} (${lname})`);
+          }
+          continue;
+        }
 
         if (!empty) {
           let line;
+          // When force-emitting (no user input but prefill exists), replace
+          // {answer} with empty string instead of the "—" placeholder.
+          const isUserEmpty = isEmptyAnswer(q, a);
           if (q.reportTemplate) {
-            line = q.reportTemplate.replace(/\{answer\}/g, formatAnswer(q, a));
-            // For composite, also substitute {partId} → value (or empty if blank).
-            if (q.type === 'composite' && a && typeof a === 'object') {
+            const answerText = isUserEmpty ? '' : formatAnswer(q, a);
+            line = q.reportTemplate.replace(/\{answer\}/g, answerText);
+            if ((q.type === 'composite' || q.type === 'fthue_grade') && a && typeof a === 'object') {
               line = line.replace(/\{([a-zA-Z0-9_]+)\}/g, (m, key) =>
                 a[key] !== undefined && a[key] !== '' ? String(a[key]) : '');
-              // Collapse trailing empty "Label:" fragments separated by "; ".
               line = line.split(/;\s*/).filter(s => !/:\s*$/.test(s.trim())).join('; ');
             }
           } else {
             line = `${q.label}: ${formatAnswer(q, a)}`;
           }
+          // Resolve cross-question references like {q:mbi} -> formatted answer.
+          line = resolveCrossRefs(line, allQs, answers);
           if (cmt) {
             const lbl = q.commentLabel || 'Other';
             line += `; ${lbl}: ${cmt}`;
           }
-          sectionLines.push(line);
           if (q.type === 'sub_score' && q.showBreakdown !== false) {
-            sectionLines.push(...subScoreBreakdownLines(q, a));
+            const bd = subScoreBreakdownLines(q, a, undefined, answers);
+            if (q.breakdownPosition === 'before') {
+              sectionLines.push(...bd);
+              sectionLines.push(line);
+            } else {
+              sectionLines.push(line);
+              sectionLines.push(...bd);
+            }
+          } else {
+            sectionLines.push(line);
           }
         } else if (cmt) {
           const lbl = q.commentLabel || 'Other';
           sectionLines.push(`${q.label} — ${lbl}: ${cmt}`);
         }
       }
-
-      if (sectionLines.length) {
-        lines.push('');
-        lines.push(s.title);
-        lines.push(...sectionLines);
+      if (sectionReasons.length) {
+        sectionLines.push(`Suspended further assessment due to ${sectionReasons.join(' / ')}.`);
       }
+      if (sectionLines.length) blocks.push({ title: s.reportTitle || s.title, lines: sectionLines });
     });
-    return lines.join('\n').trim();
+
+    return { headerLines, blocks };
   }
 
-  // ---------- history ----------
-  function renderHistory() {
-    app.innerHTML = '';
-    app.appendChild(tpl('tpl-history'));
-    const list = app.querySelector('#historyList');
+  function buildReportParts(form, answers) {
+    const { headerLines, blocks } = buildReportBlocks(form, answers);
+    const isProblem = b => /problem\s*identification/i.test(b.title || '');
+    const isRecommend = b => /recommendation/i.test(b.title || '');
+
+    const compose = (blockList, includeHeader) => {
+      const out = [];
+      if (includeHeader) out.push(...headerLines);
+      blockList.forEach(b => {
+        if (out.length) out.push('');
+        out.push(b.title);
+        out.push(...b.lines);
+      });
+      return out.join('\n').trim();
+    };
+
+    return {
+      common: compose(blocks.filter(b => !isProblem(b) && !isRecommend(b)), true),
+      problem: compose(blocks.filter(isProblem), false),
+      recommendation: compose(blocks.filter(isRecommend), false),
+    };
+  }
+
+  function buildReport(form, answers) {
+    const { headerLines, blocks } = buildReportBlocks(form, answers);
+    const out = [...headerLines];
+    blocks.forEach(b => {
+      out.push('');
+      out.push(b.title);
+      out.push(...b.lines);
+    });
+    return out.join('\n').trim();
+  }
+
+  // ---------- history list (mounted inside the browse view) ----------
+  function renderHistoryList(list) {
+    list.innerHTML = '';
     const items = history.load();
     if (!items.length) {
       list.appendChild(el('p', { class: 'muted' }, ['No saved responses yet.']));
       return;
     }
+    const fmtDate = iso => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return Number.isFinite(d.getTime()) ? d.toLocaleDateString() : '—';
+    };
+
     for (const h of items) {
       const c = (h.answers && h.answers.__case) || {};
       const metaBits = [];
-      if (c.caseId) metaBits.push('Ward/Bed: ' + c.caseId);
-      if (c.assessmentDate) metaBits.push('Date: ' + c.assessmentDate);
-      metaBits.push('Saved: ' + new Date(h.savedAt).toLocaleString());
+      metaBits.push('Saved on: ' + fmtDate(h.savedAt));
+      if (!h.draft) metaBits.push('Expired on: ' + fmtDate(h.expiresAt));
+
+      const titleRow = el('div', { class: 'history-title' }, [
+        el('span', { class: 'badge ' + h.specialty }, [h.specialty]),
+      ]);
+      if (h.draft) {
+        titleRow.appendChild(el('span', { class: 'badge draft-badge' }, ['DRAFT']));
+      }
+      const primaryName = c.caseId || h.formTitle;
+      titleRow.appendChild(el('strong', { class: 'case-name' }, [primaryName]));
+      if (c.caseId) {
+        titleRow.appendChild(el('span', { class: 'form-label' }, [h.formTitle]));
+      }
+
+      const buttons = el('div', { class: 'row' }, [
+        el('button', {
+          onclick: () => setView('fill', h),
+        }, [h.draft ? 'Continue' : 'Edit']),
+      ]);
+      if (!h.draft) {
+        buttons.appendChild(el('button', {
+          class: 'primary',
+          onclick: async () => {
+            try {
+              const form = await loadForm(h.formId);
+              setView('report', { form, answers: h.answers, entry: h });
+            } catch (err) {
+              alert('Could not reopen form: ' + err.message);
+            }
+          },
+        }, ['View report']));
+        buttons.appendChild(el('button', {
+          title: 'Push the auto-delete date out by 7 days',
+          onclick: () => {
+            history.extend(h.id);
+            renderHistoryList(list);
+          },
+        }, ['Extend 7 days']));
+      }
+      buttons.appendChild(el('button', {
+        class: 'danger',
+        onclick: () => {
+          if (!confirm('Delete this saved response?')) return;
+          history.remove(h.id);
+          renderHistoryList(list);
+        },
+      }, ['Delete']));
+
       const card = el('div', { class: 'card' }, [
         el('div', {}, [
-          el('div', {}, [
-            el('span', { class: 'badge ' + h.specialty }, [h.specialty]),
-            el('strong', {}, [h.formTitle]),
-          ]),
-          el('div', { class: 'meta' }, [metaBits.join('  •  ')]),
+          titleRow,
+          el('div', { class: 'meta' }, [metaBits.join(' ; ')]),
         ]),
-        el('div', { class: 'row' }, [
-          el('button', {
-            onclick: async () => {
-              try { await navigator.clipboard.writeText(h.report); alert('Copied.'); }
-              catch { alert('Copy failed.'); }
-            },
-          }, ['Copy']),
-          el('button', {
-            onclick: () => setView('fill', h),
-          }, ['Edit']),
-          el('button', {
-            class: 'danger',
-            onclick: () => {
-              if (!confirm('Delete this saved response?')) return;
-              history.remove(h.id);
-              renderHistory();
-            },
-          }, ['Delete']),
-        ]),
+        buttons,
       ]);
       list.appendChild(card);
     }
-  }
-
-  // ---------- admin ----------
-  async function renderAdmin() {
-    app.innerHTML = '';
-    const me = await api('/api/me');
-    state.admin = me.admin;
-    if (!state.admin) {
-      app.appendChild(tpl('tpl-admin-login'));
-      app.querySelector('#loginForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const pw = app.querySelector('#pw').value;
-        try {
-          await api('/api/login', { method: 'POST', body: JSON.stringify({ password: pw }) });
-          renderAdmin();
-        } catch (err) {
-          app.querySelector('#loginErr').textContent = err.message;
-        }
-      };
-      return;
-    }
-    app.appendChild(tpl('tpl-admin'));
-    app.querySelector('#btnLogout').onclick = async () => {
-      await api('/api/logout', { method: 'POST' });
-      state.admin = false;
-      renderAdmin();
-    };
-    app.querySelector('#btnNew').onclick = () => setView('edit', null);
-    app.querySelector('#btnImport').onclick = () => app.querySelector('#fileImport').click();
-    app.querySelector('#fileImport').onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      try {
-        const payload = JSON.parse(await file.text());
-        const res = await api('/api/forms/import', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        alert('Imported form #' + res.id);
-        renderAdmin();
-      } catch (err) {
-        alert('Import failed: ' + err.message);
-      }
-    };
-
-    const pasteArea = app.querySelector('#pasteArea');
-    const pasteErr = app.querySelector('#pasteErr');
-    const pasteJson = app.querySelector('#pasteJson');
-    app.querySelector('#btnPaste').onclick = () => {
-      pasteArea.hidden = false;
-      pasteErr.textContent = '';
-      pasteJson.focus();
-    };
-    app.querySelector('#btnPasteCancel').onclick = () => {
-      pasteArea.hidden = true;
-      pasteJson.value = '';
-      pasteErr.textContent = '';
-    };
-    app.querySelector('#btnPasteImport').onclick = async () => {
-      pasteErr.textContent = '';
-      const text = pasteJson.value.trim();
-      if (!text) { pasteErr.textContent = 'Paste some JSON first.'; return; }
-      let payload;
-      try { payload = JSON.parse(text); }
-      catch (err) { pasteErr.textContent = 'Invalid JSON: ' + err.message; return; }
-      try {
-        const res = await api('/api/forms/import', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        alert('Imported form #' + res.id);
-        renderAdmin();
-      } catch (err) {
-        pasteErr.textContent = err.message;
-      }
-    };
-
-    const list = app.querySelector('#adminFormList');
-    const forms = await api('/api/forms');
-    if (!forms.length) {
-      list.appendChild(el('p', { class: 'muted' }, ['No forms yet.']));
-      return;
-    }
-    for (const f of forms) {
-      list.appendChild(el('div', { class: 'card' }, [
-        el('div', {}, [
-          el('div', {}, [
-            el('span', { class: 'badge ' + f.specialty }, [f.specialty]),
-            el('strong', {}, [f.title]),
-          ]),
-          el('div', { class: 'meta' }, [f.description || '']),
-        ]),
-        el('div', { class: 'row' }, [
-          el('button', { onclick: () => setView('edit', f.id) }, ['Edit']),
-          el('button', {
-            onclick: async () => {
-              const newTitle = prompt('Rename form:', f.title);
-              if (newTitle === null) return;
-              const trimmed = newTitle.trim();
-              if (!trimmed) { alert('Title cannot be empty.'); return; }
-              if (trimmed === f.title) return;
-              try {
-                const full = await api('/api/forms/' + f.id);
-                await api('/api/forms/' + f.id, {
-                  method: 'PUT',
-                  body: JSON.stringify({
-                    specialty: full.specialty,
-                    title: trimmed,
-                    description: full.description,
-                    schema: full.schema,
-                  }),
-                });
-                renderAdmin();
-              } catch (err) {
-                alert('Rename failed: ' + err.message);
-              }
-            },
-          }, ['Rename']),
-          el('button', {
-            class: 'danger',
-            onclick: async () => {
-              if (!confirm(`Delete "${f.title}" permanently? This cannot be undone.`)) return;
-              try {
-                await api('/api/forms/' + f.id, { method: 'DELETE' });
-                renderAdmin();
-              } catch (err) {
-                alert('Delete failed: ' + err.message);
-              }
-            },
-          }, ['Delete']),
-        ]),
-      ]));
-    }
-  }
-
-  // ---------- form builder ----------
-  async function renderEdit(id) {
-    app.innerHTML = '';
-    app.appendChild(tpl('tpl-edit'));
-    app.querySelector('.back').onclick = () => setView('admin');
-
-    let draft;
-    if (id) {
-      const f = await api('/api/forms/' + id);
-      draft = { id, specialty: f.specialty, title: f.title, description: f.description, schema: f.schema };
-      app.querySelector('#eTitle').textContent = 'Edit form';
-      app.querySelector('#btnDeleteForm').hidden = false;
-    } else {
-      draft = { specialty: 'Medical', title: '', description: '', schema: { sections: [] } };
-    }
-
-    app.querySelector('#eSpecialty').value = draft.specialty;
-    app.querySelector('#eFormTitle').value = draft.title;
-    app.querySelector('#eFormDesc').value = draft.description || '';
-
-    const sectionsHost = app.querySelector('#eSections');
-
-    function render() {
-      sectionsHost.innerHTML = '';
-      draft.schema.sections.forEach((s, si) => {
-        const block = el('div', { class: 'section-block' });
-        const head = el('div', { class: 'row between' }, [
-          el('strong', {}, ['Section ' + (si + 1)]),
-          el('button', {
-            class: 'danger', onclick: () => { draft.schema.sections.splice(si, 1); render(); },
-          }, ['Remove section']),
-        ]);
-        block.appendChild(head);
-
-        const tInp = el('input', { value: s.title || '', placeholder: 'Section title' });
-        tInp.oninput = () => { s.title = tInp.value; };
-        block.appendChild(el('label', {}, ['Title']));
-        block.appendChild(tInp);
-
-        const dInp = el('textarea', { rows: 1, placeholder: 'Optional description' });
-        dInp.value = s.description || '';
-        dInp.oninput = () => { s.description = dInp.value; };
-        block.appendChild(el('label', {}, ['Description']));
-        block.appendChild(dInp);
-
-        s.questions.forEach((q, qi) => {
-          block.appendChild(renderQuestionEditor(s, q, qi, render));
-        });
-        block.appendChild(el('button', {
-          onclick: () => {
-            s.questions.push({ id: uid(), type: 'short_text', label: '', required: false });
-            render();
-          },
-        }, ['+ Add question']));
-
-        sectionsHost.appendChild(block);
-      });
-    }
-    render();
-
-    app.querySelector('#btnAddSection').onclick = () => {
-      draft.schema.sections.push({ title: '', description: '', questions: [] });
-      render();
-    };
-
-    app.querySelector('#btnSaveForm').onclick = async () => {
-      draft.specialty = app.querySelector('#eSpecialty').value;
-      draft.title = app.querySelector('#eFormTitle').value.trim();
-      draft.description = app.querySelector('#eFormDesc').value.trim();
-      try {
-        if (draft.id) {
-          await api('/api/forms/' + draft.id, {
-            method: 'PUT',
-            body: JSON.stringify(draft),
-          });
-        } else {
-          await api('/api/forms', {
-            method: 'POST',
-            body: JSON.stringify(draft),
-          });
-        }
-        setView('admin');
-      } catch (err) {
-        app.querySelector('#eErr').textContent = err.message;
-      }
-    };
-    app.querySelector('#btnDeleteForm').onclick = async () => {
-      if (!confirm('Delete this form permanently?')) return;
-      await api('/api/forms/' + draft.id, { method: 'DELETE' });
-      setView('admin');
-    };
-  }
-
-  function renderQuestionEditor(section, q, qi, rerender) {
-    const wrap = el('div', { class: 'q-block' });
-    wrap.appendChild(el('div', { class: 'row between' }, [
-      el('span', { class: 'q-meta' }, ['Q' + (qi + 1)]),
-      el('button', {
-        class: 'danger',
-        onclick: () => { section.questions.splice(qi, 1); rerender(); },
-      }, ['Remove']),
-    ]));
-
-    const row = el('div', { class: 'q-row' });
-    const lab = el('input', { value: q.label || '', placeholder: 'Question label' });
-    lab.oninput = () => { q.label = lab.value; };
-    const typeSel = el('select');
-    ['short_text', 'long_text', 'number', 'date', 'yes_no',
-     'multiple_choice', 'checkbox', 'rating', 'sub_score'].forEach(t => {
-      const o = el('option', { value: t }, [t]);
-      if (q.type === t) o.selected = true;
-      typeSel.appendChild(o);
-    });
-    typeSel.onchange = () => { q.type = typeSel.value; rerender(); };
-
-    const reqLabel = el('label', { style: 'display:flex;gap:6px;align-items:center;margin:0;' });
-    const req = el('input', { type: 'checkbox' });
-    req.checked = !!q.required;
-    req.onchange = () => { q.required = req.checked; };
-    reqLabel.appendChild(req);
-    reqLabel.appendChild(document.createTextNode('Required'));
-
-    const cmtLabel = el('label', { style: 'display:flex;gap:6px;align-items:center;margin:0;' });
-    const cmt = el('input', { type: 'checkbox' });
-    cmt.checked = !!q.allowComment;
-    cmt.onchange = () => { q.allowComment = cmt.checked; };
-    cmtLabel.appendChild(cmt);
-    cmtLabel.appendChild(document.createTextNode('Allow comment'));
-
-    row.appendChild(el('div', {}, [el('label', {}, ['Label']), lab]));
-    row.appendChild(el('div', {}, [el('label', {}, ['Type']), typeSel]));
-    row.appendChild(el('div', {}, [el('label', {}, ['\u00a0']), reqLabel, cmtLabel]));
-    wrap.appendChild(row);
-
-    // optional hint & report template
-    const hint = el('input', { value: q.hint || '', placeholder: 'Optional hint shown under label' });
-    hint.oninput = () => { q.hint = hint.value; };
-    wrap.appendChild(el('label', {}, ['Hint']));
-    wrap.appendChild(hint);
-
-    const rep = el('input', { value: q.reportTemplate || '', placeholder: 'e.g. "GCS: {answer}"  ({answer} is replaced)' });
-    rep.oninput = () => { q.reportTemplate = rep.value; };
-    wrap.appendChild(el('label', {}, ['Report template (optional)']));
-    wrap.appendChild(rep);
-
-    if (q.type === 'multiple_choice' || q.type === 'checkbox') {
-      const optsWrap = el('div', { class: 'opts-list' });
-      q.options = q.options || [];
-      q.options.forEach((opt, oi) => {
-        const ri = el('div', { class: 'row' });
-        const oi1 = el('input', { value: opt });
-        oi1.oninput = () => { q.options[oi] = oi1.value; };
-        const rm = el('button', {
-          onclick: () => { q.options.splice(oi, 1); rerender(); },
-        }, ['x']);
-        ri.appendChild(oi1); ri.appendChild(rm);
-        optsWrap.appendChild(ri);
-      });
-      const add = el('button', {
-        onclick: () => { q.options.push(''); rerender(); },
-      }, ['+ Add option']);
-      wrap.appendChild(el('label', {}, ['Options']));
-      wrap.appendChild(optsWrap);
-      wrap.appendChild(add);
-
-      const otherLabel = el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:6px;' });
-      const other = el('input', { type: 'checkbox' });
-      other.checked = !!q.allowOther;
-      other.onchange = () => { q.allowOther = other.checked; };
-      otherLabel.appendChild(other);
-      otherLabel.appendChild(document.createTextNode('Allow "Other: __" free-text option'));
-      wrap.appendChild(otherLabel);
-    }
-
-    if (q.type === 'rating') {
-      const mn = el('input', { type: 'number', value: q.min ?? 0 });
-      mn.oninput = () => { q.min = Number(mn.value); };
-      const mx = el('input', { type: 'number', value: q.max ?? 10 });
-      mx.oninput = () => { q.max = Number(mx.value); };
-      const r = el('div', { class: 'row' }, [
-        el('div', {}, [el('label', {}, ['Min']), mn]),
-        el('div', {}, [el('label', {}, ['Max']), mx]),
-      ]);
-      wrap.appendChild(r);
-    }
-
-    if (q.type === 'sub_score') {
-      q.mode = q.mode || 'max';
-      q.items = q.items || [];
-      const modeSel = el('select');
-      [['max', 'max (per-item numeric input 0..max)'],
-       ['options', 'options (per-item discrete choices, e.g. 0/2/5/8/10)']].forEach(([v, lbl]) => {
-        const o = el('option', { value: v }, [lbl]);
-        if (q.mode === v) o.selected = true;
-        modeSel.appendChild(o);
-      });
-      modeSel.onchange = () => { q.mode = modeSel.value; rerender(); };
-      wrap.appendChild(el('label', {}, ['Mode']));
-      wrap.appendChild(modeSel);
-
-      const itemsJson = el('textarea', { rows: 6, class: 'mono' });
-      itemsJson.value = JSON.stringify(q.items, null, 2);
-      itemsJson.oninput = () => {
-        try { q.items = JSON.parse(itemsJson.value); itemsJson.classList.remove('bad'); }
-        catch { itemsJson.classList.add('bad'); }
-      };
-      const hint = q.mode === 'options'
-        ? 'Each item: {"id":"bowels","label":"Bowels","options":[0,2,5,8,10]}'
-        : 'Each item: {"id":"age","label":"Age","max":1}';
-      wrap.appendChild(el('label', {}, ['Items (JSON array) — ' + hint]));
-      wrap.appendChild(itemsJson);
-
-      const tm = el('input', { type: 'number', value: q.totalMax ?? '' });
-      tm.oninput = () => {
-        q.totalMax = tm.value === '' ? undefined : Number(tm.value);
-      };
-      wrap.appendChild(el('label', {}, ['Total max (optional — auto-summed if blank)']));
-      wrap.appendChild(tm);
-    }
-
-    // showIf builder (works for all question types)
-    const siDet = el('details', { class: 'comment-wrap', style: 'margin-top:8px;' });
-    if (q.showIf) siDet.setAttribute('open', '');
-    siDet.appendChild(el('summary', {}, ['Show only if… (conditional)']));
-    const enable = el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:4px;' });
-    const enableCb = el('input', { type: 'checkbox' });
-    enableCb.checked = !!q.showIf;
-    enable.appendChild(enableCb);
-    enable.appendChild(document.createTextNode('Enable condition'));
-    siDet.appendChild(enable);
-
-    const qid = el('input', { placeholder: 'Source question id (e.g. premorbid_walk)' });
-    qid.value = (q.showIf && q.showIf.questionId) || '';
-    const eq  = el('input', { placeholder: 'Equals (value to match)' });
-    eq.value = (q.showIf && q.showIf.equals !== undefined) ? q.showIf.equals : '';
-
-    const apply = () => {
-      if (!enableCb.checked) { delete q.showIf; return; }
-      q.showIf = { questionId: qid.value.trim() };
-      if (eq.value !== '') q.showIf.equals = eq.value;
-    };
-    enableCb.onchange = apply;
-    qid.oninput = apply; eq.oninput = apply;
-
-    const siRow = el('div', { class: 'row' }, [
-      el('div', { style: 'flex:1' }, [el('label', {}, ['Source question id']), qid]),
-      el('div', { style: 'flex:1' }, [el('label', {}, ['Equals']), eq]),
-    ]);
-    siDet.appendChild(siRow);
-    wrap.appendChild(siDet);
-
-    return wrap;
   }
 
   // ---------- boot ----------
