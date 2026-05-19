@@ -5,8 +5,12 @@
   "schema": {
     "sections": [
       {
-        "title": "Vital Signs",
+        "title": "Vital signs and Premorbid ADL",
         "questions": [
+          {
+            "type": "heading",
+            "label": "Vital signs"
+          },
           {
             "id": "vitals",
             "label": "Vital signs",
@@ -14,57 +18,110 @@
             "type": "composite",
             "width": "full",
             "parts": [
-              { "id": "bp_sys", "label": "BP", "placeholder": "120", "suffix": "/" },
-              { "id": "bp_dia", "label": "", "placeholder": "80", "suffix": " mmHg" },
-              { "id": "p", "label": "Pulse", "placeholder": "78", "suffix": "/min" },
-              { "id": "spo2", "label": "SpO2", "placeholder": "98", "suffix": "%" },
-              { "id": "o2", "label": "", "placeholder": "Room Air / L O2", "wide": true }
+              {
+                "id": "bp_sys",
+                "label": "BP",
+                "placeholder": "120",
+                "suffix": "/"
+              },
+              {
+                "id": "bp_dia",
+                "label": "",
+                "placeholder": "80",
+                "suffix": " mmHg"
+              },
+              {
+                "id": "p",
+                "label": "Pulse",
+                "placeholder": "78",
+                "suffix": "/min"
+              },
+              {
+                "id": "spo2",
+                "label": "SpO2",
+                "placeholder": "98",
+                "suffix": "%"
+              },
+              {
+                "id": "o2",
+                "label": "",
+                "placeholder": "Room Air / L O2",
+                "wide": true
+              }
             ],
             "joinWith": "  ",
-            "reportTemplate": "Vital signs: BP {bp_sys}/{bp_dia} mmHg  P {p}/min  SpO2 {spo2}% ({o2})"
-          }
-        ],
-        "reportTitle": "A. Vital Signs"
-      },
-      {
-        "title": "Premorbid ADL",
-        "hideQuestionsIf": {
-          "questionId": "social_limited",
-          "equals": "Limited information from patient, pending further assess"
-        },
-        "questions": [
+            "reportTemplate": "Vital signs: BP {bp_sys}/{bp_dia} mmHg, Pulse {p}/minute, SpO2 {spo2}%."
+          },
+          {
+            "type": "heading",
+            "label": "Premorbid ADL",
+            "headerTriggerQuestionId": "social_limited"
+          },
           {
             "id": "social_limited",
             "label": "Limited information",
             "hideLabel": true,
             "type": "checkbox",
             "width": "full",
-            "options": ["Limited information from patient, pending further assess"],
-            "reportTemplate": "Limited information from patient, pending further assessment."
+            "tickStyle": true,
+            "options": [
+              "Limited information from patient"
+            ],
+            "reportTemplate": "Premorbid ADL: limited information from patient."
           },
           {
             "id": "premorbid_badl",
             "label": "Premorbid BADL",
-            "type": "multiple_choice",
+            "type": "checkbox",
             "width": "half",
-            "options": ["Independent", "Supervision", "Mild Assistance", "Moderate Assistance", "Maximal Assistance", "Dependent"],
-            "customReport": "premorbid_adl"
-          },
-          {
-            "id": "premorbid_iadl",
-            "label": "Premorbid IADL",
-            "type": "multiple_choice",
-            "width": "half",
-            "options": ["Independent", "Supervision", "Mild Assistance", "Moderate Assistance", "Maximal Assistance", "Dependent"],
-            "hideInReport": true
+            "options": [
+              "Independent",
+              {
+                "value": "Independent up to",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              {
+                "value": "Supervision in",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              {
+                "value": "Assist in",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              "Dependent"
+            ],
+            "customReport": "premorbid_adl",
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            }
           },
           {
             "id": "indoor_walk",
             "label": "Indoor mobility / Walk",
             "type": "multiple_choice",
             "width": "full",
-            "options": ["Independent", "Supervision", "Assisted", "Dependent"],
-            "hideInReport": true
+            "options": [
+              "Independent",
+              "Supervision",
+              "Assisted",
+              "Dependent"
+            ],
+            "hideInReport": true,
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            },
+            "allowComment": true,
+            "commentLabel": "Remark",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail"
           },
           {
             "id": "indoor_aid",
@@ -72,18 +129,44 @@
             "type": "multiple_choice",
             "width": "full",
             "mergeUp": true,
-            "options": ["Unaided", "Stick", "Quadripod", "Frame", "Rollator", "Trolley", "Chairbound", "Bedbound"],
+            "options": [
+              "Unaided",
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator",
+              "Trolley",
+              "Chairbound",
+              "Bedbound"
+            ],
             "allowOther": true,
             "otherPlaceholder": "specify",
-            "hideInReport": true
+            "hideInReport": true,
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            }
           },
           {
             "id": "outdoor_walk",
             "label": "Outdoor mobility / Walk",
             "type": "multiple_choice",
             "width": "full",
-            "options": ["Independent", "Supervision", "Assisted", "Dependent"],
-            "hideInReport": true
+            "options": [
+              "Independent",
+              "Supervision",
+              "Assisted",
+              "Dependent"
+            ],
+            "hideInReport": true,
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            },
+            "allowComment": true,
+            "commentLabel": "Remark",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail"
           },
           {
             "id": "outdoor_aid",
@@ -91,29 +174,81 @@
             "type": "multiple_choice",
             "width": "full",
             "mergeUp": true,
-            "options": ["Unaided", "Stick", "Quadripod", "Frame", "Rollator", "Trolley", "Chairbound", "Bedbound"],
+            "options": [
+              "Unaided",
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator",
+              "Trolley",
+              "Wheelchair"
+            ],
             "allowOther": true,
             "otherPlaceholder": "specify",
-            "hideInReport": true
+            "hideInReport": true,
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            }
+          },
+          {
+            "id": "premorbid_iadl",
+            "label": "Premorbid IADL",
+            "type": "checkbox",
+            "width": "half",
+            "options": [
+              "Independent",
+              {
+                "value": "Independent up to",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              {
+                "value": "Supervision in",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              {
+                "value": "Assist in",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              "Dependent"
+            ],
+            "hideInReport": true,
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            }
           },
           {
             "id": "occupation",
             "label": "Occupation",
             "type": "multiple_choice",
             "width": "half",
-            "options": ["Retired"],
+            "options": [
+              "Retired"
+            ],
             "allowOther": true,
             "otherPlaceholder": "occupation",
-            "hideInReport": true
+            "hideInReport": true,
+            "showIf": {
+              "questionId": "social_limited",
+              "notEquals": "Limited information from patient"
+            }
           }
         ],
-        "reportTitle": "B. Premorbid ADL"
+        "reportTitle": "A. Vital signs and Premorbid ADL",
+        "hideReportTitle": true
       },
       {
         "title": "Social History and Home Environment",
         "hideQuestionsIf": {
           "questionId": "social_limited_sh",
-          "equals": "Limited information from patient, pending further assess"
+          "equals": "Limited information from patient"
         },
         "questions": [
           {
@@ -122,8 +257,11 @@
             "hideLabel": true,
             "type": "checkbox",
             "width": "full",
-            "options": ["Limited information from patient, pending further assess"],
-            "reportTemplate": "Limited information from patient, pending further assessment."
+            "tickStyle": true,
+            "options": [
+              "Limited information from patient"
+            ],
+            "reportTemplate": "Limited information from patient."
           },
           {
             "id": "lives_with",
@@ -131,16 +269,16 @@
             "type": "checkbox",
             "width": "full",
             "options": [
+              {
+                "value": "Live with",
+                "detail": true,
+                "detailPlaceholder": "spouse / child / domestic helper"
+              },
               "Live alone",
-              "Spouse",
-              "Child(ren)",
-              "Parent(s)",
-              "Sibling(s)",
-              "Domestic helper",
-              "Day time alone",
-              "Night time alone",
               "OAHR",
-              "Hostel"
+              "Hostel",
+              "Day time alone",
+              "Night time alone"
             ],
             "allowOther": true,
             "allowComment": true,
@@ -154,8 +292,16 @@
             "width": "half",
             "options": [
               "Direct lift-landing",
-              { "value": "Non-direct lift-landing", "subOptions": [], "subAllowOther": true },
-              { "value": "No lift", "subOptions": [], "subAllowOther": true }
+              {
+                "value": "Non-direct lift-landing",
+                "subOptions": [],
+                "subAllowOther": true
+              },
+              {
+                "value": "No lift",
+                "subOptions": [],
+                "subAllowOther": true
+              }
             ],
             "allowComment": true,
             "commentLabel": "Floor / stairs detail",
@@ -166,7 +312,11 @@
             "label": "Bathing setup",
             "type": "checkbox",
             "width": "full",
-            "options": ["Tub", "Shower", "Hot water system"],
+            "options": [
+              "Tub",
+              "Shower",
+              "Hot water system"
+            ],
             "allowOther": true,
             "customReport": "bathing_combo"
           },
@@ -179,7 +329,15 @@
             "options": [
               "Stand",
               "Squat",
-              { "value": "Sit on", "subOptions": ["Bath chair", "Tub board", "Shower stool"], "subAllowOther": true },
+              {
+                "value": "Sit on",
+                "subOptions": [
+                  "Bath chair",
+                  "Tub board",
+                  "Shower stool"
+                ],
+                "subAllowOther": true
+              },
               "Bedbath"
             ],
             "hideInReport": true
@@ -206,16 +364,44 @@
             "width": "full",
             "options": [
               "Nil",
-              { "value": "Day Care centre", "detail": true, "detailPlaceholder": "name / frequency" },
-              { "value": "Elderly Centre", "detail": true, "detailPlaceholder": "name / frequency" },
-              { "value": "Respite Services", "detail": true, "detailPlaceholder": "name / frequency" },
+              {
+                "value": "Day Care centre",
+                "detail": true,
+                "detailPlaceholder": "name / frequency"
+              },
+              {
+                "value": "Elderly Centre",
+                "detail": true,
+                "detailPlaceholder": "name / frequency"
+              },
+              {
+                "value": "Respite Services",
+                "detail": true,
+                "detailPlaceholder": "name / frequency"
+              },
               {
                 "value": "Home Help Service",
                 "subOptions": [
-                  { "value": "Meal on wheels", "detail": true, "detailPlaceholder": "frequency" },
-                  { "value": "Personal care", "detail": true, "detailPlaceholder": "frequency" },
-                  { "value": "Household", "detail": true, "detailPlaceholder": "frequency" },
-                  { "value": "Escort", "detail": true, "detailPlaceholder": "frequency" }
+                  {
+                    "value": "Meal on wheels",
+                    "detail": true,
+                    "detailPlaceholder": "frequency"
+                  },
+                  {
+                    "value": "Personal care",
+                    "detail": true,
+                    "detailPlaceholder": "frequency"
+                  },
+                  {
+                    "value": "Household",
+                    "detail": true,
+                    "detailPlaceholder": "frequency"
+                  },
+                  {
+                    "value": "Escort",
+                    "detail": true,
+                    "detailPlaceholder": "frequency"
+                  }
                 ],
                 "subAllowOther": true
               }
@@ -232,7 +418,16 @@
               "Safety alarm",
               "Commode",
               "Handrail",
-              { "value": "Walking aids", "subOptions": ["Stick", "Quad stick", "Frame", "Rollator"], "subAllowOther": true },
+              {
+                "value": "Walking aids",
+                "subOptions": [
+                  "Stick",
+                  "Quadripod",
+                  "Frame",
+                  "Rollator"
+                ],
+                "subAllowOther": true
+              },
               "Wheelchair"
             ],
             "allowOther": true
@@ -249,9 +444,21 @@
             "type": "composite",
             "width": "half",
             "parts": [
-              { "id": "e", "label": "E", "placeholder": "1-4" },
-              { "id": "v", "label": "V", "placeholder": "1-5" },
-              { "id": "m", "label": "M", "placeholder": "1-6" }
+              {
+                "id": "e",
+                "label": "E",
+                "placeholder": "1-4"
+              },
+              {
+                "id": "v",
+                "label": "V",
+                "placeholder": "1-5"
+              },
+              {
+                "id": "m",
+                "label": "M",
+                "placeholder": "1-6"
+              }
             ],
             "joinWith": " ",
             "reportTemplate": "GCS: {answer}"
@@ -261,16 +468,33 @@
             "label": "Mental state",
             "type": "multiple_choice",
             "width": "half",
-            "options": ["Alert", "Confused", "Drowsy", "Stupor"],
+            "options": [
+              "Alert",
+              "Confused",
+              "Drowsy",
+              "Stupor"
+            ],
             "allowComment": true,
+            "commentSingleLine": true,
             "customReport": "mental_followcmd"
           },
           {
             "id": "follow_cmd",
             "label": "Follow command",
-            "type": "multiple_choice",
+            "type": "checkbox",
             "width": "half",
-            "options": ["1 step", "2 steps", "3 steps", "Not follow command"],
+            "options": [
+              "1 step",
+              "2 steps",
+              "3 steps",
+              "Not follow command"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "allowComment": true,
+            "commentSingleLine": true,
+            "commentLabel": "Other",
             "hideInReport": true
           },
           {
@@ -278,14 +502,28 @@
             "label": "Orientated to",
             "type": "checkbox",
             "width": "half",
-            "options": ["Name", "Age", "Time", "Place", "Person"]
+            "options": [
+              "Name",
+              "Age",
+              "Time",
+              "Place",
+              "Person"
+            ],
+            "invertedCheckbox": true,
+            "unableToAssess": true,
+            "customReport": "orientation_split"
           },
           {
             "id": "speech",
             "label": "Speech",
             "type": "checkbox",
             "width": "full",
-            "options": ["Normal", "Expressive dysphasia", "Receptive dysphasia", "Dysarthria"],
+            "options": [
+              "Normal",
+              "Expressive dysphasia",
+              "Receptive dysphasia",
+              "Dysarthria"
+            ],
             "allowOther": true
           },
           {
@@ -293,7 +531,15 @@
             "label": "Cognitive assessment",
             "type": "multiple_choice",
             "width": "full",
-            "options": ["Performed", "Failed to assess due to poor GCS", "Declined", "Not applicable"],
+            "options": [
+              "Performed",
+              {
+                "value": "Failed to assess due to",
+                "detail": true,
+                "detailPlaceholder": "reason (e.g. poor GCS)"
+              },
+              "Declined"
+            ],
             "customReport": "cog_status_header"
           },
           {
@@ -306,21 +552,94 @@
             "width": "full",
             "hint": "Cut-off 6/10. Score below cut-off indicates further evaluation for possible cognitive impairment.",
             "items": [
-              { "id": "age", "label": "Age", "options": [0, 1] },
-              { "id": "time", "label": "Time", "options": [0, 1] },
-              { "id": "addr", "label": "Address for recall", "options": [0, 1] },
-              { "id": "year", "label": "Current year", "options": [0, 1] },
-              { "id": "place", "label": "Place", "options": [0, 1] },
-              { "id": "recog", "label": "Recognition of two persons", "options": [0, 1] },
-              { "id": "dob", "label": "Date of birth", "options": [0, 1] },
-              { "id": "festival", "label": "Date of mid-Autumn festival", "options": [0, 1] },
-              { "id": "leader", "label": "Name of present Governor / Chinese leader", "options": [0, 1] },
-              { "id": "count_back", "label": "Count from 20 to 1 backwards", "options": [0, 1] }
+              {
+                "id": "age",
+                "label": "Age",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "time",
+                "label": "Time",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "addr",
+                "label": "Address for recall",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "year",
+                "label": "Current year",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "place",
+                "label": "Place",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "recog",
+                "label": "Recognition of two persons",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "dob",
+                "label": "Date of birth",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "festival",
+                "label": "Date of mid-Autumn festival",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "leader",
+                "label": "Name of present Governor / Chinese leader",
+                "options": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "id": "count_back",
+                "label": "Count from 20 to 1 backwards",
+                "options": [
+                  0,
+                  1
+                ]
+              }
             ],
             "reportTemplate": "AMT: Total score: {answer} (Cut-off 6/10)",
             "breakdownItemsPerLine": 7,
             "breakdownSep": "   ",
-            "showIf": { "questionId": "cog_status", "equals": "Performed" }
+            "showIf": {
+              "questionId": "cog_status",
+              "equals": "Performed"
+            }
           },
           {
             "id": "cdt",
@@ -332,7 +651,10 @@
             "width": "full",
             "hint": "Cut-off 4. Lower score indicates lower cognitive function.",
             "reportTemplate": "Clock Drawing Test (CDT): {answer} (Cut-off 4)",
-            "showIf": { "questionId": "cog_status", "equals": "Performed" }
+            "showIf": {
+              "questionId": "cog_status",
+              "equals": "Performed"
+            }
           },
           {
             "id": "moca",
@@ -351,21 +673,58 @@
               }
             ],
             "items": [
-              { "id": "visuospatial", "label": "Visuospatial / Executive", "max": 5 },
-              { "id": "naming", "label": "Naming", "max": 3 },
-              { "id": "attention", "label": "Attention", "max": 6 },
-              { "id": "language", "label": "Language", "max": 3 },
-              { "id": "abstraction", "label": "Abstraction", "max": 2 },
-              { "id": "recall", "label": "Delayed Recall", "max": 5 },
-              { "id": "orientation", "label": "Orientation", "max": 6 }
+              {
+                "id": "visuospatial",
+                "label": "Visuospatial / Executive",
+                "max": 5
+              },
+              {
+                "id": "naming",
+                "label": "Naming",
+                "max": 3
+              },
+              {
+                "id": "attention",
+                "label": "Attention",
+                "max": 6
+              },
+              {
+                "id": "language",
+                "label": "Language",
+                "max": 3
+              },
+              {
+                "id": "abstraction",
+                "label": "Abstraction",
+                "max": 2
+              },
+              {
+                "id": "recall",
+                "label": "Delayed Recall",
+                "max": 5
+              },
+              {
+                "id": "orientation",
+                "label": "Orientation",
+                "max": 6
+              }
             ],
             "totalExtras": [
-              { "id": "moca_cutoff", "label": "Cut-off", "suffix": "/30", "inputType": "number", "placeholder": "26" }
+              {
+                "id": "moca_cutoff",
+                "label": "Cut-off",
+                "suffix": "/30",
+                "inputType": "number",
+                "placeholder": "26"
+              }
             ],
             "breakdownItemsPerLine": 5,
             "breakdownSep": "   ",
             "customReport": "moca_full",
-            "showIf": { "questionId": "cog_status", "equals": "Performed" }
+            "showIf": {
+              "questionId": "cog_status",
+              "equals": "Performed"
+            }
           },
           {
             "id": "moca_band",
@@ -379,15 +738,21 @@
               "≤7th percentile: Petersen MCI",
               "≤2nd percentile: DSM-5 major NCD"
             ],
-            "showIf": { "questionId": "cog_status", "equals": "Performed" },
+            "showIf": {
+              "questionId": "cog_status",
+              "equals": "Performed"
+            },
             "hideInReport": true
           },
           {
             "id": "cog_impression",
             "label": "Cognitive impression",
-            "type": "long_text",
-            "width": "half",
-            "showIf": { "questionId": "cog_status", "equals": "Performed" },
+            "type": "short_text",
+            "width": "full",
+            "showIf": {
+              "questionId": "cog_status",
+              "equals": "Performed"
+            },
             "hideInReport": true
           }
         ],
@@ -395,6 +760,7 @@
       },
       {
         "title": "Physical Assessment",
+        "suspendSummaryBefore": "vision",
         "questions": [
           {
             "id": "complaint",
@@ -408,13 +774,31 @@
             "type": "composite",
             "layout": "grid-2x2",
             "width": "half",
-            "rowHeaders": ["Upper", "Lower"],
-            "colHeaders": ["Right", "Left"],
+            "rowHeaders": [
+              "Upper",
+              "Lower"
+            ],
+            "colHeaders": [
+              "Right",
+              "Left"
+            ],
             "parts": [
-              { "id": "rul", "placeholder": "5" },
-              { "id": "lul", "placeholder": "5" },
-              { "id": "rll", "placeholder": "5" },
-              { "id": "lll", "placeholder": "5" }
+              {
+                "id": "rul",
+                "placeholder": "5"
+              },
+              {
+                "id": "lul",
+                "placeholder": "5"
+              },
+              {
+                "id": "rll",
+                "placeholder": "5"
+              },
+              {
+                "id": "lll",
+                "placeholder": "5"
+              }
             ],
             "reportTemplate": "Power:\n{rul} | {lul}\n{rll} | {lll}"
           },
@@ -423,8 +807,11 @@
             "label": "Tone",
             "type": "multiple_choice",
             "width": "half",
-            "options": ["NAD"],
+            "options": [
+              "NAD"
+            ],
             "allowOther": true,
+            "keepOtherLabel": true,
             "otherPlaceholder": "describe (e.g. increased on left side)"
           },
           {
@@ -433,16 +820,31 @@
             "type": "multiple_choice",
             "width": "half",
             "mergeUp": true,
-            "options": ["NAD"],
+            "options": [
+              "NAD"
+            ],
             "allowOther": true,
+            "keepOtherLabel": true,
             "otherPlaceholder": "describe (e.g. dysmetria L UL)"
+          },
+          {
+            "id": "fthue",
+            "label": "Hand function — FTHUE",
+            "type": "fthue_grade",
+            "width": "full",
+            "hint": "Functional Test for the Hemiplegic Upper Extremity (1–7 each side). Pick the highest level the patient can perform on each side.",
+            "reportTemplate": "Hand function (FTHUE): Right: {r}/7  Left: {l}/7"
           },
           {
             "id": "balance_sit",
             "label": "Balance — Sitting",
             "type": "checkbox",
             "width": "half",
-            "options": ["Good", "Fair", "Poor"],
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
             "combineAdjacent": true,
             "maxSelect": 2,
             "consecutiveOnly": true,
@@ -455,7 +857,11 @@
             "type": "checkbox",
             "width": "half",
             "mergeUp": true,
-            "options": ["Good", "Fair", "Poor"],
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
             "combineAdjacent": true,
             "maxSelect": 2,
             "consecutiveOnly": true,
@@ -526,7 +932,12 @@
             "type": "multiple_choice",
             "width": "half",
             "mergeUp": true,
-            "options": ["Stick", "Quad stick", "Frame", "Rollator", "Walking belt"],
+            "options": [
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator"
+            ],
             "allowOther": true,
             "otherPlaceholder": "specify",
             "hideInReport": true
@@ -536,8 +947,11 @@
             "label": "Vision",
             "type": "multiple_choice",
             "width": "half",
-            "options": ["NAD"],
+            "options": [
+              "NAD"
+            ],
             "allowOther": true,
+            "keepOtherLabel": true,
             "otherPlaceholder": "describe deficit"
           },
           {
@@ -548,32 +962,41 @@
             "mergeUp": true,
             "options": [
               "NAD",
-              { "value": "Impaired", "subOptions": ["Left", "Right", "Bilateral"] },
+              {
+                "value": "Impaired",
+                "subOptions": [
+                  "Left",
+                  "Right",
+                  "Bilateral"
+                ]
+              },
               "Deaf"
             ]
-          },
-          {
-            "id": "fthue",
-            "label": "Hand function — FTHUE",
-            "type": "fthue_grade",
-            "width": "full",
-            "hint": "Functional Test for the Hemiplegic Upper Extremity (1–7 each side). Pick the highest level the patient can perform on each side.",
-            "reportTemplate": "Hand function (FTHUE): Right: {r}/7  Left: {l}/7"
           },
           {
             "id": "sensation",
             "label": "Sensation / Proprioception",
             "type": "multiple_choice",
             "width": "half",
-            "options": ["NAD"],
+            "options": [
+              "NAD"
+            ],
             "allowOther": true,
+            "keepOtherLabel": true,
             "otherPlaceholder": "describe deficit"
+          },
+          {
+            "id": "sensation_other",
+            "label": "Other",
+            "type": "long_text",
+            "width": "full",
+            "mergeUp": true
           }
         ],
         "reportTitle": "E. Physical Assessment"
       },
       {
-        "title": "Functional Assessment (Modified Barthel Index)",
+        "title": "Functional Assessment",
         "questions": [
           {
             "id": "mbi",
@@ -583,37 +1006,208 @@
             "totalMax": 100,
             "width": "full",
             "pendingPolicy": {
-              "ignoreItems": ["wheelchair"],
+              "oneOfGroups": [
+                [
+                  "mobility",
+                  "wheelchair"
+                ]
+              ],
               "pendingText": ", pending further assessment later"
             },
             "includeNAInBreakdown": true,
-            "breakdownPosition": "before",
+            "breakdownPosition": "after",
             "breakdownItemsPerLine": 5,
             "breakdownSep": "   ",
             "combineItems": [
-              { "ids": ["mobility", "wheelchair"], "label": "Mobility/Wheelchair" }
+              {
+                "ids": [
+                  "mobility",
+                  "wheelchair"
+                ],
+                "label": "Mobility/Wheelchair"
+              }
             ],
             "items": [
-              { "id": "bowels", "label": "Bowels", "options": [0, 2, 5, 8, 10], "allowNA": true, "defaultNA": true, "qualifier": { "id": "bowels_stoma", "label": "Stoma" } },
-              { "id": "bladder", "label": "Bladder", "options": [0, 2, 5, 8, 10], "allowNA": true, "defaultNA": true, "qualifier": { "id": "bladder_foley", "label": "Foley" } },
-              { "id": "grooming", "label": "Grooming", "options": [0, 1, 3, 4, 5], "allowNA": true, "defaultNA": true },
-              { "id": "toileting", "label": "Toileting", "options": [0, 2, 5, 8, 10], "allowNA": true, "defaultNA": true },
-              { "id": "feeding", "label": "Feeding", "options": [0, 2, 5, 8, 10], "allowNA": true, "defaultNA": true, "qualifier": { "id": "feeding_rt", "label": "R/T" } },
-              { "id": "dressing", "label": "Dressing", "options": [0, 2, 5, 8, 10], "allowNA": true, "defaultNA": true },
-              { "id": "bathing", "label": "Bathing", "options": [0, 1, 3, 4, 5], "allowNA": true, "defaultNA": true },
-              { "id": "transfer", "label": "Transfer", "options": [0, 3, 8, 12, 15], "allowNA": true, "defaultNA": true },
-              { "id": "mobility", "label": "Mobility", "options": [0, 3, 8, 12, 15], "allowNA": true, "defaultNA": true, "exclusiveWith": "wheelchair" },
-              { "id": "wheelchair", "label": "Wheelchair", "options": [0, 1, 3, 4, 5], "allowNA": true, "defaultNA": true, "exclusiveWith": "mobility" },
-              { "id": "stairs", "label": "Stairs", "options": [0, 2, 5, 8, 10], "allowNA": true, "defaultNA": true }
+              {
+                "id": "bowels",
+                "label": "Bowels",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "bowels_stoma",
+                  "label": "Stoma"
+                }
+              },
+              {
+                "id": "bladder",
+                "label": "Bladder",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "bladder_foley",
+                  "label": "Foley"
+                }
+              },
+              {
+                "id": "grooming",
+                "label": "Grooming",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "toileting",
+                "label": "Toileting",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "feeding",
+                "label": "Feeding",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "feeding_rt",
+                  "label": "R/T"
+                }
+              },
+              {
+                "id": "dressing",
+                "label": "Dressing",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "bathing",
+                "label": "Bathing",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "transfer",
+                "label": "Transfer",
+                "options": [
+                  0,
+                  3,
+                  8,
+                  12,
+                  15
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "mobility",
+                "label": "Mobility",
+                "options": [
+                  0,
+                  3,
+                  8,
+                  12,
+                  15
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "exclusiveWith": "wheelchair"
+              },
+              {
+                "id": "wheelchair",
+                "label": "Wheelchair",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "exclusiveWith": "mobility"
+              },
+              {
+                "id": "stairs",
+                "label": "Stairs",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              }
             ],
             "reportTemplate": "Modified Barthel Index (mBI): {answer}"
+          },
+          {
+            "id": "mbi_impression",
+            "label": "Impression",
+            "type": "short_text",
+            "width": "full",
+            "reportTemplate": "Impression: {answer}."
           },
           {
             "id": "mbi_overall",
             "label": "Overall functional level",
             "type": "checkbox",
             "width": "full",
-            "options": ["Independent", "Supervision", "Mild Assistance", "Moderate Assistance", "Maximal Assistance", "Dependent"],
+            "options": [
+              "Independent",
+              "Supervision",
+              "Mild Assistance",
+              "Moderate Assistance",
+              "Maximal Assistance",
+              "Dependent"
+            ],
             "combineAdjacent": true,
             "maxSelect": 2,
             "consecutiveOnly": true,
@@ -632,7 +1226,13 @@
             "width": "half",
             "options": [
               "No",
-              { "value": "Yes", "subOptions": ["Low", "High"] }
+              {
+                "value": "Yes",
+                "subOptions": [
+                  "Low",
+                  "High"
+                ]
+              }
             ]
           },
           {
@@ -650,7 +1250,10 @@
             ],
             "allowOther": true,
             "reportTemplate": "Risk factors of fall: {answer}.",
-            "showIf": { "questionId": "fall_risk", "equals": "Yes" }
+            "showIf": {
+              "questionId": "fall_risk",
+              "equals": "Yes"
+            }
           },
           {
             "id": "fall_history",
@@ -664,14 +1267,20 @@
             "type": "short_text",
             "width": "half",
             "hint": "e.g. 1 fall in 6 months",
-            "showIf": { "questionId": "fall_history", "equals": "Yes" }
+            "showIf": {
+              "questionId": "fall_history",
+              "equals": "Yes"
+            }
           },
           {
             "id": "fall_notes",
             "label": "Fall details",
             "type": "long_text",
             "width": "full",
-            "showIf": { "questionId": "fall_history", "equals": "Yes" }
+            "showIf": {
+              "questionId": "fall_history",
+              "equals": "Yes"
+            }
           }
         ],
         "reportTitle": "G. Fall Assessment"
@@ -692,8 +1301,18 @@
             "type": "composite",
             "width": "full",
             "parts": [
-              { "id": "contact", "label": "Contact person/Phone no.", "wide": true, "placeholder": "name / phone" },
-              { "id": "plan", "label": "Care plan", "extraWide": true, "placeholder": "plan / arrangement" }
+              {
+                "id": "contact",
+                "label": "Contact person/Phone no.",
+                "wide": true,
+                "placeholder": "name / phone"
+              },
+              {
+                "id": "plan",
+                "label": "Care plan",
+                "extraWide": true,
+                "placeholder": "plan / arrangement"
+              }
             ],
             "customReport": "carer_interview"
           },
@@ -724,8 +1343,14 @@
             "type": "short_text",
             "width": "full",
             "prefillFromQuestions": [
-              { "questionId": "mbi", "label": "BI" },
-              { "questionId": "mbi_overall", "label": "Level" }
+              {
+                "questionId": "mbi",
+                "label": "BI"
+              },
+              {
+                "questionId": "mbi_overall",
+                "label": "Level"
+              }
             ],
             "reportTemplate": "ADL: mBI {q:mbi}; Level: {q:mbi_overall}. {answer}"
           },
@@ -735,9 +1360,18 @@
             "type": "short_text",
             "width": "full",
             "prefillFromQuestions": [
-              { "questionId": "amt", "label": "AMT" },
-              { "questionId": "cdt", "label": "CDT" },
-              { "questionId": "moca", "label": "MoCA" }
+              {
+                "questionId": "amt",
+                "label": "AMT"
+              },
+              {
+                "questionId": "cdt",
+                "label": "CDT"
+              },
+              {
+                "questionId": "moca",
+                "label": "MoCA"
+              }
             ],
             "customReport": "cognitive"
           },
@@ -749,14 +1383,27 @@
             "mirrorTo": "recommendation",
             "options": [
               "Functionally fit home",
-              { "value": "Home with carer / maid / supervision", "detail": true, "detailPlaceholder": "from whom" },
+              {
+                "value": "Home with carer / maid / supervision",
+                "detail": true,
+                "detailPlaceholder": "from whom"
+              },
               "Convalescent rehabilitation",
-              { "value": "Short course training in QEH/1-2 days training", "detail": true, "detailPlaceholder": "details" },
-              { "value": "Refer to occupational therapy department out-patient department for", "detail": true, "detailPlaceholder": "e.g. ADL", "detailJoiner": " ", "detailSuffix": " training" },
+              {
+                "value": "Short course training in QEH",
+                "detail": true,
+                "detailPlaceholder": "details"
+              },
+              {
+                "value": "Refer to occupational therapy department out-patient department for",
+                "detail": true,
+                "detailPlaceholder": "e.g. ADL",
+                "detailJoiner": " ",
+                "detailSuffix": " training"
+              },
               "Community OT service (COT)",
               "Social service arrangement: POAH/HHS/DCC",
-              "For medical stabilisation",
-              "Not applicable, pending further assessment"
+              "For medical stabilisation"
             ],
             "allowOther": true,
             "reportTemplate": "Suggestion: {answer}"
@@ -790,12 +1437,22 @@
               },
               {
                 "value": "Environmental Factor",
-                "subOptions": ["NAD", "Not applicable", "Limited accessibility", "Risky home environment"],
+                "subOptions": [
+                  "NAD",
+                  "Not applicable",
+                  "Limited accessibility",
+                  "Risky home environment"
+                ],
                 "subAllowOther": true
               },
               {
                 "value": "Social Factor",
-                "subOptions": ["NAD", "Not applicable", "Lack of competent caregiver", "Live alone / Daytime / Nighttime alone"],
+                "subOptions": [
+                  "NAD",
+                  "Not applicable",
+                  "Lack of competent caregiver",
+                  "Live alone / Daytime / Nighttime alone"
+                ],
                 "subAllowOther": true
               }
             ],
@@ -831,14 +1488,20 @@
               "Post-LP assessment",
               "Check TED stocking",
               "Further assessment if stable",
-              "Basic ADL Training / maintenance",
+              "Basic ADL Training",
+              "Basic ADL maintenance",
               "Cognitive / orientation training",
               "Fall Prevention education / training",
               "Limb function maintenance / positioning",
-              { "value": "Pressure injury prevention / check", "detail": true, "detailPlaceholder": "site / details" },
-              { "value": "Aids prescription", "detail": true, "detailPlaceholder": "aid type" },
+              "Pressure injury prevention",
+              {
+                "value": "Aids prescription",
+                "detail": true,
+                "detailPlaceholder": "aid type"
+              },
               "Home safety recommendation / Visit",
-              "Carer interview / education / training"
+              "Carer interview",
+              "Carer education / training"
             ],
             "allowOther": true
           },
@@ -849,14 +1512,27 @@
             "width": "full",
             "options": [
               "Functionally fit home",
-              { "value": "Home with carer / maid / supervision", "detail": true, "detailPlaceholder": "from whom" },
+              {
+                "value": "Home with carer / maid / supervision",
+                "detail": true,
+                "detailPlaceholder": "from whom"
+              },
               "Convalescent rehabilitation",
-              { "value": "Short course training in QEH/1-2 days training", "detail": true, "detailPlaceholder": "details" },
-              { "value": "Refer to occupational therapy department out-patient department for", "detail": true, "detailPlaceholder": "e.g. ADL", "detailJoiner": " ", "detailSuffix": " training" },
+              {
+                "value": "Short course training in QEH",
+                "detail": true,
+                "detailPlaceholder": "details"
+              },
+              {
+                "value": "Refer to occupational therapy department out-patient department for",
+                "detail": true,
+                "detailPlaceholder": "e.g. ADL",
+                "detailJoiner": " ",
+                "detailSuffix": " training"
+              },
               "Community OT service (COT)",
               "Social service arrangement: POAH/HHS/DCC",
-              "For medical stabilisation",
-              "Not applicable, pending further assessment"
+              "For medical stabilisation"
             ],
             "allowOther": true
           }

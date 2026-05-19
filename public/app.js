@@ -113,6 +113,9 @@
 
   function setView(v, arg) {
     state.view = v;
+    document.body.classList.toggle('is-home', v === 'browse');
+    document.body.classList.toggle('is-work', v === 'fill');
+    document.body.classList.toggle('is-summary', v === 'report');
     [...nav.querySelectorAll('button')].forEach(b =>
       b.classList.toggle('active', b.dataset.view === v));
     if (v === 'browse') renderBrowse();
@@ -127,9 +130,47 @@
     const ncCaseId = app.querySelector('#ncCaseId');
     const ncDate   = app.querySelector('#ncDate');
     const ncForm   = app.querySelector('#ncForm');
+    const ncToday  = app.querySelector('#ncToday');
     const ncErr    = app.querySelector('#ncErr');
 
-    ncDate.value = new Date().toISOString().slice(0, 10);
+    const toLocalISODate = date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const formatHomeDate = date => date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const parseHomeDate = value => {
+      const text = value.trim();
+      const parts = text.match(/^(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2}|\d{4})$/);
+      if (parts) {
+        const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const month = months.indexOf(parts[2].slice(0, 3).toLowerCase());
+        const year = Number(parts[3].length === 2 ? `20${parts[3]}` : parts[3]);
+        const day = Number(parts[1]);
+        const parsed = new Date(year, month, day);
+        if (month >= 0 && parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
+          return parsed;
+        }
+      }
+
+      const parsed = new Date(text);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    };
+    const setHomeDate = date => {
+      ncDate.value = formatHomeDate(date);
+    };
+
+    setHomeDate(new Date());
+    if (ncToday) ncToday.onclick = () => setHomeDate(new Date());
+    ncDate.addEventListener('blur', () => {
+      const parsed = parseHomeDate(ncDate.value);
+      if (parsed) setHomeDate(parsed);
+    });
 
     const allForms = await listForms();
     for (const f of allForms) {
@@ -140,9 +181,11 @@
       ncErr.textContent = '';
       const caseId = ncCaseId.value.trim();
       const formId = ncForm.value;
+      const assessmentDate = parseHomeDate(ncDate.value);
       if (!caseId) { ncErr.textContent = 'Ward / Bed number is required.'; return; }
+      if (!assessmentDate) { ncErr.textContent = 'Assessment date should be like 19 May 2026.'; return; }
       if (!formId) { ncErr.textContent = 'Pick an assessment form.'; return; }
-      setView('fill', { formId, caseId, assessmentDate: ncDate.value });
+      setView('fill', { formId, caseId, assessmentDate: toLocalISODate(assessmentDate) });
     };
 
     renderHistoryList(app.querySelector('#historyList'));
@@ -175,18 +218,20 @@
       form = await loadForm(idOrHistoryEntry);
     }
     state.currentForm = form;
-    app.querySelector('#fTitle').textContent = form.title;
-    app.querySelector('#fDesc').textContent = form.description || '';
+    const formatDisplayDate = iso => {
+      if (!iso) return '';
+      const d = new Date(`${iso}T00:00:00`);
+      return Number.isFinite(d.getTime())
+        ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : iso;
+    };
+    const caseLabel = caseInfo && caseInfo.caseId ? ` • ${caseInfo.caseId}` : '';
+    app.querySelector('#fTitle').textContent = `[${form.specialty}] ${form.title}${caseLabel}`;
+    const metaBits = [];
+    if (caseInfo && caseInfo.assessmentDate) metaBits.push(`Assessment Date ${formatDisplayDate(caseInfo.assessmentDate)}`);
+    metaBits.push('Local browser storage only');
+    app.querySelector('#fDesc').textContent = metaBits.join(' · ');
     const root = app.querySelector('#fillForm');
-
-    if (caseInfo && (caseInfo.caseId || caseInfo.assessmentDate)) {
-      const banner = el('div', { class: 'case-banner' }, [
-        el('strong', {}, [caseInfo.caseId ? `Ward / Bed: ${caseInfo.caseId}` : '']),
-        document.createTextNode(caseInfo.caseId && caseInfo.assessmentDate ? '  •  ' : ''),
-        document.createTextNode(caseInfo.assessmentDate ? `Assessment date: ${caseInfo.assessmentDate}` : ''),
-      ]);
-      root.appendChild(banner);
-    }
 
     const answers = { ...initialAnswers };
     if (caseInfo) answers.__case = { ...caseInfo };
@@ -210,6 +255,8 @@
     root.appendChild(sectionHost);
 
     let currentIdx = 0;
+    let currentPrevIdx = undefined;
+    let currentNextIdx = undefined;
     const sections = form.schema.sections;
 
     function visibleSectionIndexes() {
@@ -244,6 +291,8 @@
       const pos = visIdxs.indexOf(currentIdx);
       [...tabsBar.children].forEach((t, ti) =>
         t.classList.toggle('active', ti === pos));
+      const activeTab = tabsBar.querySelector('.tab.active');
+      if (activeTab) activeTab.scrollIntoView({ block: 'nearest', inline: 'center' });
     }
 
     onChange(rebuildTabs);
@@ -262,9 +311,24 @@
       const s = sections[currentIdx];
       const sec = el('div', { class: 'section-block' });
 
-      const head = el('div', { class: 'row between' }, [
+      // If the section has a tick-style trigger question, pull it into the header.
+      let headerTriggerQId = null;
+      if (s.hideQuestionsIf) {
+        const tid = s.hideQuestionsIf.questionId;
+        const tq = s.questions.find(q => q.id === tid);
+        if (tq && tq.tickStyle) headerTriggerQId = tid;
+      }
+
+      const head = el('div', { class: 'row between section-head-row' }, [
         el('h3', { style: 'margin:0' }, [s.title]),
       ]);
+      if (headerTriggerQId) {
+        const tq = s.questions.find(q => q.id === headerTriggerQId);
+        const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+        triggerWidget.dataset.qid = tq.id;
+        triggerWidget.classList.add('header-trigger');
+        head.appendChild(triggerWidget);
+      }
       sec.appendChild(head);
       if (s.description) sec.appendChild(el('p', { class: 'muted' }, [s.description]));
 
@@ -292,8 +356,22 @@
           }
         });
       };
+      const renderedQuestionIds = new Set();
       for (const q of s.questions) {
+        if (q.id && renderedQuestionIds.has(q.id)) continue;
+        if (q.id === headerTriggerQId) continue; // rendered in section header
         const widget = renderQuestion(q, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+        if (q.type === 'heading' && q.headerTriggerQuestionId) {
+          const tq = s.questions.find(item => item.id === q.headerTriggerQuestionId);
+          if (tq) {
+            const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+            triggerWidget.dataset.qid = tq.id;
+            triggerWidget.classList.add('header-trigger');
+            widget.classList.add('heading-with-trigger');
+            widget.appendChild(triggerWidget);
+            renderedQuestionIds.add(tq.id);
+          }
+        }
         if (q.id) widget.dataset.qid = q.id;
         if (q.mergeUp && lastWrap) {
           widget.classList.add('merged-child');
@@ -313,6 +391,10 @@
       const visCount = visibleSectionIndexes().length;
       const prev = visibleSectionIndexes()[visPos - 1];
       const next = visibleSectionIndexes()[visPos + 1];
+      currentPrevIdx = prev;
+      currentNextIdx = next;
+      app.querySelector('#btnPrevSection').disabled = prev === undefined;
+      app.querySelector('#btnNextSection').disabled = next === undefined;
 
       const navRow = el('div', { class: 'section-nav' }, [
         el('button', {
@@ -333,14 +415,15 @@
     }
 
     renderSection(visibleSectionIndexes()[0] ?? 0);
-
-    app.querySelector('#btnPreview').onclick = () => {
-      const pre = app.querySelector('#reportPreview');
-      pre.hidden = false;
-      pre.textContent = buildReport(form, answers);
+    app.querySelector('#btnPrevSection').onclick = () => {
+      if (currentPrevIdx !== undefined) renderSection(currentPrevIdx);
+    };
+    app.querySelector('#btnNextSection').onclick = () => {
+      if (currentNextIdx !== undefined) renderSection(currentNextIdx);
     };
 
     function persistEntry(asDraft) {
+      const existingEntry = historyId ? history.load().find(e => e.id === historyId) : null;
       const report = buildReport(form, answers);
       const savedAt = new Date().toISOString();
       const entry = {
@@ -350,6 +433,7 @@
         specialty: form.specialty,
         answers,
         report,
+        editedParts: existingEntry && existingEntry.editedParts ? existingEntry.editedParts : undefined,
         draft: !!asDraft,
         savedAt,
         expiresAt: asDraft ? null : expiryFromSavedAt(savedAt),
@@ -377,50 +461,151 @@
     const { form, answers, entry } = arg || {};
     if (!form || !answers) { setView('browse'); return; }
 
-    app.querySelector('.back').onclick = () => setView('browse');
-    app.querySelector('#rTitle').textContent = form.title;
+    app.querySelector('.back').onclick = () => {
+      if (entry) setView('fill', entry);
+      else setView('browse');
+    };
+    app.querySelector('#btnReportBack').onclick = () => {
+      if (entry) setView('fill', entry);
+      else setView('browse');
+    };
+    app.querySelector('#btnReportHome').onclick = () => setView('browse');
+    const host = app.querySelector('#rParts');
+    const editedParts = { ...(entry && entry.editedParts ? entry.editedParts : {}) };
+    let autosaveTimer = null;
+    const autosaveReportEdits = () => {
+      if (!entry) return;
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        entry.editedParts = { ...editedParts };
+        history.update(entry.id, entry);
+      }, 250);
+    };
+    app.querySelector('#btnReportSave').onclick = () => {
+      if (entry) {
+        clearTimeout(autosaveTimer);
+        entry.editedParts = { ...editedParts };
+        history.update(entry.id, entry);
+        alert('Saved locally.');
+      }
+    };
 
     const c = (answers.__case) || {};
+    app.querySelector('#rTitle').textContent = `Generated Summary${c.caseId ? ' • ' + c.caseId : ''}`;
     const meta = [];
-    if (c.caseId) meta.push('Ward/Bed: ' + c.caseId);
-    if (c.assessmentDate) meta.push('Date: ' + c.assessmentDate);
-    if (entry && entry.savedAt) meta.push('Saved: ' + new Date(entry.savedAt).toLocaleString());
-    app.querySelector('#rMeta').textContent = meta.join('  •  ');
+    meta.push(`[${form.specialty}] ${form.title}`);
+    meta.push('Not copied');
+    app.querySelector('#rMeta').textContent = meta.join(' · ');
 
-    const parts = buildReportParts(form, answers);
-    const host = app.querySelector('#rParts');
-
-    const renderPart = (heading, text, hint) => {
+    const renderPart = (heading, text, hint, key = heading) => {
+      const currentText = editedParts[key] !== undefined ? editedParts[key] : text;
       const sec = el('div', { class: 'report-section' });
+      let textarea = null;
+      let copyBtn = null;
+      let editBtn = null;
       const head = el('div', { class: 'row between' }, [
         el('h3', { style: 'margin:0' }, [heading]),
-        el('button', {
-          class: 'primary',
-          onclick: async () => {
-            try {
-              await navigator.clipboard.writeText(text);
-              alert(`${heading} copied to clipboard.`);
-            } catch {
-              alert('Copy failed — please select and copy manually.');
-            }
-          },
-          disabled: text ? null : 'disabled',
-        }, ['Copy']),
+        el('div', { class: 'report-actions' }, [
+          editBtn = el('button', {
+            class: 'summary-top-btn report-edit-btn',
+            onclick: () => {
+              textarea.readOnly = false;
+              textarea.classList.add('is-editing');
+              editBtn.textContent = 'Editing';
+              editBtn.disabled = true;
+              textarea.focus();
+            },
+          }, ['Edit']),
+          copyBtn = el('button', {
+            class: 'summary-top-btn report-copy-btn',
+            onclick: async () => {
+              try {
+                await navigator.clipboard.writeText(textarea ? textarea.value : '');
+                alert(`${heading} copied to clipboard.`);
+              } catch {
+                alert('Copy failed — please select and copy manually.');
+              }
+            },
+            disabled: currentText ? null : 'disabled',
+          }, ['Copy']),
+        ]),
       ]);
       sec.appendChild(head);
-      if (!text) {
-        sec.appendChild(el('p', { class: 'muted' }, [hint || '(empty — nothing was filled in this section.)']));
-      } else {
-        const pre = el('pre', { class: 'report' });
-        pre.textContent = text;
-        sec.appendChild(pre);
-      }
+      textarea = el('textarea', {
+        class: 'report report-editable',
+        rows: '8',
+        readonly: 'readonly',
+        placeholder: hint || '(empty — nothing was filled in this section.)',
+      });
+      textarea.value = currentText || '';
+      const grow = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(120, textarea.scrollHeight + 8) + 'px';
+      };
+      textarea.addEventListener('input', () => {
+        editedParts[key] = textarea.value;
+        if (copyBtn) copyBtn.disabled = !textarea.value.trim();
+        autosaveReportEdits();
+        grow();
+      });
+      setTimeout(grow, 0);
+      sec.appendChild(textarea);
       host.appendChild(sec);
     };
 
-    renderPart('Common Assessment', parts.common, '(no assessment notes filled in)');
-    renderPart('Problem Identification', parts.problem);
-    renderPart('Recommendation', parts.recommendation);
+    const renderOtCommentBox = () => {
+      const limit = 250;
+      const key = 'ot_comment_extract';
+      const generatedText = buildOtCommentExtract(form, answers);
+      const currentText = editedParts[key] !== undefined ? editedParts[key] : generatedText;
+      const sec = el('div', { class: 'report-section report-green-box' });
+      const head = el('div', { class: 'row between' }, [
+        el('h3', { style: 'margin:0' }, ['OT comment']),
+        el('span', { class: 'report-char-count' }, ['【0】 / 250 characters']),
+      ]);
+      const textarea = el('textarea', {
+        class: 'report report-editable ot-comment-extract-input',
+        rows: '4',
+        maxlength: String(limit),
+        placeholder: 'mBI, cognitive assessment score and suggestion will be extracted here.',
+      });
+      const counter = head.querySelector('.report-char-count');
+      const setValue = value => {
+        textarea.value = String(value || '').slice(0, limit);
+      };
+      const updateCount = () => {
+        const count = textarea.value.length;
+        counter.textContent = `【${count}】 / ${limit} characters`;
+        counter.classList.toggle('is-near-limit', count >= limit * 0.9);
+      };
+      textarea.addEventListener('input', () => {
+        if (textarea.value.length > limit) setValue(textarea.value);
+        editedParts[key] = textarea.value;
+        updateCount();
+        autosaveReportEdits();
+      });
+      setValue(currentText);
+      updateCount();
+      sec.appendChild(head);
+      sec.appendChild(textarea);
+      host.appendChild(sec);
+    };
+
+    // If the user previewed + edited the report before saving, the entry has
+    // `customText: true` and `report` holds the user's exact text. We show
+    // that as a single "Saved report (edited)" panel rather than splitting it
+    // into the auto-generated three panels (we can't safely re-split arbitrary
+    // user prose).
+    if (entry && entry.customText && !entry.editedParts && entry.report) {
+      renderPart('Saved report (edited)', entry.report);
+      return;
+    }
+
+    const parts = buildReportParts(form, answers);
+    renderOtCommentBox();
+    renderPart('Common Assessment', parts.common, '(no assessment notes filled in)', 'common');
+    renderPart('Problem Identification', parts.problem, '', 'problem');
+    renderPart('Recommendation', parts.recommendation, '', 'recommendation');
   }
 
   function evalShowIf(cond, answers) {
@@ -450,6 +635,17 @@
                    : q.width === 'half' ? 'half'
                    : '';
     const wrap = el('div', { class: 'qfill' + (widthCls ? ' ' + widthCls : '') });
+    if (['treatment_done', 'treatment_plan', 'recommendation', 'problems'].includes(q.id)) {
+      wrap.classList.add('large-question-label');
+    }
+    const compactExpandableIds = new Set([
+      'home_access',
+      'bath_method',
+      'social_service',
+      'assistive_devices',
+      'hearing',
+      'fall_risk',
+    ]);
 
     if (q.type === 'heading') {
       wrap.classList.add('full', 'heading');
@@ -492,6 +688,17 @@
         },
       }, ['Clear']);
       head.appendChild(btn);
+    }
+    // Inline "Unable to assess" tick — built here so it sits in the header row;
+    // the checkbox case below wires up the actual change handler once `group` exists.
+    let _utaCbInline = null;
+    if (q.unableToAssess) {
+      const utaId = uid();
+      _utaCbInline = el('input', { type: 'checkbox', id: utaId });
+      const utaLbl = el('label', { for: utaId, class: 'uta-inline' });
+      utaLbl.appendChild(_utaCbInline);
+      utaLbl.appendChild(document.createTextNode('Unable to assess'));
+      head.appendChild(utaLbl);
     }
     wrap.appendChild(head);
     if (q.hint) wrap.appendChild(el('div', { class: 'hint' }, [q.hint]));
@@ -563,9 +770,11 @@
         break;
       }
       case 'long_text': {
-        const ta = el('textarea', { rows: 3 });
+        const ta = el('textarea', { rows: 1, class: 'auto-grow' });
         ta.value = cur || '';
-        ta.oninput = () => set(ta.value);
+        const growTa = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+        ta.oninput = () => { set(ta.value); growTa(); };
+        setTimeout(growTa, 0);
         wrap.appendChild(ta);
         break;
       }
@@ -598,6 +807,10 @@
       }
       case 'multiple_choice': {
         const group = el('div', { class: 'checks' });
+        if (compactExpandableIds.has(q.id)) group.classList.add('compact-expandable-options');
+        if (['ot_suggestion', 'treatment_plan', 'recommendation'].includes(q.id)) {
+          group.classList.add('aligned-option-grid');
+        }
         const norm = q.options.map(o => typeof o === 'string' ? { value: o } : o);
         const knownVals = new Set(norm.map(o => o.value));
         const curVal = (cur && typeof cur === 'object') ? cur.value : cur;
@@ -613,11 +826,33 @@
           if (curVal === opt.value) r.checked = true;
           r.onchange = () => {
             if (opt.subOptions) set({ value: opt.value, sub: [], other: '' });
+            else if (opt.detail) set({ value: opt.value, detail: detailInp ? detailInp.value : '' });
             else set(opt.value);
           };
           row.appendChild(r);
           row.appendChild(document.createTextNode(opt.value));
           wrapOpt.appendChild(row);
+
+          // Inline detail input on a radio option (e.g. cog_status "Failed to
+          // assess due to: ___"). Stored as { value, detail }.
+          let detailInp = null;
+          if (opt.detail) {
+            detailInp = el('input', {
+              type: 'text', class: 'inline-text detail-input',
+              placeholder: opt.detailPlaceholder || 'specify',
+            });
+            const startDetail = (cur && typeof cur === 'object' && cur.value === opt.value && cur.detail) ? cur.detail : '';
+            detailInp.value = startDetail;
+            detailInp.style.display = (curVal === opt.value) ? '' : 'none';
+            detailInp.oninput = () => {
+              r.checked = true;
+              set({ value: opt.value, detail: detailInp.value });
+            };
+            r.addEventListener('change', () => {
+              detailInp.style.display = r.checked ? '' : 'none';
+            });
+            wrapOpt.appendChild(detailInp);
+          }
 
           if (opt.subOptions) {
             const subBox = el('div', { class: 'sub-options' });
@@ -700,7 +935,16 @@
         break;
       }
       case 'checkbox': {
+        // tickStyle: render as a small native-looking tick + label instead of
+        // the big chip. Used for section-level skip toggles where the chip
+        // would look too prominent.
+        if (q.tickStyle) wrap.classList.add('tick-style');
         const group = el('div', { class: 'checks' });
+        if (compactExpandableIds.has(q.id)) group.classList.add('compact-expandable-options');
+        if (['ot_suggestion', 'treatment_plan', 'recommendation'].includes(q.id)) {
+          group.classList.add('aligned-option-grid');
+        }
+        if (q.invertedCheckbox) group.classList.add('inverted-checks');
         const curArr = Array.isArray(cur) ? [...cur] : [];
         answers[q.id] = curArr;
         // Optional UX rules: cap number of selected options, and enforce that
@@ -742,12 +986,11 @@
 
           if (opt.detail) {
             detailInp = el('input', {
-              type: 'text', class: 'detail-input',
+              type: 'text', class: 'detail-input check-detail',
               placeholder: opt.detailPlaceholder || 'specify',
             });
             detailInp.value = (startObj && startObj.detail) || '';
             detailInp.style.display = c.checked ? '' : 'none';
-            row.appendChild(detailInp);
           }
 
           if (Array.isArray(opt.subOptions) && opt.subOptions.length) {
@@ -812,7 +1055,6 @@
               subBox.appendChild(sr);
             }
             subBox.style.display = c.checked ? '' : 'none';
-            row.appendChild(subBox);
           }
 
           const rebuild = () => {
@@ -859,7 +1101,11 @@
           };
           if (detailInp) detailInp.oninput = () => { c.checked = true; rebuild(); };
 
-          group.appendChild(row);
+          const wrapOpt = el('div', { class: 'opt-block' });
+          wrapOpt.appendChild(row);
+          if (detailInp) wrapOpt.appendChild(detailInp);
+          if (subBox) wrapOpt.appendChild(subBox);
+          group.appendChild(wrapOpt);
         });
         if (q.allowOther) {
           const id = uid();
@@ -886,6 +1132,22 @@
           group.appendChild(row);
         }
         wrap.appendChild(group);
+
+        if (q.unableToAssess && _utaCbInline) {
+          const isUnable = curArr.length === 1 && curArr[0] === '__unable__';
+          if (isUnable) { _utaCbInline.checked = true; group.style.display = 'none'; }
+          _utaCbInline.onchange = () => {
+            curArr.length = 0;
+            if (_utaCbInline.checked) {
+              curArr.push('__unable__');
+              group.style.display = 'none';
+            } else {
+              group.style.display = '';
+            }
+            fire();
+          };
+        }
+
         break;
       }
       case 'rating': {
@@ -923,6 +1185,7 @@
         break;
       }
       case 'sub_score': {
+        if (q.id === 'mbi') wrap.classList.add('mbi-score');
         const mode = q.mode || 'max';
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         answers[q.id] = curObj;
@@ -940,7 +1203,7 @@
           }
         });
 
-        const table = el('table', { class: 'subscore' });
+        const table = el('table', { class: 'subscore' + (q.id === 'mbi' ? ' mbi-subscore' : '') });
         const totalCell = el('strong', {}, ['0']);
         const totalSuffix = el('span', { class: 'si-pending' }, ['']);
         // Track each row's chip-row so we can re-paint after exclusiveWith flips.
@@ -951,8 +1214,7 @@
             a + (typeof v === 'number' ? v : 0), 0);
           totalCell.textContent = String(t);
           if (q.pendingPolicy) {
-            const ignore = new Set(q.pendingPolicy.ignoreItems || []);
-            const incomplete = q.items.some(it => ignore.has(it.id) ? false : typeof curObj[it.id] !== 'number');
+            const incomplete = subScoreIncomplete(q, curObj);
             totalSuffix.textContent = incomplete
               ? '  ' + (q.pendingPolicy.pendingText || 'pending further assessment later')
               : '';
@@ -1372,10 +1634,9 @@
       const hasComment = comments && comments[q.id];
       if (hasComment) details.setAttribute('open', '');
       details.appendChild(el('summary', {}, [q.commentLabel || 'Other']));
-      const cta = el('textarea', {
-        rows: 2,
-        placeholder: q.commentPlaceholder || 'Optional notes…',
-      });
+      const cta = q.commentSingleLine
+        ? el('input', { type: 'text', class: 'inline-text', placeholder: q.commentPlaceholder || 'Optional notes…' })
+        : el('textarea', { rows: 2, placeholder: q.commentPlaceholder || 'Optional notes…' });
       cta.value = (comments && comments[q.id]) || '';
       cta.oninput = () => {
         if (!comments) return;
@@ -1433,7 +1694,7 @@
     }
     if (q.type === 'multiple_choice' && typeof a === 'object' && !Array.isArray(a)) {
       const sub = Array.isArray(a.sub) ? a.sub : [];
-      return !a.value && sub.length === 0 && !a.other;
+      return !a.value && sub.length === 0 && !a.other && !a.detail;
     }
     return false;
   }
@@ -1444,15 +1705,21 @@
     return sit.detail ? `${sit.value} (${sit.detail})` : String(sit.value);
   }
 
-  function formatCheckEntry(it) {
-    if (typeof it !== 'object' || it === null) return String(it);
+  function formatCheckEntry(it, keepOtherLabel = false) {
+    if (typeof it !== 'object' || it === null) {
+      const s = String(it);
+      return (!keepOtherLabel && s.startsWith('Other: ')) ? s.slice(7) : s;
+    }
     let s = it.value;
     if (it.detail) {
       const joiner = it.detailJoiner !== undefined ? it.detailJoiner : ': ';
       s += joiner + it.detail + (it.detailSuffix || '');
     }
     if (Array.isArray(it.sub) && it.sub.length) s += ' (' + it.sub.map(formatSubEntry).join(', ') + ')';
-    if (it.other) s += (it.sub && it.sub.length ? '; ' : ' (') + 'Other: ' + it.other + (it.sub && it.sub.length ? '' : ')');
+    if (it.other) {
+      const otherText = keepOtherLabel ? 'Other: ' + it.other : it.other;
+      s += (it.sub && it.sub.length ? '; ' : ' (') + otherText + (it.sub && it.sub.length ? '' : ')');
+    }
     return s;
   }
 
@@ -1476,7 +1743,7 @@
         }
         if (picked.length === 1) return picked[0];
       }
-      return a.map(formatCheckEntry).join(', ');
+      return a.map(it => formatCheckEntry(it, !!q.keepOtherLabel)).join(', ');
     }
     if (q.type === 'composite') {
       const sep = q.joinWith != null ? q.joinWith : '; ';
@@ -1501,16 +1768,10 @@
         : q.items.reduce((x, it) => x + (mode === 'max'
             ? Number(it.max || 0)
             : Math.max(...(it.options || [0]))), 0);
-      // pendingPolicy: when any required item (i.e. items not in `ignoreItems`)
-      // is unrated/NA, the total is reported as `≥X/Y pending further assessment later`.
+      // pendingPolicy: when any required item is unrated/NA, the total reads
+      // `≥X/Y pending further assessment later`.
       if (q.pendingPolicy) {
-        const ignore = new Set(q.pendingPolicy.ignoreItems || []);
-        const incomplete = q.items.some(it => {
-          if (ignore.has(it.id)) return false;
-          const v = a[it.id];
-          return typeof v !== 'number';
-        });
-        if (incomplete) {
+        if (subScoreIncomplete(q, a)) {
           const tail = q.pendingPolicy.pendingText || ', pending further assessment later';
           return `≥${total}/${totalMax}${tail}`;
         }
@@ -1518,12 +1779,41 @@
       return `${total}/${totalMax}`;
     }
     if (q.type === 'multiple_choice' && typeof a === 'object' && !Array.isArray(a)) {
+      // Inline detail (radio with `detail: true`) reads as "Value: detail".
+      if (a.detail && !Array.isArray(a.sub) && !a.other) {
+        return `${a.value} ${a.detail}`;
+      }
       const parts = [];
       if (Array.isArray(a.sub) && a.sub.length) parts.push(a.sub.join(', '));
-      if (a.other) parts.push('Other: ' + a.other);
+      if (a.other) parts.push(q.keepOtherLabel ? 'Other: ' + a.other : a.other);
+      if (a.detail) parts.push(a.detail);
       return parts.length ? `${a.value} (${parts.join('; ')})` : String(a.value || '');
     }
+    // multiple_choice plain-string "other" value: add prefix only when keepOtherLabel
+    if (q.type === 'multiple_choice' && q.keepOtherLabel && q.allowOther && typeof a === 'string') {
+      const knownVals = new Set((q.options || []).map(o => typeof o === 'string' ? o : o.value));
+      if (!knownVals.has(a)) return 'Other: ' + a;
+    }
     return String(a);
+  }
+
+  // Shared incomplete-check for sub_score pendingPolicy. Honours both
+  // `ignoreItems` (never required) and `oneOfGroups` (any one rated counts
+  // as completion for that whole group).
+  function subScoreIncomplete(q, a) {
+    if (!q.pendingPolicy || !q.items) return false;
+    const ignore = new Set(q.pendingPolicy.ignoreItems || []);
+    const groups = q.pendingPolicy.oneOfGroups || [];
+    const inGroup = new Set(groups.flat());
+    // Each oneOf group is complete if at least one member is numeric.
+    const groupsComplete = groups.every(g => g.some(id => typeof (a || {})[id] === 'number'));
+    if (!groupsComplete) return true;
+    return q.items.some(it => {
+      if (ignore.has(it.id)) return false;
+      if (inGroup.has(it.id)) return false;
+      const v = (a || {})[it.id];
+      return typeof v !== 'number';
+    });
   }
 
   function subScoreBreakdownLines(q, a, maxLen = 90, answers = {}) {
@@ -1620,6 +1910,7 @@
     // ONE question (e.g. premorbid_badl) and set hideInReport on the others
     // so they don't double-emit. Empty fields are dropped from the output.
     premorbid_adl(q, a, allQs, answers) {
+      const comments = answers.__comments || {};
       const v = id => {
         const oq = allQs[id];
         if (!oq) return null;
@@ -1627,27 +1918,44 @@
         if (isEmptyAnswer(oq, ov)) return null;
         return formatAnswer(oq, ov);
       };
-      const lines = [];
+
+      // Line 1: BADL  Walk  Outdoor mobility
       const l1 = [];
       const badl = v('premorbid_badl');
-      const iadl = v('premorbid_iadl');
-      if (badl) l1.push(`BADL: ${badl}.`);
-      if (iadl) l1.push(`IADL: ${iadl}.`);
-      if (l1.length) lines.push(l1.join('  '));
+      if (badl) l1.push(`BADL: ${badl}`);
 
-      const l2 = [];
       const inW = v('indoor_walk');
       const inA = v('indoor_aid');
-      if (inW) l2.push(inA ? `Walk: ${inW} (Aid: ${inA})` : `Walk: ${inW}`);
-      else if (inA) l2.push(`Aid: ${inA}`);
+      const inRemark = (comments.indoor_walk || '').trim();
+      if (inW) {
+        let seg = 'Walk:';
+        if (inW) seg += ` ${inW}`;
+        if (inRemark) seg += `, ${inRemark}`;
+        if (inA) seg += ` (Aid: ${inA})`;
+        l1.push(seg);
+      } else if (inA) l1.push(`Aid: ${inA}`);
+
       const outW = v('outdoor_walk');
       const outA = v('outdoor_aid');
-      if (outW) l2.push(outA ? `Outdoor mobility: ${outW} (Aid: ${outA})` : `Outdoor mobility: ${outW}`);
-      else if (outA) l2.push(`Outdoor aid: ${outA}`);
+      const outRemark = (comments.outdoor_walk || '').trim();
+      if (outW) {
+        let seg = 'Outdoor mobility:';
+        if (outW) seg += ` ${outW}`;
+        if (outRemark) seg += `, ${outRemark}`;
+        if (outA) seg += ` (Aid: ${outA})`;
+        l1.push(seg);
+      } else if (outA) l1.push(`Outdoor aid: ${outA}`);
+
+      // Line 2: IADL  Occupation
+      const l2 = [];
+      const iadl = v('premorbid_iadl');
+      if (iadl) l2.push(`IADL: ${iadl}`);
       const occ = v('occupation');
       if (occ) l2.push(`Occupation: ${occ}`);
-      if (l2.length) lines.push(l2.join('. ') + (l2[l2.length - 1].endsWith('.') ? '' : '.'));
 
+      const lines = [];
+      if (l1.length) lines.push(l1.join('  '));
+      if (l2.length) lines.push(l2.join('  '));
       return lines.length ? lines.join('\n') : null;
     },
     // Lives with + Home access on one line. "Live alone" / "OAHR" emit
@@ -1657,20 +1965,21 @@
       const parts = [];
       const lwQ = allQs.lives_with, lw = answers.lives_with;
       if (lwQ && Array.isArray(lw) && lw.length) {
-        const liveAlone = [], oahr = [], hostel = [], lives = [];
+        const segs = [];
         lw.forEach(entry => {
           const v = (typeof entry === 'object' && entry !== null) ? entry.value : entry;
-          const formatted = formatCheckEntry(entry);
-          if (v === 'Live alone') liveAlone.push('Live alone');
-          else if (v === 'OAHR') oahr.push('OAHR');
-          else if (v === 'Hostel') hostel.push('Live in Hostel');
-          else lives.push(formatted);
+          const detail = (typeof entry === 'object' && entry !== null) ? entry.detail : '';
+          if (v === 'Live with') {
+            // "Live with" carries an inline detail (whom). Render as
+            // "Lives with <detail>" when filled, else just "Lives with".
+            segs.push(detail ? `Lives with ${detail}` : 'Lives with');
+          } else if (v === 'Live alone') segs.push('Live alone');
+          else if (v === 'OAHR')         segs.push('OAHR');
+          else if (v === 'Hostel')       segs.push('Live in Hostel');
+          else if (v === 'Day time alone' || v === 'Daytime alone')   segs.push('Day time alone');
+          else if (v === 'Night time alone' || v === 'Nighttime alone') segs.push('Night time alone');
+          else segs.push(formatCheckEntry(entry));
         });
-        const segs = [];
-        if (lives.length) segs.push('Lives with ' + lives.join(', '));
-        if (liveAlone.length) segs.push('Live alone');
-        if (oahr.length) segs.push('OAHR');
-        if (hostel.length) segs.push('Live in Hostel');
         if (segs.length) parts.push(segs.join('; '));
       }
       const haQ = allQs.home_access, ha = answers.home_access;
@@ -1691,23 +2000,64 @@
       return parts.length ? parts.join('. ') + '.' : null;
     },
 
+    // Inverted-checkbox orientation: unchecked = orientated (green), checked = disorientated (red).
+    // Special sentinel '__unable__' means "Unable to assess" was ticked.
+    orientation_split(q, a) {
+      if (Array.isArray(a) && a[0] === '__unable__') return 'Orientated to: Unable to assess.';
+      const all = (q.options || []).map(o => (typeof o === 'string' ? o : o.value));
+      const disoriented = Array.isArray(a) ? a.map(it => (typeof it === 'object' && it !== null) ? it.value : it) : [];
+      const oriented = all.filter(v => !disoriented.includes(v));
+      const parts = [];
+      if (oriented.length)    parts.push(`Orientated to: ${oriented.join(', ')}.`);
+      if (disoriented.length) parts.push(`Disorientated to: ${disoriented.join(', ')}.`);
+      return parts.length ? parts.join('   ') : null;
+    },
+
     // Mental state + Follow command on one line.
     mental_followcmd(q, a, allQs, answers) {
       const parts = [];
+      const cmts = answers.__comments || {};
       const msQ = allQs.mental_state, ms = answers.mental_state;
-      if (msQ && !isEmptyAnswer(msQ, ms)) parts.push(`Mental state: ${formatAnswer(msQ, ms)}`);
+      if (msQ && !isEmptyAnswer(msQ, ms)) {
+        let line = `Mental state: ${formatAnswer(msQ, ms)}`;
+        if (cmts.mental_state) line += ` (${cmts.mental_state})`;
+        parts.push(line);
+      }
       const fcQ = allQs.follow_cmd, fc = answers.follow_cmd;
-      if (fcQ && !isEmptyAnswer(fcQ, fc)) parts.push(`Follow command: ${formatAnswer(fcQ, fc)}`);
+      if (fcQ && !isEmptyAnswer(fcQ, fc)) {
+        let line;
+        // For checkbox follow_cmd with two adjacent picks, render "Follow N-M
+        // steps command" using the digit prefix of each option label. Falls
+        // back to default formatAnswer for everything else.
+        if (Array.isArray(fc) && fc.length === 2) {
+          const nums = fc.map(it => {
+            const v = (typeof it === 'object' && it !== null) ? it.value : it;
+            const m = String(v).match(/^(\d+)/);
+            return m ? Number(m[1]) : null;
+          }).filter(n => n != null).sort((x, y) => x - y);
+          if (nums.length === 2 && nums[1] - nums[0] === 1) {
+            line = `Follow ${nums[0]}-${nums[1]} steps command`;
+          }
+        }
+        if (!line) line = `Follow command: ${formatAnswer(fcQ, fc)}`;
+        if (cmts.follow_cmd) line += ` (${cmts.follow_cmd})`;
+        parts.push(line);
+      }
       return parts.length ? parts.join('. ') + '.' : null;
     },
 
     // "Cognitive assessment" header line in Mental Function. When Performed,
     // emit just the header so AMT/CDT/MoCA show below; otherwise emit the
-    // status (e.g. "Cognitive assessment: Failed to assess due to poor GCS.").
+    // reason (e.g. "Cognitive assessment: Failed to assess due to poor GCS.").
     cog_status_header(q, a) {
       if (!a) return null;
-      if (a === 'Performed') return 'Cognitive assessment:';
-      return `Cognitive assessment: ${a}.`;
+      const val = (typeof a === 'object' && a !== null) ? a.value : a;
+      const detail = (typeof a === 'object' && a !== null && a.detail) ? a.detail : '';
+      if (val === 'Performed') return 'Cognitive assessment:';
+      if (!val) return null;
+      return detail
+        ? `Cognitive assessment: ${val} ${detail}.`
+        : `Cognitive assessment: ${val}.`;
     },
 
     // Single multi-line MoCA block: total line with cut-off + Education,
@@ -1738,31 +2088,46 @@
       return lines.join('\n');
     },
 
-    // Balance: Sitting + Standing on one line.
+    // Balance: Sitting + Standing on one line. Halves whose source question
+    // is suspended are dropped (the suspended reason still appears at the
+    // section's end via the report builder's section-reasons summary).
     balance_combo(q, a, allQs, answers) {
+      const susp = answers.__suspended || {};
       const sitQ = allQs.balance_sit, sit = answers.balance_sit;
       const stdQ = allQs.balance_stand, std = answers.balance_stand;
       const parts = [];
-      if (sitQ && !isEmptyAnswer(sitQ, sit)) parts.push(`Sitting: ${formatAnswer(sitQ, sit)}`);
-      if (stdQ && !isEmptyAnswer(stdQ, std)) parts.push(`Standing: ${formatAnswer(stdQ, std)}`);
+      if (sitQ && !('balance_sit' in susp) && !isEmptyAnswer(sitQ, sit)) {
+        parts.push(`Sitting: ${formatAnswer(sitQ, sit)}`);
+      }
+      if (stdQ && !('balance_stand' in susp) && !isEmptyAnswer(stdQ, std)) {
+        parts.push(`Standing: ${formatAnswer(stdQ, std)}`);
+      }
       return parts.length ? `Balance: ${parts.join('; ')}` : null;
     },
 
     // Transfer: Lie to sit + Sit to stand on one line.
     transfer_combo(q, a, allQs, answers) {
+      const susp = answers.__suspended || {};
       const lsQ = allQs.transfer_lie_sit, ls = answers.transfer_lie_sit;
       const ssQ = allQs.transfer_sit_stand, ss = answers.transfer_sit_stand;
       const parts = [];
-      if (lsQ && !isEmptyAnswer(lsQ, ls)) parts.push(`Lie to sit: ${formatAnswer(lsQ, ls)}`);
-      if (ssQ && !isEmptyAnswer(ssQ, ss)) parts.push(`Sit to stand: ${formatAnswer(ssQ, ss)}`);
+      if (lsQ && !('transfer_lie_sit' in susp) && !isEmptyAnswer(lsQ, ls)) {
+        parts.push(`Lie to sit: ${formatAnswer(lsQ, ls)}`);
+      }
+      if (ssQ && !('transfer_sit_stand' in susp) && !isEmptyAnswer(ssQ, ss)) {
+        parts.push(`Sit to stand: ${formatAnswer(ssQ, ss)}`);
+      }
       return parts.length ? `Transfer: ${parts.join('; ')}` : null;
     },
 
     // Ambulation level + optional Aid suffix.
     ambulation_combo(q, a, allQs, answers) {
+      const susp = answers.__suspended || {};
       const aidQ = allQs.ambulation_aid, aid = answers.ambulation_aid;
       const aidStr = aidQ && !isEmptyAnswer(aidQ, aid) ? formatAnswer(aidQ, aid) : null;
-      if (isEmptyAnswer(q, a)) {
+      const ambSuspended = 'ambulation' in susp;
+      if (ambSuspended || isEmptyAnswer(q, a)) {
+        if (ambSuspended) return null; // section-level summary will carry the reason
         return aidStr ? `Ambulation: (Aid: ${aidStr})` : null;
       }
       let line = `Ambulation: ${formatAnswer(q, a)}`;
@@ -1791,44 +2156,47 @@
       return a.map(formatCheckEntry).join('\n');
     },
 
+    // OT-comment Cognitive line — totals only, no per-domain subscore.
+    // If the cognitive assessment wasn't performed, emit just the reason.
     cognitive(q, a, allQs, answers) {
-      // If cognitive assessment was not performed, emit just the reason —
-      // skip the AMT/CDT/MoCA breakdown entirely.
       const status = answers.cog_status;
-      if (status && status !== 'Performed') {
+      const statusVal = (typeof status === 'object' && status !== null) ? status.value : status;
+      const statusDetail = (typeof status === 'object' && status !== null) ? status.detail : '';
+      if (statusVal && statusVal !== 'Performed') {
         const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
-        return `Cognitive assessment: ${status}.${userText}`;
+        const reason = statusDetail ? `${statusVal} ${statusDetail}` : statusVal;
+        return `Cognitive assessment: ${reason}.${userText}`;
       }
-      const lines = [];
+      const parts = [];
       const amtQ = allQs.amt, amt = answers.amt;
       if (amtQ && !isEmptyAnswer(amtQ, amt)) {
-        lines.push(`AMT Total score: ${formatAnswer(amtQ, amt)} (Cut-off 6/10)`);
-        const bd = subScoreBreakdownLines(amtQ, amt, undefined, answers);
-        if (bd.length) lines.push(...bd);
+        parts.push(`AMT: ${formatAnswer(amtQ, amt)} (Cut-off 6/10)`);
       }
       const cdtQ = allQs.cdt, cdt = answers.cdt;
       if (cdtQ && !isEmptyAnswer(cdtQ, cdt)) {
-        lines.push(`CDT ${formatAnswer(cdtQ, cdt)} (Cut-off 4)`);
+        parts.push(`CDT: ${formatAnswer(cdtQ, cdt)} (Cut-off 4)`);
       }
       const mocaQ = allQs.moca, moca = answers.moca;
       if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
-        let header = `MoCA Total score: ${formatAnswer(mocaQ, moca)}`;
+        let s = `MoCA: ${formatAnswer(mocaQ, moca)}`;
         const inner = [];
         const cut = answers.moca_cutoff;
         if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
         const bandQ = allQs.moca_band, band = answers.moca_band;
         if (bandQ && !isEmptyAnswer(bandQ, band)) inner.push(formatAnswer(bandQ, band));
-        if (inner.length) header += ` (${inner.join(', ')})`;
-        lines.push(header);
-        const bd = subScoreBreakdownLines(mocaQ, moca, undefined, answers);
-        if (bd.length) lines.push(...bd);
+        if (inner.length) s += ` (${inner.join(', ')})`;
+        parts.push(s);
       }
-      if (!lines.length) {
-        const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
-        return userText.trim() ? `Cognitive:${userText}` : null;
-      }
+      // Append Cognitive impression (extracted from the Mental Function section).
+      const impQ = allQs.cog_impression, imp = answers.cog_impression;
+      const impText = (impQ && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
       const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
-      return `Cognitive:\n${lines.join('\n')}${userText ? '\n' + userText : ''}`;
+      const tail = [
+        parts.length ? `Cognitive: ${parts.join('; ')}.` : '',
+        impText ? `Cognitive impression: ${impText}.` : '',
+        userText.trim(),
+      ].filter(Boolean).join(' ');
+      return tail || null;
     },
   };
 
@@ -1844,31 +2212,66 @@
 
     const suspendedMap = answers.__suspended || {};
     form.schema.sections.forEach((s, si) => {
+      let currentReportTitle = s.reportTitle || s.title;
       const sectionLines = [];
       // Section-level hideQuestionsIf: when matched, only the trigger question
       // is rendered in the report — everything else in the section is skipped.
       const sectionSkip = s.hideQuestionsIf && evalShowIf(s.hideQuestionsIf, answers);
       const triggerId = sectionSkip ? s.hideQuestionsIf.questionId : null;
+      // suspendSuppressesAll: when ANY question in this section is suspended,
+      // collapse the whole section to a single "Suspended further assessment
+      // due to <reason>" sentence. (Currently unused; kept for future tools.)
+      const suspendCollapses = !!s.suspendSuppressesAll &&
+        s.questions.some(q => q.allowSuspend && q.id in suspendedMap);
       // Collect deduped reasons from any suspended questions in this section.
+      // Pre-collected here so customReport composers (which may emit a partial
+      // line when only one of two paired questions is suspended) still see the
+      // matching reason in the section-end summary.
       const sectionReasons = [];
+      s.questions.forEach(q => {
+        if (q.allowSuspend && q.id in suspendedMap) {
+          const r = (suspendedMap[q.id] || '').trim();
+          if (r && !sectionReasons.includes(r)) sectionReasons.push(r);
+        }
+      });
+      // suspendSummaryBefore: section-level config naming a question whose
+      // line should be preceded by the "Suspended further assessment due to…"
+      // sentence (rather than appended at the section's tail). Tracks whether
+      // we've already inserted it so we only emit once.
+      let suspendSummaryEmitted = false;
+      const suspendSummaryBefore = s.suspendSummaryBefore || null;
+      const emitSuspendSummary = () => {
+        if (suspendSummaryEmitted || !sectionReasons.length) return;
+        sectionLines.push(`Suspended further assessment due to ${sectionReasons.join(' / ')}.`);
+        suspendSummaryEmitted = true;
+      };
       for (const q of s.questions) {
+        if (suspendCollapses) break; // skip all per-question lines
         if (q.type === 'heading') continue;
         if (q.hideInReport) continue;
         if (sectionSkip && q.id !== triggerId) continue;
         if (hiddenQ.has(q.id)) continue;
         if (q.showIf && !evalShowIf(q.showIf, answers)) continue;
         if (q.hideInReportIf && evalShowIf(q.hideInReportIf, answers)) continue;
-        if (q.allowSuspend && q.id in suspendedMap) {
-          const r = (suspendedMap[q.id] || '').trim();
-          if (r && !sectionReasons.includes(r)) sectionReasons.push(r);
-          continue;
+        // A question-level reportTitle flushes the current block and starts a new one.
+        if (q.reportTitle && sectionLines.length) {
+          blocks.push({ title: currentReportTitle, lines: [...sectionLines] });
+          sectionLines.length = 0;
+          currentReportTitle = q.reportTitle;
         }
-        // customReport: lets a question delegate its report line to a named composer.
+        // Insert the suspend summary just before the configured anchor question.
+        if (suspendSummaryBefore && q.id === suspendSummaryBefore) emitSuspendSummary();
+        // customReport: lets a question delegate its report line to a named
+        // composer. The composer is responsible for handling its own suspend
+        // logic (e.g. balance_combo skips a half whose source is suspended).
         if (q.customReport && customReportFns[q.customReport]) {
           const out = customReportFns[q.customReport](q, answers[q.id], allQs, answers);
           if (out) sectionLines.push(out);
           continue;
         }
+        // Non-customReport: a suspended question simply omits its line; the
+        // reason was already collected above.
+        if (q.allowSuspend && q.id in suspendedMap) continue;
 
         if (Array.isArray(q.headerInputs)) {
           for (const hi of q.headerInputs) {
@@ -1958,10 +2361,16 @@
           sectionLines.push(`${q.label} — ${lbl}: ${cmt}`);
         }
       }
-      if (sectionReasons.length) {
+      // If suspendSummaryBefore was set but the anchor never rendered
+      // (e.g. all questions hidden), still emit the summary at the tail.
+      if (sectionReasons.length && !suspendSummaryEmitted) {
         sectionLines.push(`Suspended further assessment due to ${sectionReasons.join(' / ')}.`);
       }
-      if (sectionLines.length) blocks.push({ title: s.reportTitle || s.title, lines: sectionLines });
+      if (sectionLines.length) blocks.push({
+        title: currentReportTitle,
+        lines: sectionLines,
+        hideTitle: !!s.hideReportTitle,
+      });
     });
 
     return { headerLines, blocks };
@@ -1971,14 +2380,15 @@
     const { headerLines, blocks } = buildReportBlocks(form, answers);
     const isProblem = b => /problem\s*identification/i.test(b.title || '');
     const isRecommend = b => /recommendation/i.test(b.title || '');
+    const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
 
     const compose = (blockList, includeHeader) => {
       const out = [];
       if (includeHeader) out.push(...headerLines);
       blockList.forEach(b => {
         if (out.length) out.push('');
-        out.push(b.title);
-        out.push(...b.lines);
+        if (!b.hideTitle) out.push(stripPrefix(b.title));
+        out.push(...b.lines.flatMap((line, index) => index ? ['', line] : [line]));
       });
       return out.join('\n').trim();
     };
@@ -1990,13 +2400,43 @@
     };
   }
 
+  function buildOtCommentExtract(form, answers) {
+    const allQs = flattenQuestions(form);
+    const parts = [];
+    const add = value => {
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      if (text) parts.push(text);
+    };
+
+    const mbiQ = allQs.mbi;
+    if (mbiQ && !isEmptyAnswer(mbiQ, answers.mbi)) {
+      add(`mBI: ${formatAnswer(mbiQ, answers.mbi)}`);
+    }
+
+    const cognitiveLine = customReportFns.cognitive(
+      allQs.ot_cognitive || { id: 'ot_cognitive' },
+      answers.ot_cognitive,
+      allQs,
+      answers,
+    );
+    add(cognitiveLine);
+
+    const suggestionQ = allQs.ot_suggestion;
+    if (suggestionQ && !isEmptyAnswer(suggestionQ, answers.ot_suggestion)) {
+      add(`Suggestion: ${formatAnswer(suggestionQ, answers.ot_suggestion)}`);
+    }
+
+    return parts.join('\n');
+  }
+
   function buildReport(form, answers) {
     const { headerLines, blocks } = buildReportBlocks(form, answers);
+    const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
     const out = [...headerLines];
     blocks.forEach(b => {
       out.push('');
-      out.push(b.title);
-      out.push(...b.lines);
+      if (!b.hideTitle) out.push(stripPrefix(b.title));
+      out.push(...b.lines.flatMap((line, index) => index ? ['', line] : [line]));
     });
     return out.join('\n').trim();
   }
@@ -2009,57 +2449,50 @@
       list.appendChild(el('p', { class: 'muted' }, ['No saved responses yet.']));
       return;
     }
-    const fmtDate = iso => {
+    const fmtDate = (iso, opts = {}) => {
       if (!iso) return '—';
       const d = new Date(iso);
-      return Number.isFinite(d.getTime()) ? d.toLocaleDateString() : '—';
+      if (!Number.isFinite(d.getTime())) return '—';
+      if (opts.long) {
+        return d.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+      }
+      return d.toLocaleDateString();
     };
 
     for (const h of items) {
       const c = (h.answers && h.answers.__case) || {};
-      const metaBits = [];
-      metaBits.push('Saved on: ' + fmtDate(h.savedAt));
-      if (!h.draft) metaBits.push('Expired on: ' + fmtDate(h.expiresAt));
+      const dateLabel = (c.assessmentDate ? fmtDate(c.assessmentDate, { long: true }) : fmtDate(h.savedAt, { long: true }));
+      const detailRow = el('div', { class: 'history-detail' }, [
+        el('span', { class: 'badge ' + h.specialty }, [h.specialty || 'Case']),
+        h.draft ? el('span', { class: 'badge draft-badge' }, ['Draft']) : null,
+        h.customText ? el('span', { class: 'badge edited-badge', title: 'Saved with manually edited report text' }, ['Edited']) : null,
+        el('span', { class: 'history-form-chip' }, [h.formTitle]),
+      ].filter(Boolean));
 
-      const titleRow = el('div', { class: 'history-title' }, [
-        el('span', { class: 'badge ' + h.specialty }, [h.specialty]),
+      const primaryName = c.caseId || h.formTitle || 'Untitled case';
+      const titleRow = el('div', { class: 'history-title-row' }, [
+        el('strong', { class: 'case-name' }, [primaryName]),
+        el('span', { class: 'history-date' }, [dateLabel]),
       ]);
+
+      const buttons = el('div', { class: 'card-actions home-history-actions' });
       if (h.draft) {
-        titleRow.appendChild(el('span', { class: 'badge draft-badge' }, ['DRAFT']));
-      }
-      const primaryName = c.caseId || h.formTitle;
-      titleRow.appendChild(el('strong', { class: 'case-name' }, [primaryName]));
-      if (c.caseId) {
-        titleRow.appendChild(el('span', { class: 'form-label' }, [h.formTitle]));
-      }
-
-      const buttons = el('div', { class: 'row' }, [
-        el('button', {
+        buttons.appendChild(el('button', {
+          class: 'home-open-btn',
           onclick: () => setView('fill', h),
-        }, [h.draft ? 'Continue' : 'Edit']),
-      ]);
-      if (!h.draft) {
+        }, ['Open']));
+      } else {
         buttons.appendChild(el('button', {
-          class: 'primary',
-          onclick: async () => {
-            try {
-              const form = await loadForm(h.formId);
-              setView('report', { form, answers: h.answers, entry: h });
-            } catch (err) {
-              alert('Could not reopen form: ' + err.message);
-            }
-          },
-        }, ['View report']));
-        buttons.appendChild(el('button', {
-          title: 'Push the auto-delete date out by 7 days',
-          onclick: () => {
-            history.extend(h.id);
-            renderHistoryList(list);
-          },
-        }, ['Extend 7 days']));
+          class: 'home-open-btn',
+          onclick: () => setView('fill', h),
+        }, ['Open']));
       }
       buttons.appendChild(el('button', {
-        class: 'danger',
+        class: 'home-delete-btn',
         onclick: () => {
           if (!confirm('Delete this saved response?')) return;
           history.remove(h.id);
@@ -2067,10 +2500,10 @@
         },
       }, ['Delete']));
 
-      const card = el('div', { class: 'card' }, [
-        el('div', {}, [
+      const card = el('div', { class: 'card home-history-card' }, [
+        el('div', { class: 'home-history-main' }, [
+          detailRow,
           titleRow,
-          el('div', { class: 'meta' }, [metaBits.join(' ; ')]),
         ]),
         buttons,
       ]);

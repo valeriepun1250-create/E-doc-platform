@@ -20,54 +20,90 @@
 
 <!-- Templates -->
 <template id="tpl-browse">
-  <section class="view">
-    <div class="new-case">
-      <h3 style="margin-top:0">Create new case</h3>
-      <div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap;">
-        <label style="flex:1;min-width:180px">Ward / Bed number / Initial
-          <input type="text" id="ncCaseId" placeholder="e.g. E8/23/Chan TM" />
-        </label>
-        <label style="min-width:170px">Assessment date
-          <input type="date" id="ncDate" />
-        </label>
-        <label style="flex:1;min-width:240px">Assessment form
-          <select id="ncForm"><option value="">Select form…</option></select>
-        </label>
-        <button id="ncStart" class="primary" type="button">Start</button>
-      </div>
-      <p id="ncErr" class="err"></p>
-    </div>
+  <section class="home-hero">
+    <p class="home-hospital">QUEEN ELIZABETH HOSPITAL</p>
+    <h1 class="home-title">OT E-Documentation Platform</h1>
+  </section>
 
-    <h3 style="margin-top:18px">History</h3>
-    <p class="muted" style="margin-top:0">Saved locally on this device. Reports auto-delete 7 days after saving.</p>
-    <div id="historyList" class="card-list"></div>
+  <section class="home-panel home-create">
+    <h2 class="home-heading">Create New Case</h2>
+    <div class="home-create-grid">
+      <label class="home-field home-case">Ward / Bed number / Initial
+        <input type="text" id="ncCaseId" placeholder="e.g. E8/12" />
+      </label>
+      <div class="home-field home-date-wrap">
+        <div class="home-date-label">
+          <span>Assessment Date</span>
+          <button id="ncToday" type="button" class="home-today-btn">Today</button>
+        </div>
+        <input type="text" id="ncDate" placeholder="e.g. 19 May 2026" />
+      </div>
+      <label class="home-field home-form">Assessment Form
+        <select id="ncForm"><option value="">Select assessment form</option></select>
+      </label>
+      <button id="ncStart" class="home-create-btn" type="button">Create</button>
+    </div>
+    <p id="ncErr" class="err home-error"></p>
+  </section>
+
+  <section class="home-panel home-history">
+    <h2 class="home-heading">History</h2>
+    <div id="historyList" class="card-list home-history-list"></div>
   </section>
 </template>
 
 <template id="tpl-fill">
-  <section class="view">
-    <button class="back">&larr; Back</button>
-    <h2 id="fTitle"></h2>
-    <p id="fDesc" class="muted"></p>
-    <form id="fillForm"></form>
-    <div class="actions">
-      <button type="button" id="btnSaveDraft">Save Draft</button>
-      <button type="button" id="btnSaveGenerate" class="primary">Save &amp; Generate Report</button>
-      <button type="button" id="btnPreview">Preview report</button>
+  <section class="view fill-view">
+    <div class="work-topbar">
+      <div class="work-case-meta">
+        <h2 id="fTitle"></h2>
+        <p id="fDesc" class="muted"></p>
+      </div>
+      <div class="work-top-actions">
+        <button type="button" id="btnSaveGenerate" class="work-top-btn">Summary</button>
+        <button type="button" class="back work-top-btn">Home Page</button>
+      </div>
     </div>
-    <pre id="reportPreview" class="report" hidden></pre>
+    <form id="fillForm"></form>
+    <div class="work-bottom-bar">
+      <strong>Autosaved locally</strong>
+      <div class="work-bottom-actions">
+        <button type="button" id="btnPrevSection">Previous</button>
+        <button type="button" id="btnSaveDraft" class="primary solid">Save</button>
+        <button type="button" id="btnNextSection">Next</button>
+      </div>
+    </div>
   </section>
 </template>
 
 <template id="tpl-report">
-  <section class="view">
-    <button class="back">&larr; Back</button>
-    <h2 id="rTitle"></h2>
-    <p id="rMeta" class="muted"></p>
-    <div id="rParts" class="report-parts"></div>
+  <section class="view report-view">
+    <div class="summary-topbar">
+      <div class="summary-case-meta">
+        <h2 id="rTitle"></h2>
+        <p id="rMeta" class="muted"></p>
+      </div>
+      <div class="summary-top-actions">
+        <button type="button" class="back summary-top-btn">Assessment</button>
+        <button type="button" id="btnReportHome" class="summary-top-btn">Home Page</button>
+      </div>
+    </div>
+    <div class="summary-shell">
+      <h2 class="summary-heading">Generated Documentation</h2>
+      <p class="summary-reminder">Only edit when you finish the assessment input.</p>
+      <div id="rParts" class="report-parts"></div>
+    </div>
+    <div class="summary-bottom-bar">
+      <strong>Saved locally.</strong>
+      <div class="summary-bottom-actions">
+        <button type="button" id="btnReportSave" class="primary solid">Save</button>
+        <button type="button" id="btnReportBack" class="summary-top-btn">Back to assessment</button>
+      </div>
+    </div>
   </section>
 </template>
 
+<div id="version-badge">V 1.1.35</div>
 <script src="app.js"></script>
 </body>
 </html>
