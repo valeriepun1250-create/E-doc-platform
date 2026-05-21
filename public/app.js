@@ -2021,7 +2021,7 @@
         return formatAnswer(oq, ov);
       };
 
-      // Line 1: Basic ADL  Walk  Outdoor mobility
+      // Line 1: Basic ADL  Indoor mobility  Outdoor mobility
       const l1 = [];
       const badl = v('premorbid_badl');
       if (badl) l1.push(`Basic ADL: ${badl}`);
@@ -2030,12 +2030,12 @@
       const inA = v('indoor_aid');
       const inRemark = (comments.indoor_walk || '').trim();
       if (inW) {
-        let seg = 'Walk:';
+        let seg = 'Indoor mobility:';
         if (inW) seg += ` ${inW}`;
         if (inRemark) seg += `, ${inRemark}`;
-        if (inA) seg += ` (Aid: ${inA})`;
+        if (inA) seg += ` (${inA})`;
         l1.push(seg);
-      } else if (inA) l1.push(`Aid: ${inA}`);
+      } else if (inA) l1.push(`Indoor mobility: (${inA})`);
 
       const outW = v('outdoor_walk');
       const outA = v('outdoor_aid');
@@ -2044,9 +2044,9 @@
         let seg = 'Outdoor mobility:';
         if (outW) seg += ` ${outW}`;
         if (outRemark) seg += `, ${outRemark}`;
-        if (outA) seg += ` (Aid: ${outA})`;
+        if (outA) seg += ` (${outA})`;
         l1.push(seg);
-      } else if (outA) l1.push(`Outdoor aid: ${outA}`);
+      } else if (outA) l1.push(`Outdoor mobility: (${outA})`);
 
       // Line 2: IADL  Occupation
       const l2 = [];
