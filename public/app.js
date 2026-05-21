@@ -2061,7 +2061,7 @@
     },
 
     // Single multi-line MoCA block: total line with cut-off + Education,
-    // then sub-score breakdown, then Interpretation, then Cognitive impression.
+    // then sub-score breakdown, then Interpretation, then Impression.
     moca_full(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
       const total = formatAnswer(q, a);
@@ -2083,7 +2083,7 @@
       }
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
       if (impQ && !isEmptyAnswer(impQ, imp)) {
-        lines.push(`Cognitive impression: ${formatAnswer(impQ, imp)}`);
+        lines.push(`Impression: ${formatAnswer(impQ, imp)}`);
       }
       return lines.join('\n');
     },
@@ -2187,13 +2187,13 @@
         if (inner.length) s += ` (${inner.join(', ')})`;
         parts.push(s);
       }
-      // Append Cognitive impression (extracted from the Mental Function section).
+      // Append Impression (extracted from the Mental Function section).
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
       const impText = (impQ && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
       const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
       const tail = [
         parts.length ? `Cognitive: ${parts.join('; ')}.` : '',
-        impText ? `Cognitive impression: ${impText}.` : '',
+        impText ? `Impression: ${impText}.` : '',
         userText.trim(),
       ].filter(Boolean).join(' ');
       return tail || null;

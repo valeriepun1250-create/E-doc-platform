@@ -746,7 +746,7 @@
           },
           {
             "id": "cog_impression",
-            "label": "Cognitive impression",
+            "label": "Impression",
             "type": "short_text",
             "width": "full",
             "showIf": {
