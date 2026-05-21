@@ -2125,7 +2125,7 @@
       const cmts = answers.__comments || {};
       const msQ = allQs.mental_state, ms = answers.mental_state;
       if (msQ && !isEmptyAnswer(msQ, ms)) {
-        let line = `Mental state: ${formatAnswer(msQ, ms)}`;
+        let line = `${formatAnswer(msQ, ms)}`;
         if (cmts.mental_state) line += ` (${cmts.mental_state})`;
         parts.push(line);
       }
