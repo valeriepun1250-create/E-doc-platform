@@ -666,10 +666,21 @@
             "width": "full",
             "headerInputs": [
               {
+                "id": "moca_age_cluster",
+                "label": "Age",
+                "type": "select",
+                "placeholder": "Select age",
+                "options": [
+                  "65-69",
+                  "70-79",
+                  "≥80"
+                ]
+              },
+              {
                 "id": "moca_education",
                 "label": "Education",
-                "placeholder": "e.g. F.6",
-                "reportTemplate": "[Educational level: {answer}]"
+                "type": "select",
+                "placeholder": "Select education"
               }
             ],
             "items": [
@@ -709,15 +720,6 @@
                 "max": 6
               }
             ],
-            "totalExtras": [
-              {
-                "id": "moca_cutoff",
-                "label": "Cut-off",
-                "suffix": "/30",
-                "inputType": "number",
-                "placeholder": "26"
-              }
-            ],
             "breakdownItemsPerLine": 5,
             "breakdownSep": "   ",
             "customReport": "moca_full",
@@ -732,11 +734,12 @@
             "type": "multiple_choice",
             "width": "full",
             "mergeUp": true,
+            "hideInForm": true,
             "options": [
               ">16th percentile",
-              "≤16th percentile: DSM-5 mild NCD",
-              "≤7th percentile: Petersen MCI",
-              "≤2nd percentile: DSM-5 major NCD"
+              "≤16th percentile",
+              "≤7th percentile",
+              "≤2nd percentile"
             ],
             "showIf": {
               "questionId": "cog_status",
@@ -1370,7 +1373,7 @@
               },
               {
                 "questionId": "moca",
-                "label": "MoCA"
+                "label": "HK-Montreal Cognitive Assessment (MoCA)"
               }
             ],
             "customReport": "cognitive"

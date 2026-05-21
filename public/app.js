@@ -6,6 +6,26 @@
   const state = { view: 'browse', currentForm: null };
   const HISTORY_KEY = 'edoc_history_v1';
   const FORMS_DIR = 'forms/';
+  const MOCA_NORM_ROWS = {
+    '65-69': {
+      '0-3': { p16: 17, p7: 14, p2: 9 },
+      '4-6': { p16: 19, p7: 18, p2: 13 },
+      '7-9': { p16: 21, p7: 19, p2: 16 },
+      '10-12': { p16: 22, p7: 20, p2: 17 },
+      '>12': { p16: 25, p7: 23, p2: 21 },
+    },
+    '70-79': {
+      '0-3': { p16: 15, p7: 14, p2: 11 },
+      '4-6': { p16: 18, p7: 15, p2: 10 },
+      '7-9': { p16: 20, p7: 18, p2: 15 },
+      '10-12': { p16: 22, p7: 19, p2: 18 },
+      '>12': { p16: 22, p7: 20, p2: 16 },
+    },
+    '≥80': {
+      '0-6': { p16: 13, p7: 13, p2: 10 },
+      '>6': { p16: 17, p7: 15, p2: 13 },
+    },
+  };
 
   // ---------- forms loader (replaces former /api/forms backend) ----------
   // Each form file is { specialty, title, description?, schema }. The id is the
@@ -58,6 +78,23 @@
     });
     kids.forEach(k => e.appendChild(typeof k === 'string' ? document.createTextNode(k) : k));
     return e;
+  };
+  const mocaEducationOptions = ageCluster =>
+    ageCluster === '≥80' ? ['0-6', '>6'] : ['0-3', '4-6', '7-9', '10-12', '>12'];
+  const mocaTotal = value => {
+    if (!value || typeof value !== 'object') return null;
+    return Object.values(value).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+  };
+  const mocaNormFor = (answers, total) => {
+    const age = answers.moca_age_cluster;
+    const edu = answers.moca_education;
+    const row = age && edu && MOCA_NORM_ROWS[age] && MOCA_NORM_ROWS[age][edu];
+    if (!row || typeof total !== 'number') return null;
+    let band = '>16th percentile';
+    if (total <= row.p2) band = '≤2nd percentile';
+    else if (total <= row.p7) band = '≤7th percentile';
+    else if (total <= row.p16) band = '≤16th percentile';
+    return { cutoff: row.p16, band };
   };
 
   // Saved reports auto-expire 7 days after savedAt. The user can extend the
@@ -664,14 +701,38 @@
       q.headerInputs.forEach(hi => {
         const wrap = el('label', { class: 'header-extra' });
         wrap.appendChild(document.createTextNode((hi.label || '') + ': '));
-        const inp = el('input', { type: hi.inputType || 'text', placeholder: hi.placeholder || '' });
-        inp.value = answers[hi.id] != null ? answers[hi.id] : '';
-        inp.oninput = () => {
-          if (inp.value === '') delete answers[hi.id];
-          else answers[hi.id] = inp.value;
-          if (ctx && ctx.fireChange) ctx.fireChange();
-        };
-        wrap.appendChild(inp);
+        if (hi.type === 'select') {
+          const sel = el('select');
+          const options = hi.id === 'moca_education'
+            ? mocaEducationOptions(answers.moca_age_cluster)
+            : (hi.options || []);
+          sel.appendChild(el('option', { value: '' }, [hi.placeholder || 'Select']));
+          options.forEach(opt => sel.appendChild(el('option', { value: opt }, [opt])));
+          sel.value = answers[hi.id] != null ? answers[hi.id] : '';
+          sel.onchange = () => {
+            if (sel.value === '') delete answers[hi.id];
+            else answers[hi.id] = sel.value;
+            if (hi.id === 'moca_age_cluster') {
+              const allowed = mocaEducationOptions(sel.value);
+              if (answers.moca_education && !allowed.includes(answers.moca_education)) delete answers.moca_education;
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+            } else if (hi.id === 'moca_education' && ctx && ctx.rerenderSection) {
+              ctx.rerenderSection();
+            } else if (ctx && ctx.fireChange) {
+              ctx.fireChange();
+            }
+          };
+          wrap.appendChild(sel);
+        } else {
+          const inp = el('input', { type: hi.inputType || 'text', placeholder: hi.placeholder || '' });
+          inp.value = answers[hi.id] != null ? answers[hi.id] : '';
+          inp.oninput = () => {
+            if (inp.value === '') delete answers[hi.id];
+            else answers[hi.id] = inp.value;
+            if (ctx && ctx.fireChange) ctx.fireChange();
+          };
+          wrap.appendChild(inp);
+        }
         extras.appendChild(wrap);
       });
       head.appendChild(extras);
@@ -725,6 +786,11 @@
 
     if (q.removable && Array.isArray(answers.__hiddenQuestions) && answers.__hiddenQuestions.includes(q.id)) {
       wrap.style.display = 'none';
+    }
+
+    if (q.hideInForm) {
+      wrap.style.display = 'none';
+      return wrap;
     }
 
     const fire = ctx && ctx.fireChange ? ctx.fireChange : () => {};
@@ -1213,6 +1279,22 @@
           const t = Object.values(curObj).reduce((a, v) =>
             a + (typeof v === 'number' ? v : 0), 0);
           totalCell.textContent = String(t);
+          if (q.id === 'moca') {
+            const norm = mocaNormFor(answers, t);
+            if (norm) {
+              answers.moca_cutoff = norm.cutoff;
+              answers.moca_band = norm.band;
+            } else {
+              delete answers.moca_cutoff;
+              delete answers.moca_band;
+            }
+            const normText = wrap.querySelector('.moca-norm-result');
+            if (normText) {
+              normText.textContent = norm
+                ? `Cut-off: ${norm.cutoff}/30 · ${norm.band}`
+                : 'Select Age and Education cluster to calculate cut-off / percentile.';
+            }
+          }
           if (q.pendingPolicy) {
             const incomplete = subScoreIncomplete(q, curObj);
             totalSuffix.textContent = incomplete
@@ -1323,6 +1405,12 @@
 
         const totalCellWrap = el('td', { class: 'si-val' },
           [totalCell, el('span', { class: 'si-max' }, ['/' + totalMax]), totalSuffix]);
+
+        if (q.id === 'moca') {
+          totalCellWrap.appendChild(el('span', {
+            class: 'moca-norm-result',
+          }, ['Select Age and Education cluster to calculate cut-off / percentile.']));
+        }
 
         // totalExtras: extra inline fields rendered on the total row, bound to
         // separate top-level answer keys. Used for things like a MoCA cut-off
@@ -2065,22 +2153,18 @@
     moca_full(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
       const total = formatAnswer(q, a);
-      let header = `MoCA: Total score: ${total}`;
-      const cutoff = answers.moca_cutoff;
-      if (cutoff !== undefined && cutoff !== '' && cutoff !== null) {
-        header += ` (cut-off: ${cutoff}/30)`;
-      }
-      const edu = answers.moca_education;
-      if (edu !== undefined && edu !== '' && edu !== null) {
-        header += ` [Educational level: ${edu}]`;
-      }
+      const totalNumber = mocaTotal(a);
+      const norm = mocaNormFor(answers, totalNumber);
+      let header = `HK-Montreal Cognitive Assessment (MoCA): Total score: ${total}`;
+      const cutoff = norm ? norm.cutoff : answers.moca_cutoff;
+      const band = norm ? norm.band : answers.moca_band;
+      const inner = [];
+      if (cutoff !== undefined && cutoff !== '' && cutoff !== null) inner.push(`cut-off: ${cutoff}/30`);
+      if (band) inner.push(band);
+      if (inner.length) header += ` (${inner.join(', ')})`;
       const lines = [header];
       const bd = subScoreBreakdownLines(q, a, undefined, answers);
       if (bd.length) lines.push(...bd);
-      const bandQ = allQs.moca_band, band = answers.moca_band;
-      if (bandQ && !isEmptyAnswer(bandQ, band)) {
-        lines.push(`Interpretation: ${formatAnswer(bandQ, band)}.`);
-      }
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
       if (impQ && !isEmptyAnswer(impQ, imp)) {
         lines.push(`Impression: ${formatAnswer(impQ, imp)}`);
@@ -2178,12 +2262,14 @@
       }
       const mocaQ = allQs.moca, moca = answers.moca;
       if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
-        let s = `MoCA: ${formatAnswer(mocaQ, moca)}`;
+        const totalNumber = mocaTotal(moca);
+        const norm = mocaNormFor(answers, totalNumber);
+        let s = `HK-Montreal Cognitive Assessment (MoCA): ${formatAnswer(mocaQ, moca)}`;
         const inner = [];
-        const cut = answers.moca_cutoff;
+        const cut = norm ? norm.cutoff : answers.moca_cutoff;
         if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
-        const bandQ = allQs.moca_band, band = answers.moca_band;
-        if (bandQ && !isEmptyAnswer(bandQ, band)) inner.push(formatAnswer(bandQ, band));
+        const band = norm ? norm.band : answers.moca_band;
+        if (band) inner.push(band);
         if (inner.length) s += ` (${inner.join(', ')})`;
         parts.push(s);
       }
