@@ -2092,14 +2092,18 @@
       return parts.length ? parts.join('. ') + '.' : null;
     },
 
-    // Bathing setup + Bath by on one line.
+    // Bathing setup + Bath by in concise sentence style.
     bathing_combo(q, a, allQs, answers) {
-      const parts = [];
       const sQ = allQs.bathing_setup, s = answers.bathing_setup;
-      if (sQ && !isEmptyAnswer(sQ, s)) parts.push(`Bathing setup: ${formatAnswer(sQ, s)}`);
       const mQ = allQs.bath_method, m = answers.bath_method;
-      if (mQ && !isEmptyAnswer(mQ, m)) parts.push(`Bath by: ${formatAnswer(mQ, m)}`);
-      return parts.length ? parts.join('. ') + '.' : null;
+      const parts = [];
+      if (sQ && !isEmptyAnswer(sQ, s)) parts.push(`Bathing: ${formatAnswer(sQ, s)}.`);
+      if (mQ && !isEmptyAnswer(mQ, m)) {
+        let method = formatAnswer(mQ, m);
+        method = method.replace(/^Sit on \((.+)\)$/i, 'Sit on $1');
+        parts.push(`${method}.`);
+      }
+      return parts.length ? parts.join(' ') : null;
     },
 
     // Inverted-checkbox orientation: unchecked = orientated (green), checked = disorientated (red).
