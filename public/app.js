@@ -1772,7 +1772,7 @@
       reason.oninput = () => { cb.checked = true; sync(); };
       const lbl = el('label', { class: 'suspend-label' });
       lbl.appendChild(cb);
-      lbl.appendChild(document.createTextNode(' Suspend assessment — reason: '));
+      lbl.appendChild(document.createTextNode(' Not test due to '));
       lbl.appendChild(reason);
       row.appendChild(lbl);
       wrap.appendChild(row);
