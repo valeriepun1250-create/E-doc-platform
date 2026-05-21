@@ -1312,7 +1312,7 @@
           if (q.pendingPolicy) {
             const incomplete = subScoreIncomplete(q, curObj);
             totalSuffix.textContent = incomplete
-              ? '  ' + (q.pendingPolicy.pendingText || 'pending further assessment later')
+              ? '  ' + (q.pendingPolicy.pendingText || 'pending further assessment')
               : '';
             totalCell.textContent = (incomplete ? '≥' : '') + String(t);
           }
@@ -1924,10 +1924,10 @@
             ? Number(it.max || 0)
             : Math.max(...(it.options || [0]))), 0);
       // pendingPolicy: when any required item is unrated/NA, the total reads
-      // `≥X/Y pending further assessment later`.
+      // `≥X/Y pending further assessment`.
       if (q.pendingPolicy) {
         if (subScoreIncomplete(q, a)) {
-          const tail = q.pendingPolicy.pendingText || ', pending further assessment later';
+          const tail = q.pendingPolicy.pendingText || ', pending further assessment';
           return `≥${total}/${totalMax}${tail}`;
         }
       }

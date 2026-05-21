@@ -1021,7 +1021,7 @@
                   "wheelchair"
                 ]
               ],
-              "pendingText": ", pending further assessment later"
+              "pendingText": ", pending further assessment"
             },
             "includeNAInBreakdown": true,
             "breakdownPosition": "after",
