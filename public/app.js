@@ -2085,7 +2085,7 @@
         if (segs.length) parts.push(segs.join('; '));
       }
       const haQ = allQs.home_access, ha = answers.home_access;
-      if (haQ && !isEmptyAnswer(haQ, ha)) parts.push(`Home access: ${formatAnswer(haQ, ha)}`);
+      if (haQ && !isEmptyAnswer(haQ, ha)) parts.push(formatAnswer(haQ, ha));
       const cmts = answers.__comments || {};
       if (cmts.lives_with) parts.push(`Main carer / details: ${cmts.lives_with}`);
       if (cmts.home_access) parts.push(`Floor / stairs detail: ${cmts.home_access}`);
