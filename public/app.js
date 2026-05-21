@@ -96,6 +96,22 @@
     else if (total <= row.p16) band = '≤16th percentile';
     return { cutoff: row.p16, band };
   };
+  const refreshMocaNormDisplay = (root, answers) => {
+    const norm = mocaNormFor(answers, mocaTotal(answers.moca));
+    if (norm) {
+      answers.moca_cutoff = norm.cutoff;
+      answers.moca_band = norm.band;
+    } else {
+      delete answers.moca_cutoff;
+      delete answers.moca_band;
+    }
+    const normText = root && root.querySelector('.moca-norm-result');
+    if (normText) {
+      normText.textContent = norm
+        ? `Cut-off: ${norm.cutoff}/30 · ${norm.band}`
+        : 'Select Age and Education cluster to calculate cut-off / percentile.';
+    }
+  };
 
   // Saved reports auto-expire 7 days after savedAt. The user can extend the
   // expiry by another 7 days from the History list.
@@ -702,12 +718,19 @@
         const wrap = el('label', { class: 'header-extra' });
         wrap.appendChild(document.createTextNode((hi.label || '') + ': '));
         if (hi.type === 'select') {
-          const sel = el('select');
+          const sel = el('select', { 'data-header-id': hi.id });
           const options = hi.id === 'moca_education'
             ? mocaEducationOptions(answers.moca_age_cluster)
             : (hi.options || []);
-          sel.appendChild(el('option', { value: '' }, [hi.placeholder || 'Select']));
-          options.forEach(opt => sel.appendChild(el('option', { value: opt }, [opt])));
+          const populateSelect = select => {
+            select.innerHTML = '';
+            select.appendChild(el('option', { value: '' }, [hi.placeholder || 'Select']));
+            const nextOptions = hi.id === 'moca_education'
+              ? mocaEducationOptions(answers.moca_age_cluster)
+              : options;
+            nextOptions.forEach(opt => select.appendChild(el('option', { value: opt }, [opt])));
+          };
+          populateSelect(sel);
           sel.value = answers[hi.id] != null ? answers[hi.id] : '';
           sel.onchange = () => {
             if (sel.value === '') delete answers[hi.id];
@@ -715,12 +738,16 @@
             if (hi.id === 'moca_age_cluster') {
               const allowed = mocaEducationOptions(sel.value);
               if (answers.moca_education && !allowed.includes(answers.moca_education)) delete answers.moca_education;
-              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
-            } else if (hi.id === 'moca_education' && ctx && ctx.rerenderSection) {
-              ctx.rerenderSection();
-            } else if (ctx && ctx.fireChange) {
-              ctx.fireChange();
+              const eduSelect = extras.querySelector('select[data-header-id="moca_education"]');
+              if (eduSelect) {
+                eduSelect.innerHTML = '';
+                eduSelect.appendChild(el('option', { value: '' }, ['Select education']));
+                allowed.forEach(opt => eduSelect.appendChild(el('option', { value: opt }, [opt])));
+                eduSelect.value = answers.moca_education || '';
+              }
             }
+            refreshMocaNormDisplay(wrap.closest('.qfill') || wrap, answers);
+            if (ctx && ctx.fireChange) ctx.fireChange();
           };
           wrap.appendChild(sel);
         } else {
@@ -1280,20 +1307,7 @@
             a + (typeof v === 'number' ? v : 0), 0);
           totalCell.textContent = String(t);
           if (q.id === 'moca') {
-            const norm = mocaNormFor(answers, t);
-            if (norm) {
-              answers.moca_cutoff = norm.cutoff;
-              answers.moca_band = norm.band;
-            } else {
-              delete answers.moca_cutoff;
-              delete answers.moca_band;
-            }
-            const normText = wrap.querySelector('.moca-norm-result');
-            if (normText) {
-              normText.textContent = norm
-                ? `Cut-off: ${norm.cutoff}/30 · ${norm.band}`
-                : 'Select Age and Education cluster to calculate cut-off / percentile.';
-            }
+            refreshMocaNormDisplay(wrap, answers);
           }
           if (q.pendingPolicy) {
             const incomplete = subScoreIncomplete(q, curObj);
