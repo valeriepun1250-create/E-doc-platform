@@ -2339,14 +2339,14 @@
         }
       });
       // suspendSummaryBefore: section-level config naming a question whose
-      // line should be preceded by the "Suspended further assessment due to…"
+      // line should be preceded by the "Not test due to …"
       // sentence (rather than appended at the section's tail). Tracks whether
       // we've already inserted it so we only emit once.
       let suspendSummaryEmitted = false;
       const suspendSummaryBefore = s.suspendSummaryBefore || null;
       const emitSuspendSummary = () => {
         if (suspendSummaryEmitted || !sectionReasons.length) return;
-        sectionLines.push(`Suspended further assessment due to ${sectionReasons.join(' / ')}.`);
+        sectionLines.push(`Not test due to ${sectionReasons.join(' / ')}.`);
         suspendSummaryEmitted = true;
       };
       for (const q of s.questions) {
@@ -2468,7 +2468,7 @@
       // If suspendSummaryBefore was set but the anchor never rendered
       // (e.g. all questions hidden), still emit the summary at the tail.
       if (sectionReasons.length && !suspendSummaryEmitted) {
-        sectionLines.push(`Suspended further assessment due to ${sectionReasons.join(' / ')}.`);
+        sectionLines.push(`Not test due to ${sectionReasons.join(' / ')}.`);
       }
       if (sectionLines.length) blocks.push({
         title: currentReportTitle,
