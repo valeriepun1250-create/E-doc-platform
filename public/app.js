@@ -2021,10 +2021,10 @@
         return formatAnswer(oq, ov);
       };
 
-      // Line 1: BADL  Walk  Outdoor mobility
+      // Line 1: Basic ADL  Walk  Outdoor mobility
       const l1 = [];
       const badl = v('premorbid_badl');
-      if (badl) l1.push(`BADL: ${badl}`);
+      if (badl) l1.push(`Basic ADL: ${badl}`);
 
       const inW = v('indoor_walk');
       const inA = v('indoor_aid');

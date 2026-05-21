@@ -71,7 +71,7 @@
           },
           {
             "id": "premorbid_badl",
-            "label": "Premorbid BADL",
+            "label": "Premorbid Basic ADL",
             "type": "checkbox",
             "width": "half",
             "options": [
