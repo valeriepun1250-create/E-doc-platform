@@ -639,7 +639,7 @@
                 ]
               }
             ],
-            "reportTemplate": "AMT: Total score: {answer} (Cut-off 6/10)",
+            "reportTemplate": "Abbreviated Mental Test (AMT): {answer} (Cut off scores: <6 indicated further evaluations for possibility of cognitive impairment)",
             "breakdownItemsPerLine": 7,
             "breakdownSep": "   ",
             "showIf": {
@@ -656,7 +656,7 @@
             "removable": true,
             "width": "full",
             "hint": "Cut-off 4. Lower score indicates lower cognitive function.",
-            "reportTemplate": "Clock Drawing Test (CDT): {answer} (Cut-off 4)",
+            "reportTemplate": "Clock Drawing Test (CDT): {answer} (Cutoff score: 3/4; Lower score indicated higher cognitive function)",
             "showIf": {
               "questionId": "cog_status",
               "equals": "Performed"

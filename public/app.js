@@ -2272,11 +2272,11 @@
       const parts = [];
       const amtQ = allQs.amt, amt = answers.amt;
       if (amtQ && !isEmptyAnswer(amtQ, amt)) {
-        parts.push(`AMT: ${formatAnswer(amtQ, amt)} (Cut-off 6/10)`);
+        parts.push(`Abbreviated Mental Test (AMT): ${formatAnswer(amtQ, amt)} (Cut off scores: <6 indicated further evaluations for possibility of cognitive impairment)`);
       }
       const cdtQ = allQs.cdt, cdt = answers.cdt;
       if (cdtQ && !isEmptyAnswer(cdtQ, cdt)) {
-        parts.push(`CDT: ${formatAnswer(cdtQ, cdt)} (Cut-off 4)`);
+        parts.push(`Clock Drawing Test (CDT): ${formatAnswer(cdtQ, cdt)} (Cutoff score: 3/4; Lower score indicated higher cognitive function)`);
       }
       const mocaQ = allQs.moca, moca = answers.moca;
       if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
