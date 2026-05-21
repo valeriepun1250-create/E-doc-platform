@@ -2198,11 +2198,21 @@
       const sitQ = allQs.balance_sit, sit = answers.balance_sit;
       const stdQ = allQs.balance_stand, std = answers.balance_stand;
       const parts = [];
-      if (sitQ && !('balance_sit' in susp) && !isEmptyAnswer(sitQ, sit)) {
-        parts.push(`Sitting: ${formatAnswer(sitQ, sit)}`);
+      if (sitQ) {
+        if ('balance_sit' in susp) {
+          const reason = String(susp.balance_sit || '').trim();
+          parts.push(reason ? `Sitting: Not test due to ${reason}` : 'Sitting: Not test');
+        } else if (!isEmptyAnswer(sitQ, sit)) {
+          parts.push(`Sitting: ${formatAnswer(sitQ, sit)}`);
+        }
       }
-      if (stdQ && !('balance_stand' in susp) && !isEmptyAnswer(stdQ, std)) {
-        parts.push(`Standing: ${formatAnswer(stdQ, std)}`);
+      if (stdQ) {
+        if ('balance_stand' in susp) {
+          const reason = String(susp.balance_stand || '').trim();
+          parts.push(reason ? `Standing: Not test due to ${reason}` : 'Standing: Not test');
+        } else if (!isEmptyAnswer(stdQ, std)) {
+          parts.push(`Standing: ${formatAnswer(stdQ, std)}`);
+        }
       }
       return parts.length ? `Balance: ${parts.join('; ')}` : null;
     },
@@ -2333,6 +2343,8 @@
       // matching reason in the section-end summary.
       const sectionReasons = [];
       s.questions.forEach(q => {
+        // balance_combo already renders these two suspend states inline.
+        if (q.id === 'balance_sit' || q.id === 'balance_stand') return;
         if (q.allowSuspend && q.id in suspendedMap) {
           const r = (suspendedMap[q.id] || '').trim();
           if (r && !sectionReasons.includes(r)) sectionReasons.push(r);
