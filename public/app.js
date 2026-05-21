@@ -2306,10 +2306,10 @@
           const reason = String(susp.ambulation || '').trim();
           return reason ? `Ambulation: Not test due to ${reason}` : 'Ambulation: Not test';
         }
-        return aidStr ? `Ambulation: (Aid: ${aidStr})` : null;
+        return aidStr ? `Ambulation: (${aidStr})` : null;
       }
       let line = `Ambulation: ${formatAnswer(q, a)}`;
-      if (aidStr) line += ` (Aid: ${aidStr})`;
+      if (aidStr) line += ` (${aidStr})`;
       return line;
     },
 
