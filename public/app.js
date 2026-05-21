@@ -1762,9 +1762,24 @@
       });
       const initial = susp[q.id];
       if (initial !== undefined) { cb.checked = true; reason.value = initial; }
+      const setFrozen = frozen => {
+        wrap.querySelectorAll('input, button, select, textarea').forEach(ctrl => {
+          if (ctrl === cb || ctrl === reason) return;
+          ctrl.disabled = frozen;
+        });
+      };
+      const clearAnswer = () => {
+        delete answers[q.id];
+        if (comments) delete comments[q.id];
+      };
       const sync = () => {
-        if (cb.checked) susp[q.id] = reason.value;
-        else delete susp[q.id];
+        if (cb.checked) {
+          clearAnswer();
+          susp[q.id] = reason.value;
+        } else {
+          delete susp[q.id];
+        }
+        setFrozen(cb.checked);
         wrap.classList.toggle('suspended', cb.checked);
         if (ctx && ctx.fireChange) ctx.fireChange();
       };
@@ -1776,7 +1791,10 @@
       lbl.appendChild(reason);
       row.appendChild(lbl);
       wrap.appendChild(row);
-      if (initial !== undefined) wrap.classList.add('suspended');
+      if (initial !== undefined) {
+        wrap.classList.add('suspended');
+        setFrozen(true);
+      }
     }
 
     return wrap;
