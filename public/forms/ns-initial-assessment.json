@@ -467,7 +467,7 @@
               }
             ],
             "joinWith": " ",
-            "reportTemplate": "GCS: {answer}"
+            "reportTemplate": "GCS: E{e} V{v} M{m}"
           },
           {
             "id": "mental_state",
