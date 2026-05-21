@@ -1772,8 +1772,43 @@
         delete answers[q.id];
         if (comments) delete comments[q.id];
       };
+      const clearAnswerUI = () => {
+        wrap.querySelectorAll('input, select, textarea').forEach(ctrl => {
+          if (ctrl === cb || ctrl === reason) return;
+          if (ctrl.tagName === 'SELECT') {
+            if (ctrl.value) {
+              ctrl.value = '';
+              ctrl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            return;
+          }
+          if (ctrl.tagName === 'TEXTAREA') {
+            if (ctrl.value) {
+              ctrl.value = '';
+              ctrl.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            return;
+          }
+          const type = (ctrl.getAttribute('type') || '').toLowerCase();
+          if (type === 'checkbox' || type === 'radio') {
+            if (ctrl.checked) {
+              ctrl.checked = false;
+              ctrl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          } else if (ctrl.value) {
+            ctrl.value = '';
+            ctrl.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        });
+        wrap.querySelectorAll('.sel').forEach(node => node.classList.remove('sel'));
+      };
       const sync = () => {
+        const wasChecked = Object.prototype.hasOwnProperty.call(susp, q.id);
         if (cb.checked) {
+          if (!wasChecked) {
+            clearAnswerUI();
+            clearAnswer();
+          }
           clearAnswer();
           susp[q.id] = reason.value;
         } else {
@@ -2241,11 +2276,21 @@
       const lsQ = allQs.transfer_lie_sit, ls = answers.transfer_lie_sit;
       const ssQ = allQs.transfer_sit_stand, ss = answers.transfer_sit_stand;
       const parts = [];
-      if (lsQ && !('transfer_lie_sit' in susp) && !isEmptyAnswer(lsQ, ls)) {
-        parts.push(`Lie to sit: ${formatAnswer(lsQ, ls)}`);
+      if (lsQ) {
+        if ('transfer_lie_sit' in susp) {
+          const reason = String(susp.transfer_lie_sit || '').trim();
+          parts.push(reason ? `Lie to sit: Not test due to ${reason}` : 'Lie to sit: Not test');
+        } else if (!isEmptyAnswer(lsQ, ls)) {
+          parts.push(`Lie to sit: ${formatAnswer(lsQ, ls)}`);
+        }
       }
-      if (ssQ && !('transfer_sit_stand' in susp) && !isEmptyAnswer(ssQ, ss)) {
-        parts.push(`Sit to stand: ${formatAnswer(ssQ, ss)}`);
+      if (ssQ) {
+        if ('transfer_sit_stand' in susp) {
+          const reason = String(susp.transfer_sit_stand || '').trim();
+          parts.push(reason ? `Sit to stand: Not test due to ${reason}` : 'Sit to stand: Not test');
+        } else if (!isEmptyAnswer(ssQ, ss)) {
+          parts.push(`Sit to stand: ${formatAnswer(ssQ, ss)}`);
+        }
       }
       return parts.length ? `Transfer: ${parts.join('; ')}` : null;
     },
@@ -2257,7 +2302,10 @@
       const aidStr = aidQ && !isEmptyAnswer(aidQ, aid) ? formatAnswer(aidQ, aid) : null;
       const ambSuspended = 'ambulation' in susp;
       if (ambSuspended || isEmptyAnswer(q, a)) {
-        if (ambSuspended) return null; // section-level summary will carry the reason
+        if (ambSuspended) {
+          const reason = String(susp.ambulation || '').trim();
+          return reason ? `Ambulation: Not test due to ${reason}` : 'Ambulation: Not test';
+        }
         return aidStr ? `Ambulation: (Aid: ${aidStr})` : null;
       }
       let line = `Ambulation: ${formatAnswer(q, a)}`;
@@ -2361,8 +2409,10 @@
       // matching reason in the section-end summary.
       const sectionReasons = [];
       s.questions.forEach(q => {
-        // balance_combo already renders these two suspend states inline.
-        if (q.id === 'balance_sit' || q.id === 'balance_stand') return;
+        // These custom report composers already render suspend states inline.
+        if (q.id === 'balance_sit' || q.id === 'balance_stand'
+          || q.id === 'transfer_lie_sit' || q.id === 'transfer_sit_stand'
+          || q.id === 'ambulation') return;
         if (q.allowSuspend && q.id in suspendedMap) {
           const r = (suspendedMap[q.id] || '').trim();
           if (r && !sectionReasons.includes(r)) sectionReasons.push(r);
