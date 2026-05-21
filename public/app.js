@@ -620,7 +620,7 @@
         class: 'report report-editable ot-comment-extract-input',
         rows: '4',
         maxlength: String(limit),
-        placeholder: 'mBI, cognitive assessment score and suggestion will be extracted here.',
+        placeholder: 'MBI, cognitive assessment score and suggestion will be extracted here.',
       });
       const counter = head.querySelector('.report-char-count');
       const setValue = value => {
@@ -2594,7 +2594,7 @@
 
     const mbiQ = allQs.mbi;
     if (mbiQ && !isEmptyAnswer(mbiQ, answers.mbi)) {
-      add(`mBI: ${formatAnswer(mbiQ, answers.mbi)}`);
+      add(`MBI: ${formatAnswer(mbiQ, answers.mbi)}`);
     }
 
     const cognitiveLine = customReportFns.cognitive(
