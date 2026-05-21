@@ -367,17 +367,23 @@
               {
                 "value": "Day Care centre",
                 "detail": true,
-                "detailPlaceholder": "name / frequency"
+                "detailPlaceholder": "name / frequency",
+                "detailJoiner": " (",
+                "detailSuffix": ")"
               },
               {
                 "value": "Elderly Centre",
                 "detail": true,
-                "detailPlaceholder": "name / frequency"
+                "detailPlaceholder": "name / frequency",
+                "detailJoiner": " (",
+                "detailSuffix": ")"
               },
               {
                 "value": "Respite Services",
                 "detail": true,
-                "detailPlaceholder": "name / frequency"
+                "detailPlaceholder": "name / frequency",
+                "detailJoiner": " (",
+                "detailSuffix": ")"
               },
               {
                 "value": "Home Help Service",
