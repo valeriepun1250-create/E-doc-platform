@@ -2073,6 +2073,16 @@
   // Named custom report composers — invoked when a question has `customReport: "<name>"`.
   // Return null/undefined to skip the line; otherwise the returned string is pushed.
   const customReportFns = {
+    mbi_summary(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      let line = `Modified Barthel Index (MBI): ${formatAnswer(q, a)}`;
+      const overallQ = allQs.mbi_overall, overall = answers.mbi_overall;
+      if (overallQ && !isEmptyAnswer(overallQ, overall)) {
+        line += ` (Overall ADL ${formatAnswer(overallQ, overall)}.)`;
+      }
+      return line;
+    },
+
     // Compact two-line summary for the Premorbid ADL section. Attach this to
     // ONE question (e.g. premorbid_badl) and set hideInReport on the others
     // so they don't double-emit. Empty fields are dropped from the output.

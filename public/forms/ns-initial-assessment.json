@@ -1195,7 +1195,7 @@
                 "defaultNA": true
               }
             ],
-            "reportTemplate": "Modified Barthel Index (MBI): {answer}"
+            "customReport": "mbi_summary"
           },
           {
             "id": "mbi_impression",
@@ -1220,7 +1220,7 @@
             "combineAdjacent": true,
             "maxSelect": 2,
             "consecutiveOnly": true,
-            "reportTemplate": "Overall: ADL {answer}."
+            "hideInReport": true
           }
         ],
         "reportTitle": "F. Functional Assessment"
