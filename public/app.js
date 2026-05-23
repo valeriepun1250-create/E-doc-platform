@@ -312,6 +312,7 @@
     const fireChange = () => changeListeners.forEach(fn => fn());
     // Flat lookup for prefillFromQuestions / cross references during fill.
     const formQuestions = flattenQuestions(form);
+    let missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
 
     // Section tabs — avoids one long scroll.
     const tabsBar = el('div', { class: 'tabs' });
@@ -389,7 +390,7 @@
       ]);
       if (headerTriggerQId) {
         const tq = s.questions.find(q => q.id === headerTriggerQId);
-        const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+        const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, missingRequired, rerenderSection: () => renderSection(currentIdx) });
         triggerWidget.dataset.qid = tq.id;
         triggerWidget.classList.add('header-trigger');
         head.appendChild(triggerWidget);
@@ -425,11 +426,11 @@
       for (const q of s.questions) {
         if (q.id && renderedQuestionIds.has(q.id)) continue;
         if (q.id === headerTriggerQId) continue; // rendered in section header
-        const widget = renderQuestion(q, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+        const widget = renderQuestion(q, answers, comments, { onChange, fireChange, formQuestions, missingRequired, rerenderSection: () => renderSection(currentIdx) });
         if (q.type === 'heading' && q.headerTriggerQuestionId) {
           const tq = s.questions.find(item => item.id === q.headerTriggerQuestionId);
           if (tq) {
-            const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, rerenderSection: () => renderSection(currentIdx) });
+            const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, missingRequired, rerenderSection: () => renderSection(currentIdx) });
             triggerWidget.dataset.qid = tq.id;
             triggerWidget.classList.add('header-trigger');
             widget.classList.add('heading-with-trigger');
@@ -469,7 +470,7 @@
         el('span', { class: 'muted' }, [`Section ${visPos + 1} of ${visCount}`]),
         el('button', {
           class: next === undefined ? '' : 'primary',
-          onclick: () => renderSection(next),
+          onclick: () => goToSection(next),
           disabled: next === undefined ? 'disabled' : null,
         }, ['Next →']),
       ]);
@@ -484,7 +485,7 @@
       if (currentPrevIdx !== undefined) renderSection(currentPrevIdx);
     };
     app.querySelector('#btnNextSection').onclick = () => {
-      if (currentNextIdx !== undefined) renderSection(currentNextIdx);
+      if (currentNextIdx !== undefined) goToSection(currentNextIdx);
     };
 
     function persistEntry(asDraft) {
@@ -513,12 +514,12 @@
       alert('Saved as draft. Continue from the History tab any time.');
     };
 
-    function subScoreMissingLabels(q, value) {
+    function subScoreMissingItems(q, value) {
       if (!q || !Array.isArray(q.items)) return [];
       const obj = value && typeof value === 'object' ? value : {};
       return q.items
         .filter(item => typeof obj[item.id] !== 'number')
-        .map(item => item.label || item.id);
+        .map(item => ({ id: item.id, label: item.label || item.id }));
     }
 
     function sectionIndexForQuestion(questionId) {
@@ -528,29 +529,72 @@
           (Array.isArray(q.headerInputs) && q.headerInputs.some(hi => hi.id === questionId))));
     }
 
-    function validateBeforeGenerate() {
-      if (answers.cog_status !== 'Performed') return true;
+    function collectCognitiveMissing() {
+      const result = {
+        sectionIdx: sectionIndexForQuestion('cog_status'),
+        headerIds: new Set(),
+        itemIdsByQuestion: new Map(),
+        hasMissing: false,
+      };
+      if (answers.cog_status !== 'Performed') return result;
+
       const missing = [];
       const amtQ = formQuestions.amt;
-      const amtMissing = subScoreMissingLabels(amtQ, answers.amt);
+      const amtMissing = subScoreMissingItems(amtQ, answers.amt);
       if (amtMissing.length) {
-        missing.push(`AMT: ${amtMissing.join(', ')}`);
+        result.itemIdsByQuestion.set('amt', new Set(amtMissing.map(item => item.id)));
+        missing.push(`AMT: ${amtMissing.map(item => item.label).join(', ')}`);
       }
 
       const mocaQ = formQuestions.moca;
       const mocaMissing = [];
-      if (!answers.moca_age_cluster) mocaMissing.push('Age');
-      if (!answers.moca_education) mocaMissing.push('Education');
-      mocaMissing.push(...subScoreMissingLabels(mocaQ, answers.moca));
+      if (!answers.moca_age_cluster) {
+        result.headerIds.add('moca_age_cluster');
+        mocaMissing.push({ id: 'moca_age_cluster', label: 'Age' });
+      }
+      if (!answers.moca_education) {
+        result.headerIds.add('moca_education');
+        mocaMissing.push({ id: 'moca_education', label: 'Education' });
+      }
+      const mocaItemMissing = subScoreMissingItems(mocaQ, answers.moca);
+      mocaMissing.push(...mocaItemMissing);
+      if (mocaItemMissing.length) {
+        result.itemIdsByQuestion.set('moca', new Set(mocaItemMissing.map(item => item.id)));
+      }
       if (mocaMissing.length) {
-        missing.push(`MoCA: ${mocaMissing.join(', ')}`);
+        missing.push(`MoCA: ${mocaMissing.map(item => item.label).join(', ')}`);
       }
 
-      if (!missing.length) return true;
-      const cognitiveIdx = sectionIndexForQuestion('cog_status');
-      if (cognitiveIdx >= 0) renderSection(cognitiveIdx);
-      alert('Please complete all required Cognitive assessment fields before generating Summary:\n\n' + missing.join('\n'));
+      result.hasMissing = missing.length > 0;
+      return result;
+    }
+
+    function applyMissingHighlights(missing, targetIdx = currentIdx) {
+      missingRequired = {
+        headerIds: new Set(missing.headerIds || []),
+        itemIdsByQuestion: new Map(missing.itemIdsByQuestion || []),
+      };
+      renderSection(targetIdx);
+      const firstMissing = sectionHost.querySelector('.is-required-missing');
+      if (firstMissing) firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function validateBeforeGenerate() {
+      const missing = collectCognitiveMissing();
+      if (!missing.hasMissing) return true;
+      const targetIdx = missing.sectionIdx >= 0 ? missing.sectionIdx : currentIdx;
+      applyMissingHighlights(missing, targetIdx);
       return false;
+    }
+
+    function goToSection(targetIdx) {
+      const missing = collectCognitiveMissing();
+      if (missing.hasMissing && currentIdx === missing.sectionIdx && targetIdx !== currentIdx) {
+        applyMissingHighlights(missing);
+        return;
+      }
+      missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
+      renderSection(targetIdx);
     }
 
     app.querySelector('#btnSaveGenerate').onclick = () => {
@@ -768,7 +812,9 @@
     if (Array.isArray(q.headerInputs) && q.headerInputs.length) {
       const extras = el('div', { class: 'qhead-extras' });
       q.headerInputs.forEach(hi => {
-        const wrap = el('label', { class: 'header-extra' });
+        const isMissing = ctx.missingRequired && ctx.missingRequired.headerIds &&
+          ctx.missingRequired.headerIds.has(hi.id);
+        const wrap = el('label', { class: 'header-extra' + (isMissing ? ' is-required-missing' : '') });
         wrap.appendChild(document.createTextNode((hi.label || '') + (hi.required ? ' *' : '') + ': '));
         if (hi.type === 'select') {
           const sel = el('select', { 'data-header-id': hi.id });
@@ -1382,7 +1428,12 @@
         }
 
         q.items.forEach(it => {
-          const tr = el('tr');
+          const missingRows = ctx.missingRequired && ctx.missingRequired.itemIdsByQuestion
+            ? ctx.missingRequired.itemIdsByQuestion.get(q.id)
+            : null;
+          const tr = el('tr', {
+            class: missingRows && missingRows.has(it.id) ? 'is-required-missing' : '',
+          });
           tr.appendChild(el('td', { class: 'si-label' }, [it.label]));
           const valCell = el('td', { class: 'si-val' });
           const row = el('div', { class: 'rating' });

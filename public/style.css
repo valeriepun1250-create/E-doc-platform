@@ -1284,6 +1284,13 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 12.5px; color: var(--muted-strong); margin: 0; font-weight: 500;
 }
+.qhead-extras .header-extra.is-required-missing {
+  padding: 6px 8px;
+  border: 1px solid rgba(202, 84, 84, 0.26);
+  border-radius: var(--radius-sm);
+  background: rgba(202, 84, 84, 0.10);
+  color: #8f3e3e;
+}
 .qhead-extras .header-extra input {
   width: 140px; padding: 6px 10px; font-size: 13px;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -1657,6 +1664,16 @@ table.subscore td {
   padding: 10px 12px; vertical-align: middle;
 }
 table.subscore tr:hover td { background: var(--surface-soft); }
+table.subscore tr.is-required-missing td {
+  background: rgba(202, 84, 84, 0.10);
+  border-bottom-color: rgba(202, 84, 84, 0.24);
+}
+table.subscore tr.is-required-missing:hover td {
+  background: rgba(202, 84, 84, 0.14);
+}
+table.subscore tr.is-required-missing .si-label {
+  color: #8f3e3e;
+}
 table.subscore tr:last-child td { border-bottom: none; }
 table.subscore tr:last-child:hover td { background: var(--primary-soft); }
 table.subscore .si-label {
