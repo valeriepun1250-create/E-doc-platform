@@ -176,6 +176,12 @@
     else if (v === 'report') renderReport(arg);
   }
 
+  function syncWorkHeaderOffset() {
+    const bar = app.querySelector('.work-topbar');
+    const height = bar ? Math.ceil(bar.getBoundingClientRect().height) : 74;
+    document.documentElement.style.setProperty('--work-header-offset', `${height}px`);
+  }
+
   // ---------- browse (single page: Create new case + History) ----------
   async function renderBrowse() {
     app.innerHTML = '';
@@ -285,6 +291,12 @@
     metaBits.push('Local browser storage only');
     app.querySelector('#fDesc').textContent = metaBits.join(' · ');
     const root = app.querySelector('#fillForm');
+    syncWorkHeaderOffset();
+    setTimeout(syncWorkHeaderOffset, 0);
+    if (window.ResizeObserver) {
+      const headerObserver = new ResizeObserver(syncWorkHeaderOffset);
+      headerObserver.observe(app.querySelector('.work-topbar'));
+    }
 
     const answers = { ...initialAnswers };
     if (caseInfo) answers.__case = { ...caseInfo };

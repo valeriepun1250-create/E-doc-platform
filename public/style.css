@@ -61,6 +61,7 @@
   --ease:      cubic-bezier(0.2, 0.8, 0.2, 1);
   --t-fast:    140ms;
   --t-med:     220ms;
+  --work-header-offset: 74px;
 }
 
 /* ----- Reset & base ----- */
@@ -889,7 +890,6 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   }
 
   .tabs {
-    top: 92px;
     padding: 8px 10px;
   }
 
@@ -1567,7 +1567,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 
 .tabs {
   position: sticky;
-  top: 74px;
+  top: var(--work-header-offset);
   z-index: 25;
   display: flex; gap: 6px;
   overflow-x: auto; overflow-y: hidden;
@@ -1634,7 +1634,6 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 
 @media (pointer: coarse), (max-width: 1024px) {
   .tabs {
-    top: 92px;
     padding: 8px 10px;
   }
 
