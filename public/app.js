@@ -2349,11 +2349,16 @@
       return lines.join('\n');
     },
 
-    // One factor per line in Problem Identification — sub-options stay
-    // formatted in parentheses by formatCheckEntry.
+    // One factor per line in Problem Identification, with sub-options after ":".
     problems_factors(q, a) {
       if (!Array.isArray(a) || !a.length) return null;
-      return a.map(formatCheckEntry).join('\n');
+      return a.map(item => {
+        if (!item || typeof item !== 'object' || !Array.isArray(item.sub) || !item.sub.length) {
+          return formatCheckEntry(item);
+        }
+        const subText = item.sub.map(formatSubEntry).join(', ');
+        return `${item.value}: ${subText}`;
+      }).join('\n');
     },
 
     // OT-comment Cognitive line — totals only, no per-domain subscore.
@@ -2593,7 +2598,7 @@
       if (includeHeader) out.push(...headerLines);
       blockList.forEach(b => {
         if (out.length) out.push('');
-        if (!b.hideTitle) out.push(stripPrefix(b.title));
+        if (!b.hideTitle && !isProblem(b)) out.push(stripPrefix(b.title));
         out.push(...b.lines.flatMap((line, index) => index ? ['', line] : [line]));
       });
       return out.join('\n').trim();
