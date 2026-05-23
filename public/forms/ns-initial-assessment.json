@@ -1383,39 +1383,6 @@
               }
             ],
             "customReport": "cognitive"
-          },
-          {
-            "id": "ot_suggestion",
-            "label": "Suggestion",
-            "type": "checkbox",
-            "width": "full",
-            "mirrorTo": "recommendation",
-            "options": [
-              "Functionally fit home",
-              {
-                "value": "Home with carer / maid / supervision",
-                "detail": true,
-                "detailPlaceholder": "from whom"
-              },
-              "Convalescent rehabilitation",
-              {
-                "value": "Short course training in QEH",
-                "detail": true,
-                "detailPlaceholder": "details"
-              },
-              {
-                "value": "Refer to occupational therapy department out-patient department for",
-                "detail": true,
-                "detailPlaceholder": "e.g. ADL",
-                "detailJoiner": " ",
-                "detailSuffix": " training"
-              },
-              "Community OT service (COT)",
-              "Social service arrangement: POAH/HHS/DCC",
-              "For medical stabilisation"
-            ],
-            "allowOther": true,
-            "reportTemplate": "Suggestion: {answer}"
           }
         ],
         "reportTitle": "I. OT comment"

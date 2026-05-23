@@ -632,7 +632,7 @@
         class: 'report report-editable ot-comment-extract-input',
         rows: '4',
         maxlength: String(limit),
-        placeholder: 'MBI and cognitive assessment score will be extracted here.',
+        placeholder: 'MBI, cognitive assessment score, and suggestion will be extracted here.',
       });
       const counter = head.querySelector('.report-char-count');
       const setValue = value => {
@@ -2632,6 +2632,14 @@
       answers,
     );
     add(cognitiveLine);
+
+    const recommendationQ = allQs.recommendation;
+    const suggestionAnswer = recommendationQ && !isEmptyAnswer(recommendationQ, answers.recommendation)
+      ? answers.recommendation
+      : answers.ot_suggestion;
+    if (recommendationQ && !isEmptyAnswer(recommendationQ, suggestionAnswer)) {
+      add(`Suggestion: ${formatAnswer(recommendationQ, suggestionAnswer)}`);
+    }
 
     return parts.join('\n');
   }
