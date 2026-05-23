@@ -522,6 +522,11 @@
         .map(item => ({ id: item.id, label: item.label || item.id }));
     }
 
+    function hasAnySubScoreInput(q, value) {
+      if (!q || !Array.isArray(q.items) || !value || typeof value !== 'object') return false;
+      return q.items.some(item => typeof value[item.id] === 'number');
+    }
+
     function sectionIndexForQuestion(questionId) {
       return sections.findIndex(section =>
         section.questions.some(q =>
@@ -540,28 +545,31 @@
 
       const missing = [];
       const amtQ = formQuestions.amt;
-      const amtMissing = subScoreMissingItems(amtQ, answers.amt);
-      if (amtMissing.length) {
+      const amtStarted = hasAnySubScoreInput(amtQ, answers.amt);
+      const amtMissing = amtStarted ? subScoreMissingItems(amtQ, answers.amt) : [];
+      if (amtStarted && amtMissing.length) {
         result.itemIdsByQuestion.set('amt', new Set(amtMissing.map(item => item.id)));
         missing.push(`AMT: ${amtMissing.map(item => item.label).join(', ')}`);
       }
 
       const mocaQ = formQuestions.moca;
+      const mocaStarted = hasAnySubScoreInput(mocaQ, answers.moca) ||
+        !!answers.moca_age_cluster || !!answers.moca_education;
       const mocaMissing = [];
-      if (!answers.moca_age_cluster) {
+      if (mocaStarted && !answers.moca_age_cluster) {
         result.headerIds.add('moca_age_cluster');
         mocaMissing.push({ id: 'moca_age_cluster', label: 'Age' });
       }
-      if (!answers.moca_education) {
+      if (mocaStarted && !answers.moca_education) {
         result.headerIds.add('moca_education');
         mocaMissing.push({ id: 'moca_education', label: 'Education' });
       }
-      const mocaItemMissing = subScoreMissingItems(mocaQ, answers.moca);
+      const mocaItemMissing = mocaStarted ? subScoreMissingItems(mocaQ, answers.moca) : [];
       mocaMissing.push(...mocaItemMissing);
-      if (mocaItemMissing.length) {
+      if (mocaStarted && mocaItemMissing.length) {
         result.itemIdsByQuestion.set('moca', new Set(mocaItemMissing.map(item => item.id)));
       }
-      if (mocaMissing.length) {
+      if (mocaStarted && mocaMissing.length) {
         missing.push(`MoCA: ${mocaMissing.map(item => item.label).join(', ')}`);
       }
 
