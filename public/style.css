@@ -889,7 +889,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   }
 
   .tabs {
-    top: 118px;
+    top: 92px;
     padding: 8px 10px;
   }
 
@@ -1634,7 +1634,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 
 @media (pointer: coarse), (max-width: 1024px) {
   .tabs {
-    top: 118px;
+    top: 92px;
     padding: 8px 10px;
   }
 
