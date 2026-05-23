@@ -2202,7 +2202,7 @@
       const msQ = allQs.mental_state, ms = answers.mental_state;
       if (msQ && !isEmptyAnswer(msQ, ms)) {
         let line = `${formatAnswer(msQ, ms)}`;
-        if (cmts.mental_state) line += ` (${cmts.mental_state})`;
+        if (cmts.mental_state) line += `, ${cmts.mental_state}`;
         parts.push(line);
       }
       const fcQ = allQs.follow_cmd, fc = answers.follow_cmd;
@@ -2222,7 +2222,7 @@
           }
         }
         if (!line) line = `Follow command: ${formatAnswer(fcQ, fc)}`;
-        if (cmts.follow_cmd) line += ` (${cmts.follow_cmd})`;
+        if (cmts.follow_cmd) line += `, ${cmts.follow_cmd}`;
         parts.push(line);
       }
       return parts.length ? parts.join('. ') + '.' : null;
