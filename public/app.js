@@ -2080,7 +2080,8 @@
       if (overallQ && !isEmptyAnswer(overallQ, overall)) {
         line += ` (Overall ADL ${formatAnswer(overallQ, overall)}.)`;
       }
-      return line;
+      const breakdown = q.showBreakdown === false ? [] : subScoreBreakdownLines(q, a, undefined, answers);
+      return [line, ...breakdown].join('\n');
     },
 
     // Compact two-line summary for the Premorbid ADL section. Attach this to
