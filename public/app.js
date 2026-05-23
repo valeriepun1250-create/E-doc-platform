@@ -513,7 +513,48 @@
       alert('Saved as draft. Continue from the History tab any time.');
     };
 
+    function subScoreMissingLabels(q, value) {
+      if (!q || !Array.isArray(q.items)) return [];
+      const obj = value && typeof value === 'object' ? value : {};
+      return q.items
+        .filter(item => typeof obj[item.id] !== 'number')
+        .map(item => item.label || item.id);
+    }
+
+    function sectionIndexForQuestion(questionId) {
+      return sections.findIndex(section =>
+        section.questions.some(q =>
+          q.id === questionId ||
+          (Array.isArray(q.headerInputs) && q.headerInputs.some(hi => hi.id === questionId))));
+    }
+
+    function validateBeforeGenerate() {
+      if (answers.cog_status !== 'Performed') return true;
+      const missing = [];
+      const amtQ = formQuestions.amt;
+      const amtMissing = subScoreMissingLabels(amtQ, answers.amt);
+      if (amtMissing.length) {
+        missing.push(`AMT: ${amtMissing.join(', ')}`);
+      }
+
+      const mocaQ = formQuestions.moca;
+      const mocaMissing = [];
+      if (!answers.moca_age_cluster) mocaMissing.push('Age');
+      if (!answers.moca_education) mocaMissing.push('Education');
+      mocaMissing.push(...subScoreMissingLabels(mocaQ, answers.moca));
+      if (mocaMissing.length) {
+        missing.push(`MoCA: ${mocaMissing.join(', ')}`);
+      }
+
+      if (!missing.length) return true;
+      const cognitiveIdx = sectionIndexForQuestion('cog_status');
+      if (cognitiveIdx >= 0) renderSection(cognitiveIdx);
+      alert('Please complete all required Cognitive assessment fields before generating Summary:\n\n' + missing.join('\n'));
+      return false;
+    }
+
     app.querySelector('#btnSaveGenerate').onclick = () => {
+      if (!validateBeforeGenerate()) return;
       const entry = persistEntry(false);
       setView('report', { form, answers, entry });
     };
@@ -728,7 +769,7 @@
       const extras = el('div', { class: 'qhead-extras' });
       q.headerInputs.forEach(hi => {
         const wrap = el('label', { class: 'header-extra' });
-        wrap.appendChild(document.createTextNode((hi.label || '') + ': '));
+        wrap.appendChild(document.createTextNode((hi.label || '') + (hi.required ? ' *' : '') + ': '));
         if (hi.type === 'select') {
           const sel = el('select', { 'data-header-id': hi.id });
           const options = hi.id === 'moca_education'

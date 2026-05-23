@@ -554,6 +554,7 @@
             "type": "sub_score",
             "mode": "options",
             "totalMax": 10,
+            "required": true,
             "removable": true,
             "width": "full",
             "hint": "Cut-off 6/10. Score below cut-off indicates further evaluation for possible cognitive impairment.",
@@ -668,6 +669,7 @@
             "type": "sub_score",
             "mode": "max",
             "totalMax": 30,
+            "required": true,
             "removable": true,
             "width": "full",
             "headerInputs": [
@@ -675,6 +677,7 @@
                 "id": "moca_age_cluster",
                 "label": "Age",
                 "type": "select",
+                "required": true,
                 "placeholder": "Select age",
                 "options": [
                   "65-69",
@@ -686,6 +689,7 @@
                 "id": "moca_education",
                 "label": "Education",
                 "type": "select",
+                "required": true,
                 "placeholder": "Select education"
               }
             ],
