@@ -2599,7 +2599,7 @@
       if (includeHeader) out.push(...headerLines);
       blockList.forEach(b => {
         if (out.length) out.push('');
-        if (!b.hideTitle && !isProblem(b)) out.push(stripPrefix(b.title));
+        if (!b.hideTitle && !isProblem(b) && !isRecommend(b)) out.push(stripPrefix(b.title));
         out.push(...b.lines.flatMap((line, index) => index ? ['', line] : [line]));
       });
       return out.join('\n').trim();
