@@ -1811,8 +1811,8 @@
           table.appendChild(el('thead', {}, [
             el('tr', {}, [
               el('th', {}, [title]),
-              el('th', {}, ['LT']),
-              el('th', {}, ['PP']),
+              el('th', {}, ['Light touch']),
+              el('th', {}, ['Pinprick']),
             ]),
           ]));
           const body = el('tbody');
