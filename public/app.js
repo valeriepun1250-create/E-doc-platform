@@ -1972,15 +1972,24 @@
     return sit.detail ? `${sit.value} (${sit.detail})` : String(sit.value);
   }
 
-  function formatCheckEntry(it, keepOtherLabel = false) {
+  function formatCheckEntry(it, keepOtherLabel = false, optionDef = null) {
     if (typeof it !== 'object' || it === null) {
       const s = String(it);
       return (!keepOtherLabel && s.startsWith('Other: ')) ? s.slice(7) : s;
     }
     let s = it.value;
     if (it.detail) {
-      const joiner = it.detailJoiner !== undefined ? it.detailJoiner : ': ';
-      s += joiner + it.detail + (it.detailSuffix || '');
+      const joiner = it.detailJoiner !== undefined
+        ? it.detailJoiner
+        : optionDef && optionDef.detailJoiner !== undefined
+          ? optionDef.detailJoiner
+          : ': ';
+      const suffix = it.detailSuffix !== undefined
+        ? it.detailSuffix
+        : optionDef && optionDef.detailSuffix !== undefined
+          ? optionDef.detailSuffix
+          : '';
+      s += joiner + it.detail + suffix;
     }
     if (Array.isArray(it.sub) && it.sub.length) s += ' (' + it.sub.map(formatSubEntry).join(', ') + ')';
     if (it.other) {
@@ -2010,7 +2019,13 @@
         }
         if (picked.length === 1) return picked[0];
       }
-      return a.map(it => formatCheckEntry(it, !!q.keepOtherLabel)).join(', ');
+      const optionByValue = new Map((q.options || [])
+        .filter(opt => typeof opt === 'object' && opt !== null)
+        .map(opt => [opt.value, opt]));
+      return a.map(it => {
+        const value = (typeof it === 'object' && it !== null) ? it.value : it;
+        return formatCheckEntry(it, !!q.keepOtherLabel, optionByValue.get(value));
+      }).join(', ');
     }
     if (q.type === 'composite') {
       const sep = q.joinWith != null ? q.joinWith : '; ';
