@@ -2216,14 +2216,21 @@
 
   // Named custom report composers — invoked when a question has `customReport: "<name>"`.
   // Return null/undefined to skip the line; otherwise the returned string is pushed.
+  function buildMbiSummaryLine(allQs, answers) {
+    const q = allQs.mbi;
+    if (!q || isEmptyAnswer(q, answers.mbi)) return null;
+    let line = `Modified Barthel Index (MBI): ${formatAnswer(q, answers.mbi)}`;
+    const overallQ = allQs.mbi_overall, overall = answers.mbi_overall;
+    if (overallQ && !isEmptyAnswer(overallQ, overall)) {
+      line += ` (Overall ADL ${formatAnswer(overallQ, overall)}.)`;
+    }
+    return line;
+  }
+
   const customReportFns = {
     mbi_summary(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
-      let line = `Modified Barthel Index (MBI): ${formatAnswer(q, a)}`;
-      const overallQ = allQs.mbi_overall, overall = answers.mbi_overall;
-      if (overallQ && !isEmptyAnswer(overallQ, overall)) {
-        line += ` (Overall ADL ${formatAnswer(overallQ, overall)}.)`;
-      }
+      const line = buildMbiSummaryLine(allQs, answers);
       const breakdown = q.showBreakdown === false ? [] : subScoreBreakdownLines(q, a, undefined, answers);
       return [line, ...breakdown].join('\n');
     },
@@ -2600,6 +2607,10 @@
       // we've already inserted it so we only emit once.
       let suspendSummaryEmitted = false;
       const suspendSummaryBefore = s.suspendSummaryBefore || null;
+      if (currentReportTitle === 'I. OT comment') {
+        const mbiLine = buildMbiSummaryLine(allQs, answers);
+        if (mbiLine) sectionLines.push(mbiLine);
+      }
       const emitSuspendSummary = () => {
         if (suspendSummaryEmitted || !sectionReasons.length) return;
         sectionLines.push(`Not test due to ${sectionReasons.join(' / ')}.`);
@@ -2792,12 +2803,13 @@
     );
     add(cognitiveLine);
 
-    const recommendationQ = allQs.recommendation;
-    const suggestionAnswer = recommendationQ && !isEmptyAnswer(recommendationQ, answers.recommendation)
-      ? answers.recommendation
-      : answers.ot_suggestion;
-    if (recommendationQ && !isEmptyAnswer(recommendationQ, suggestionAnswer)) {
-      add(`Suggestion: ${formatAnswer(recommendationQ, suggestionAnswer)}`);
+    const recommendationText = buildReportParts(form, answers).recommendation;
+    const recommendationLine = recommendationText
+      .split('\n')
+      .map(line => line.trim())
+      .find(line => /^Recommendation:\s*/i.test(line));
+    if (recommendationLine) {
+      add(`Suggestion: ${recommendationLine.replace(/^Recommendation:\s*/i, '')}`);
     }
 
     return parts.join('\n');
