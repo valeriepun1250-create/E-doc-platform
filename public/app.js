@@ -50,7 +50,9 @@
     if (grade === '2') return null;
     if (grade === '0') return 'absent';
     if (grade === 'NT') return 'Not testable';
-    const direction = cell && cell.direction ? cell.direction : '';
+    const direction = cell && cell.direction === '↑' ? 'increase'
+      : cell && cell.direction === '↓' ? 'decrease'
+        : '';
     const percent = cell && cell.percent ? `${cell.percent}%` : '';
     const detail = [direction, percent].filter(Boolean).join(' ');
     return `altered${detail ? ' ' + detail : ''}`;
@@ -1769,19 +1771,15 @@
           const holder = el('div', { class: 'asia-sensory-cell' });
           const select = el('select', { 'aria-label': `${modality} ${level} ${side}` });
           ['2', '1', '0', 'NT'].forEach(value => {
-            const label = value === '2' ? '2 Normal'
-              : value === '1' ? '1 Altered'
-                : value === '0' ? '0 Absent'
-                  : 'NT';
-            select.appendChild(el('option', { value }, [label]));
+            select.appendChild(el('option', { value }, [value]));
           });
           select.value = cell.grade || '2';
           const detail = el('div', { class: 'asia-grade-detail' });
           const direction = el('select');
           [
-            ['', 'Direction'],
-            ['↑', '↑ increase'],
-            ['↓', '↓ decrease'],
+            ['', '-'],
+            ['↑', '↑'],
+            ['↓', '↓'],
           ].forEach(([value, label]) => direction.appendChild(el('option', { value }, [label])));
           direction.value = cell.direction || '';
           const percent = el('input', {
