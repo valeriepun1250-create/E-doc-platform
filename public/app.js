@@ -34,6 +34,7 @@
     'S2', 'S3', 'S4-5',
   ];
   const asiaSensoryGradeValue = grade => {
+    if (grade && typeof grade === 'object') return asiaSensoryGradeValue(grade.grade || '2');
     if (grade === '2') return 2;
     if (grade === '1') return 1;
     return 0;
