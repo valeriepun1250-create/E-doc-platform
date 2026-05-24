@@ -657,7 +657,7 @@
             "removable": true,
             "width": "full",
             "hint": "Cut-off 4. Lower score indicates lower cognitive function.",
-            "reportTemplate": "Clock Drawing Test (CDT): {answer} (Cutoff score: 3/4; Lower score indicated higher cognitive function)",
+            "reportTemplate": "Clock Drawing Test (CDT): {answer} (Cut off score: 3/4; Lower score indicated higher cognitive function)",
             "showIf": {
               "questionId": "cog_status",
               "equals": "Performed"
@@ -1355,6 +1355,7 @@
             "label": "ADL",
             "type": "short_text",
             "width": "full",
+            "hideInReportIfEmpty": true,
             "prefillFromQuestions": [
               {
                 "questionId": "mbi",

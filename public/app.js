@@ -717,14 +717,42 @@
       const generatedText = buildOtCommentExtract(form, answers);
       const currentText = editedParts[key] !== undefined ? editedParts[key] : generatedText;
       const sec = el('div', { class: 'report-section report-green-box' });
+      let textarea = null;
+      let copyBtn = null;
+      let editBtn = null;
       const head = el('div', { class: 'row between' }, [
-        el('h3', { style: 'margin:0' }, ['OT comment']),
-        el('span', { class: 'report-char-count' }, ['【0】 / 250 characters']),
+        el('h3', { style: 'margin:0' }, ['Green Box']),
+        el('div', { class: 'report-actions' }, [
+          el('span', { class: 'report-char-count' }, ['【0】 / 250 characters']),
+          editBtn = el('button', {
+            class: 'summary-top-btn report-edit-btn',
+            onclick: () => {
+              textarea.readOnly = false;
+              textarea.classList.add('is-editing');
+              editBtn.textContent = 'Editing';
+              editBtn.disabled = true;
+              textarea.focus();
+            },
+          }, ['Edit']),
+          copyBtn = el('button', {
+            class: 'summary-top-btn report-copy-btn',
+            onclick: async () => {
+              try {
+                await navigator.clipboard.writeText(textarea ? textarea.value : '');
+                alert('Green Box copied to clipboard.');
+              } catch {
+                alert('Copy failed — please select and copy manually.');
+              }
+            },
+            disabled: currentText ? null : 'disabled',
+          }, ['Copy']),
+        ]),
       ]);
-      const textarea = el('textarea', {
+      textarea = el('textarea', {
         class: 'report report-editable ot-comment-extract-input',
         rows: '4',
         maxlength: String(limit),
+        readonly: 'readonly',
         placeholder: 'MBI, cognitive assessment score, and suggestion will be extracted here.',
       });
       const counter = head.querySelector('.report-char-count');
@@ -739,6 +767,7 @@
       textarea.addEventListener('input', () => {
         if (textarea.value.length > limit) setValue(textarea.value);
         editedParts[key] = textarea.value;
+        if (copyBtn) copyBtn.disabled = !textarea.value.trim();
         updateCount();
         autosaveReportEdits();
       });
@@ -2479,7 +2508,7 @@
 
     // OT-comment Cognitive line — totals only, no per-domain subscore.
     // If the cognitive assessment wasn't performed, emit just the reason.
-    cognitive(q, a, allQs, answers) {
+    cognitive(q, a, allQs, answers, opts = {}) {
       const status = answers.cog_status;
       const statusVal = (typeof status === 'object' && status !== null) ? status.value : status;
       const statusDetail = (typeof status === 'object' && status !== null) ? status.detail : '';
@@ -2491,11 +2520,15 @@
       const parts = [];
       const amtQ = allQs.amt, amt = answers.amt;
       if (amtQ && !isEmptyAnswer(amtQ, amt)) {
-        parts.push(`Abbreviated Mental Test (AMT): ${formatAnswer(amtQ, amt)} (Cut off scores: <6 indicated further evaluations for possibility of cognitive impairment)`);
+        let line = `Abbreviated Mental Test (AMT): ${formatAnswer(amtQ, amt)}`;
+        if (!opts.brief) line += ' (Cut off scores: <6 indicated further evaluations for possibility of cognitive impairment)';
+        parts.push(line);
       }
       const cdtQ = allQs.cdt, cdt = answers.cdt;
       if (cdtQ && !isEmptyAnswer(cdtQ, cdt)) {
-        parts.push(`Clock Drawing Test (CDT): ${formatAnswer(cdtQ, cdt)} (Cutoff score: 3/4; Lower score indicated higher cognitive function)`);
+        let line = `Clock Drawing Test (CDT): ${formatAnswer(cdtQ, cdt)}`;
+        if (!opts.brief) line += ' (Cut off score: 3/4; Lower score indicated higher cognitive function)';
+        parts.push(line);
       }
       const mocaQ = allQs.moca, moca = answers.moca;
       if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
@@ -2592,7 +2625,13 @@
         // composer. The composer is responsible for handling its own suspend
         // logic (e.g. balance_combo skips a half whose source is suspended).
         if (q.customReport && customReportFns[q.customReport]) {
-          const out = customReportFns[q.customReport](q, answers[q.id], allQs, answers);
+          const out = customReportFns[q.customReport](
+            q,
+            answers[q.id],
+            allQs,
+            answers,
+            { brief: currentReportTitle === 'I. OT comment' },
+          );
           if (out) sectionLines.push(out);
           continue;
         }
@@ -2614,7 +2653,7 @@
         let empty = isEmptyAnswer(q, a);
         // prefillFromQuestions / forceInReport: emit the line even when the
         // user's own input is blank, so the auto-pulled context still shows.
-        if (empty && (q.forceInReport || (Array.isArray(q.prefillFromQuestions) && q.prefillFromQuestions.length))) {
+        if (empty && !q.hideInReportIfEmpty && (q.forceInReport || (Array.isArray(q.prefillFromQuestions) && q.prefillFromQuestions.length))) {
           empty = false;
         }
 
@@ -2749,6 +2788,7 @@
       answers.ot_cognitive,
       allQs,
       answers,
+      { brief: true },
     );
     add(cognitiveLine);
 
