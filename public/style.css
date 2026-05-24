@@ -1953,7 +1953,34 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   font-weight: 800;
 }
 .asia-sensory-table {
-  max-width: 980px;
+  max-width: none;
+}
+.asia-sensory-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(160px, 220px) minmax(250px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.asia-sensory-side {
+  min-width: 0;
+  overflow-x: auto;
+}
+.asia-figure {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 360px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(180deg, rgba(36, 137, 95, 0.08), rgba(255, 255, 255, 0.95));
+  color: #1f2937;
+}
+.asia-figure svg {
+  width: 100%;
+  max-width: 210px;
+  height: auto;
 }
 .asia-sensory-cell {
   display: inline-flex;
@@ -2015,6 +2042,13 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   .asia-chart-table {
     display: block;
     overflow-x: auto;
+  }
+  .asia-sensory-layout {
+    grid-template-columns: 1fr;
+  }
+  .asia-figure {
+    order: -1;
+    min-height: 260px;
   }
   .asia-sensory-grid {
     grid-template-columns: 1fr;

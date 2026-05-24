@@ -1747,17 +1747,6 @@
 
         const sensoryTitle = el('div', { class: 'asia-subtitle' }, ['Sensory scoring']);
         wrap.appendChild(sensoryTitle);
-        const sensoryTable = el('table', { class: 'asia-chart-table asia-sensory-table' });
-        sensoryTable.appendChild(el('thead', {}, [
-          el('tr', {}, [
-            el('th', {}, ['Level']),
-            el('th', {}, ['Light Touch R']),
-            el('th', {}, ['Light Touch L']),
-            el('th', {}, ['Pinprick R']),
-            el('th', {}, ['Pinprick L']),
-          ]),
-        ]));
-        const sensoryBody = el('tbody');
         const ensureCell = (modality, level, side) => {
           const rows = curObj.sensory[modality];
           rows[level] = rows[level] && typeof rows[level] === 'object' ? rows[level] : {};
@@ -1817,17 +1806,77 @@
           holder.appendChild(detail);
           return holder;
         };
-        ASIA_SENSORY_LEVELS.forEach(level => {
-          sensoryBody.appendChild(el('tr', {}, [
-            el('td', { class: 'asia-level' }, [level]),
-            el('td', {}, [renderSensoryCell('lightTouch', level, 'r')]),
-            el('td', {}, [renderSensoryCell('lightTouch', level, 'l')]),
-            el('td', {}, [renderSensoryCell('pinprick', level, 'r')]),
-            el('td', {}, [renderSensoryCell('pinprick', level, 'l')]),
+        const renderSensorySideTable = (side, title) => {
+          const table = el('table', { class: 'asia-chart-table asia-sensory-table' });
+          table.appendChild(el('thead', {}, [
+            el('tr', {}, [
+              el('th', {}, [title]),
+              el('th', {}, ['LT']),
+              el('th', {}, ['PP']),
+            ]),
           ]));
+          const body = el('tbody');
+          ASIA_SENSORY_LEVELS.forEach(level => {
+            body.appendChild(el('tr', {}, [
+              el('td', { class: 'asia-level' }, [level]),
+              el('td', {}, [renderSensoryCell('lightTouch', level, side)]),
+              el('td', {}, [renderSensoryCell('pinprick', level, side)]),
+            ]));
+          });
+          table.appendChild(body);
+          return table;
+        };
+        const sensoryFigure = el('div', {
+          class: 'asia-figure',
+          html: `
+            <svg viewBox="0 0 210 520" role="img" aria-label="ASIA key sensory points reference">
+              <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M105 35 C84 35 70 52 72 76 C74 96 87 111 105 112 C123 111 136 96 138 76 C140 52 126 35 105 35 Z"/>
+                <path d="M101 112 C97 132 88 144 72 158 C58 171 50 196 47 230 C43 282 55 342 66 386 C77 430 83 470 78 500"/>
+                <path d="M111 112 C116 132 125 144 140 158 C154 171 162 196 165 230 C169 282 157 342 146 386 C135 430 129 470 134 500"/>
+                <path d="M75 162 C59 182 45 217 35 260 C28 291 21 324 14 352"/>
+                <path d="M136 162 C153 184 167 218 177 260 C184 292 192 326 199 354"/>
+                <path d="M72 500 C86 510 99 509 108 498"/>
+                <path d="M137 500 C123 510 110 509 101 498"/>
+              </g>
+              <g fill="currentColor" font-size="12" font-weight="700">
+                <text x="142" y="73">C2</text><circle cx="132" cy="70" r="3"/>
+                <text x="65" y="104">C3</text><circle cx="84" cy="101" r="3"/>
+                <text x="143" y="130">C4</text><circle cx="128" cy="128" r="3"/>
+                <text x="178" y="188">C5</text><circle cx="160" cy="188" r="3"/>
+                <text x="187" y="248">C6</text><circle cx="171" cy="247" r="3"/>
+                <text x="167" y="316">C7</text><circle cx="151" cy="315" r="3"/>
+                <text x="133" y="245">C8</text><circle cx="122" cy="245" r="3"/>
+                <text x="98" y="170">T1</text><circle cx="92" cy="171" r="3"/>
+                <text x="82" y="196">T2</text><circle cx="92" cy="195" r="3"/>
+                <text x="79" y="218">T4</text><circle cx="91" cy="218" r="3"/>
+                <text x="78" y="242">T6</text><circle cx="91" cy="242" r="3"/>
+                <text x="78" y="266">T8</text><circle cx="91" cy="266" r="3"/>
+                <text x="72" y="290">T10</text><circle cx="91" cy="290" r="3"/>
+                <text x="72" y="314">T12</text><circle cx="91" cy="314" r="3"/>
+                <text x="122" y="338">L1</text><circle cx="111" cy="337" r="3"/>
+                <text x="132" y="382">L2</text><circle cx="121" cy="380" r="3"/>
+                <text x="137" y="424">L3</text><circle cx="126" cy="422" r="3"/>
+                <text x="135" y="462">L4</text><circle cx="124" cy="460" r="3"/>
+                <text x="110" y="496">L5</text><circle cx="111" cy="483" r="3"/>
+                <text x="54" y="478">S1</text><circle cx="72" cy="469" r="3"/>
+                <text x="38" y="408">S2</text><circle cx="59" cy="403" r="3"/>
+                <text x="35" y="356">S3</text><circle cx="62" cy="354" r="3"/>
+                <text x="58" y="331">S4-5</text><circle cx="79" cy="329" r="3"/>
+              </g>
+              <g fill="currentColor" font-size="11">
+                <circle cx="142" cy="268" r="4"/>
+                <text x="152" y="272">Key sensory points</text>
+              </g>
+            </svg>
+          `,
         });
-        sensoryTable.appendChild(sensoryBody);
-        wrap.appendChild(sensoryTable);
+        const sensoryLayout = el('div', { class: 'asia-sensory-layout' }, [
+          el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('r', 'Right')]),
+          sensoryFigure,
+          el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('l', 'Left')]),
+        ]);
+        wrap.appendChild(sensoryLayout);
 
         updateSensoryDerivedFields();
         answers[q.id] = curObj;
