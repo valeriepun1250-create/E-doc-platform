@@ -1892,6 +1892,93 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 .composite-grid input { padding: 6px 10px; font-size: 13.5px; text-align: center; }
 
 /* ===========================================================
+   ASIA sensory / motor chart
+   =========================================================== */
+.asia-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+.asia-tools button {
+  border: 1px solid rgba(36, 137, 95, 0.28);
+  background: rgba(36, 137, 95, 0.10);
+  color: #0f5f43;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.asia-chart-table {
+  width: 100%;
+  max-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+}
+.asia-chart-table th,
+.asia-chart-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.asia-chart-table th {
+  background: var(--surface-soft);
+  color: var(--muted-strong);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.asia-chart-table tr:last-child td { border-bottom: none; }
+.asia-chart-table .asia-level {
+  width: 90px;
+  color: var(--fg);
+  font-weight: 700;
+  text-align: left;
+}
+.asia-chart-table input {
+  width: 72px;
+  min-height: 38px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+.asia-sensory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px 14px;
+  margin-top: 14px;
+}
+.asia-sensory-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--muted-strong);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.asia-sensory-grid input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13.5px;
+}
+.asia-sensory-grid .asia-wide {
+  grid-column: 1 / -1;
+}
+@media (max-width: 760px) {
+  .asia-chart-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .asia-sensory-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================================================
    Per-question comment (collapsible)
    =========================================================== */
 .comment-wrap {

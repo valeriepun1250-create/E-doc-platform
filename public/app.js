@@ -999,7 +999,11 @@
         break;
       }
       case 'long_text': {
-        const ta = el('textarea', { rows: 1, class: 'auto-grow' });
+        const ta = el('textarea', {
+          rows: 1,
+          class: 'auto-grow',
+          placeholder: q.placeholder || '',
+        });
         ta.value = cur || '';
         const growTa = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
         ta.oninput = () => { set(ta.value); growTa(); };
@@ -1602,6 +1606,102 @@
         refreshTotal();
         break;
       }
+      case 'asia_chart': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        curObj.motor = (curObj.motor && typeof curObj.motor === 'object') ? curObj.motor : {};
+        answers[q.id] = curObj;
+        const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
+        const save = () => {
+          answers[q.id] = curObj;
+          fire();
+        };
+
+        const tools = el('div', { class: 'asia-tools' }, [
+          el('button', {
+            type: 'button',
+            onclick: () => {
+              levels.forEach(level => {
+                curObj.motor[level] = { r: '5', l: '5' };
+              });
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              else save();
+            },
+          }, ['Set all motor 5/5']),
+          el('button', {
+            type: 'button',
+            onclick: () => {
+              delete answers[q.id];
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              else fire();
+            },
+          }, ['Clear ASIA chart']),
+        ]);
+        wrap.appendChild(tools);
+
+        const table = el('table', { class: 'asia-chart-table' });
+        const thead = el('thead');
+        thead.appendChild(el('tr', {}, [
+          el('th', {}, ['Level']),
+          el('th', {}, ['Motor Right']),
+          el('th', {}, ['Motor Left']),
+        ]));
+        table.appendChild(thead);
+        const tbody = el('tbody');
+        levels.forEach(level => {
+          const row = curObj.motor[level] || {};
+          curObj.motor[level] = row;
+          const tr = el('tr');
+          tr.appendChild(el('td', { class: 'asia-level' }, [level]));
+          ['r', 'l'].forEach(side => {
+            const inp = el('input', {
+              type: 'number',
+              min: '0',
+              max: '5',
+              step: '1',
+              inputmode: 'numeric',
+              placeholder: '5',
+              value: row[side] || '',
+            });
+            inp.oninput = () => {
+              if (inp.value === '') delete row[side];
+              else row[side] = String(Math.max(0, Math.min(5, Number(inp.value))));
+              save();
+            };
+            tr.appendChild(el('td', {}, [inp]));
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+
+        const sensory = el('div', { class: 'asia-sensory-grid' });
+        [
+          ['lightTouch', 'Light touch sensation', 'e.g. intact / impaired below C6'],
+          ['pinprick', 'Pinprick sensation', 'e.g. intact / impaired'],
+          ['proprioception', 'Proprioception', 'e.g. intact / impaired'],
+          ['lightTouchSubscore', 'Light touch subscore', '/112'],
+          ['pinprickSubscore', 'Pinprick subscore', '/112'],
+          ['asia', 'ASIA', 'e.g. AIS D / NLI C5'],
+          ['others', 'Others', 'c/o'],
+        ].forEach(([key, label, placeholder]) => {
+          const lab = el('label', { class: key === 'others' ? 'asia-wide' : '' });
+          lab.appendChild(el('span', {}, [label]));
+          const inp = el('input', {
+            type: 'text',
+            placeholder,
+            value: curObj[key] || '',
+          });
+          inp.oninput = () => {
+            if (inp.value === '') delete curObj[key];
+            else curObj[key] = inp.value;
+            save();
+          };
+          lab.appendChild(inp);
+          sensory.appendChild(lab);
+        });
+        wrap.appendChild(sensory);
+        break;
+      }
       case 'composite': {
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         answers[q.id] = curObj;
@@ -1984,6 +2084,15 @@
       // If every recorded value is the NA marker, treat as empty.
       return !Object.values(a).some(v => typeof v === 'number');
     }
+    if (q.type === 'asia_chart') {
+      if (typeof a !== 'object') return true;
+      const motor = a.motor && typeof a.motor === 'object' ? a.motor : {};
+      const hasMotor = Object.values(motor).some(row =>
+        row && typeof row === 'object' && (row.r || row.l));
+      const hasText = ['lightTouch', 'pinprick', 'proprioception', 'lightTouchSubscore', 'pinprickSubscore', 'asia', 'others']
+        .some(key => a[key] !== '' && a[key] !== undefined && a[key] !== null);
+      return !hasMotor && !hasText;
+    }
     if (q.type === 'composite' || q.type === 'hdrs_table' || q.type === 'fthue_grade') {
       if (typeof a !== 'object') return true;
       return !Object.values(a).some(v => v !== '' && v !== undefined && v !== null);
@@ -2069,6 +2178,34 @@
         return s;
       }).filter(Boolean);
       return parts.join(sep);
+    }
+    if (q.type === 'asia_chart') {
+      const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
+      const motor = a.motor && typeof a.motor === 'object' ? a.motor : {};
+      const motorLines = levels
+        .filter(level => motor[level] && (motor[level].r || motor[level].l))
+        .map(level => `${level}: Right ${motor[level].r || '-'}  Left ${motor[level].l || '-'}`);
+      const lines = [];
+      if (motorLines.length) {
+        lines.push('Sensory and Motor Assessment');
+        lines.push('Motor');
+        lines.push(...motorLines);
+      }
+      const sensory = [];
+      if (a.lightTouch) sensory.push(`Light touch sensation: ${a.lightTouch}`);
+      if (a.pinprick) sensory.push(`Pinprick sensation: ${a.pinprick}`);
+      if (a.proprioception) sensory.push(`Proprioception: ${a.proprioception}`);
+      if (sensory.length) {
+        lines.push('Sensation');
+        lines.push(...sensory);
+      }
+      const asiaBits = [];
+      if (a.lightTouchSubscore) asiaBits.push(`light touch subscore: ${a.lightTouchSubscore}/112`);
+      if (a.pinprickSubscore) asiaBits.push(`pinprick subscore: ${a.pinprickSubscore}/112`);
+      if (a.asia) asiaBits.push(a.asia);
+      if (asiaBits.length) lines.push(`ASIA: ${asiaBits.join('  ')}`);
+      if (a.others) lines.push(`Others: ${a.others}`);
+      return lines.join('\n');
     }
     if (q.type === 'rating') return `${a}/${q.max}`;
     if (q.type === 'sub_score') {
