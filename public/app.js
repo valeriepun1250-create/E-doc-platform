@@ -2708,6 +2708,10 @@
     const isProblem = b => /problem\s*identification/i.test(b.title || '');
     const isRecommend = b => /recommendation/i.test(b.title || '');
     const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
+    const linesWithTargetedSpacing = lines => lines.flatMap((line, index) =>
+      index > 0 && /^Vital signs:/.test(lines[index - 1] || '') && /^Basic ADL:/.test(line || '')
+        ? ['', line]
+        : [line]);
 
     const compose = (blockList, includeHeader) => {
       const out = [];
@@ -2715,7 +2719,7 @@
       blockList.forEach(b => {
         if (out.length) out.push('');
         if (!b.hideTitle && !isProblem(b) && !isRecommend(b)) out.push(stripPrefix(b.title));
-        out.push(...b.lines);
+        out.push(...linesWithTargetedSpacing(b.lines));
       });
       return out.join('\n').trim();
     };
@@ -2762,11 +2766,15 @@
   function buildReport(form, answers) {
     const { headerLines, blocks } = buildReportBlocks(form, answers);
     const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
+    const linesWithTargetedSpacing = lines => lines.flatMap((line, index) =>
+      index > 0 && /^Vital signs:/.test(lines[index - 1] || '') && /^Basic ADL:/.test(line || '')
+        ? ['', line]
+        : [line]);
     const out = [...headerLines];
     blocks.forEach(b => {
       out.push('');
       if (!b.hideTitle) out.push(stripPrefix(b.title));
-      out.push(...b.lines);
+      out.push(...linesWithTargetedSpacing(b.lines));
     });
     return out.join('\n').trim();
   }
