@@ -1946,6 +1946,45 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   font-size: 15px;
   font-weight: 700;
 }
+.asia-subtitle {
+  margin: 16px 0 8px;
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 800;
+}
+.asia-sensory-table {
+  max-width: 980px;
+}
+.asia-sensory-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+.asia-sensory-cell select {
+  width: 112px;
+  min-height: 38px;
+  padding: 6px 28px 6px 8px;
+  font-size: 12.5px;
+}
+.asia-grade-detail {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px;
+  border: 1px solid rgba(36, 137, 95, 0.24);
+  border-radius: var(--radius-sm);
+  background: rgba(36, 137, 95, 0.08);
+}
+.asia-grade-detail select {
+  width: 100px;
+  min-height: 34px;
+}
+.asia-grade-detail input {
+  width: 58px;
+  min-height: 34px;
+  font-size: 13px;
+}
 .asia-sensory-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
@@ -1964,6 +2003,10 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   width: 100%;
   padding: 8px 10px;
   font-size: 13.5px;
+}
+.asia-sensory-grid input[readonly] {
+  background: var(--surface-soft);
+  color: var(--fg-soft);
 }
 .asia-sensory-grid .asia-wide {
   grid-column: 1 / -1;

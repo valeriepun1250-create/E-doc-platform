@@ -26,6 +26,48 @@
       '>6': { p16: 17, p7: 15, p2: 13 },
     },
   };
+  const ASIA_SENSORY_LEVELS = [
+    'C2', 'C3', 'C4',
+    'C5', 'C6', 'C7', 'C8', 'T1',
+    'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12', 'L1',
+    'L2', 'L3', 'L4', 'L5', 'S1',
+    'S2', 'S3', 'S4-5',
+  ];
+  const asiaSensoryGradeValue = grade => {
+    if (grade === '2') return 2;
+    if (grade === '1') return 1;
+    return 0;
+  };
+  const asiaSensoryTotal = (chart, modality) => {
+    const sensory = chart && chart.sensory && chart.sensory[modality] ? chart.sensory[modality] : {};
+    return ASIA_SENSORY_LEVELS.reduce((sum, level) => {
+      const row = sensory[level] || {};
+      return sum + asiaSensoryGradeValue(row.r || '2') + asiaSensoryGradeValue(row.l || '2');
+    }, 0);
+  };
+  const asiaGradeText = cell => {
+    const grade = cell && cell.grade ? cell.grade : '2';
+    if (grade === '2') return null;
+    if (grade === '0') return 'absent';
+    if (grade === 'NT') return 'Not testable';
+    const direction = cell && cell.direction ? cell.direction : '';
+    const percent = cell && cell.percent ? `${cell.percent}%` : '';
+    const detail = [direction, percent].filter(Boolean).join(' ');
+    return `altered${detail ? ' ' + detail : ''}`;
+  };
+  const asiaSensorySummary = (chart, modality) => {
+    const sensory = chart && chart.sensory && chart.sensory[modality] ? chart.sensory[modality] : {};
+    const parts = [];
+    ASIA_SENSORY_LEVELS.forEach(level => {
+      ['r', 'l'].forEach(side => {
+        const row = sensory[level] || {};
+        const cell = row[side] || { grade: '2' };
+        const text = asiaGradeText(cell);
+        if (text) parts.push(`${level} ${side === 'r' ? 'Right' : 'Left'} ${text}`);
+      });
+    });
+    return parts.length ? parts.join(', ') : 'intact bilaterally';
+  };
 
   // ---------- forms loader (replaces former /api/forms backend) ----------
   // Each form file is { specialty, title, description?, schema }. The id is the
@@ -1609,9 +1651,25 @@
       case 'asia_chart': {
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         curObj.motor = (curObj.motor && typeof curObj.motor === 'object') ? curObj.motor : {};
+        curObj.sensory = (curObj.sensory && typeof curObj.sensory === 'object') ? curObj.sensory : {};
+        curObj.sensory.lightTouch = (curObj.sensory.lightTouch && typeof curObj.sensory.lightTouch === 'object')
+          ? curObj.sensory.lightTouch : {};
+        curObj.sensory.pinprick = (curObj.sensory.pinprick && typeof curObj.sensory.pinprick === 'object')
+          ? curObj.sensory.pinprick : {};
         answers[q.id] = curObj;
         const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
+        const derivedInputs = {};
+        const updateSensoryDerivedFields = () => {
+          curObj.lightTouch = asiaSensorySummary(curObj, 'lightTouch');
+          curObj.pinprick = asiaSensorySummary(curObj, 'pinprick');
+          curObj.lightTouchSubscore = String(asiaSensoryTotal(curObj, 'lightTouch'));
+          curObj.pinprickSubscore = String(asiaSensoryTotal(curObj, 'pinprick'));
+          Object.entries(derivedInputs).forEach(([key, input]) => {
+            input.value = curObj[key] || '';
+          });
+        };
         const save = () => {
+          updateSensoryDerivedFields();
           answers[q.id] = curObj;
           fire();
         };
@@ -1627,6 +1685,16 @@
               else save();
             },
           }, ['Set all motor 5/5']),
+          el('button', {
+            type: 'button',
+            onclick: () => {
+              ['lightTouch', 'pinprick'].forEach(modality => {
+                curObj.sensory[modality] = {};
+              });
+              save();
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+            },
+          }, ['Set all sensory 2/2']),
           el('button', {
             type: 'button',
             onclick: () => {
@@ -1674,23 +1742,115 @@
         table.appendChild(tbody);
         wrap.appendChild(table);
 
+        const sensoryTitle = el('div', { class: 'asia-subtitle' }, ['Sensory scoring']);
+        wrap.appendChild(sensoryTitle);
+        const sensoryTable = el('table', { class: 'asia-chart-table asia-sensory-table' });
+        sensoryTable.appendChild(el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, ['Level']),
+            el('th', {}, ['Light Touch R']),
+            el('th', {}, ['Light Touch L']),
+            el('th', {}, ['Pinprick R']),
+            el('th', {}, ['Pinprick L']),
+          ]),
+        ]));
+        const sensoryBody = el('tbody');
+        const ensureCell = (modality, level, side) => {
+          const rows = curObj.sensory[modality];
+          rows[level] = rows[level] && typeof rows[level] === 'object' ? rows[level] : {};
+          rows[level][side] = rows[level][side] && typeof rows[level][side] === 'object'
+            ? rows[level][side]
+            : { grade: rows[level][side] || '2' };
+          if (!rows[level][side].grade) rows[level][side].grade = '2';
+          return rows[level][side];
+        };
+        const renderSensoryCell = (modality, level, side) => {
+          const cell = ensureCell(modality, level, side);
+          const holder = el('div', { class: 'asia-sensory-cell' });
+          const select = el('select', { 'aria-label': `${modality} ${level} ${side}` });
+          ['2', '1', '0', 'NT'].forEach(value => {
+            const label = value === '2' ? '2 Normal'
+              : value === '1' ? '1 Altered'
+                : value === '0' ? '0 Absent'
+                  : 'NT';
+            select.appendChild(el('option', { value }, [label]));
+          });
+          select.value = cell.grade || '2';
+          const detail = el('div', { class: 'asia-grade-detail' });
+          const direction = el('select');
+          [
+            ['', 'Direction'],
+            ['↑', '↑ increase'],
+            ['↓', '↓ decrease'],
+          ].forEach(([value, label]) => direction.appendChild(el('option', { value }, [label])));
+          direction.value = cell.direction || '';
+          const percent = el('input', {
+            type: 'number',
+            min: '0',
+            max: '100',
+            inputmode: 'numeric',
+            placeholder: '%',
+            value: cell.percent || '',
+          });
+          const syncDetail = () => {
+            cell.direction = direction.value;
+            if (percent.value === '') delete cell.percent;
+            else cell.percent = String(Math.max(0, Math.min(100, Number(percent.value))));
+            save();
+          };
+          direction.onchange = syncDetail;
+          percent.oninput = syncDetail;
+          detail.appendChild(direction);
+          detail.appendChild(percent);
+          const syncGrade = () => {
+            cell.grade = select.value;
+            if (cell.grade !== '1') {
+              delete cell.direction;
+              delete cell.percent;
+            }
+            detail.style.display = cell.grade === '1' ? '' : 'none';
+            if (cell.grade === '1') direction.focus();
+            save();
+          };
+          select.onchange = syncGrade;
+          detail.style.display = cell.grade === '1' ? '' : 'none';
+          holder.appendChild(select);
+          holder.appendChild(detail);
+          return holder;
+        };
+        ASIA_SENSORY_LEVELS.forEach(level => {
+          sensoryBody.appendChild(el('tr', {}, [
+            el('td', { class: 'asia-level' }, [level]),
+            el('td', {}, [renderSensoryCell('lightTouch', level, 'r')]),
+            el('td', {}, [renderSensoryCell('lightTouch', level, 'l')]),
+            el('td', {}, [renderSensoryCell('pinprick', level, 'r')]),
+            el('td', {}, [renderSensoryCell('pinprick', level, 'l')]),
+          ]));
+        });
+        sensoryTable.appendChild(sensoryBody);
+        wrap.appendChild(sensoryTable);
+
+        updateSensoryDerivedFields();
+        answers[q.id] = curObj;
         const sensory = el('div', { class: 'asia-sensory-grid' });
         [
-          ['lightTouch', 'Light touch sensation', 'e.g. intact / impaired below C6'],
-          ['pinprick', 'Pinprick sensation', 'e.g. intact / impaired'],
+          ['lightTouch', 'Light touch sensation', 'Auto summary from light touch scoring', true],
+          ['pinprick', 'Pinprick sensation', 'Auto summary from pinprick scoring', true],
           ['proprioception', 'Proprioception', 'e.g. intact / impaired'],
-          ['lightTouchSubscore', 'Light touch subscore', '/112'],
-          ['pinprickSubscore', 'Pinprick subscore', '/112'],
+          ['lightTouchSubscore', 'Light touch subscore', '/112', true],
+          ['pinprickSubscore', 'Pinprick subscore', '/112', true],
           ['asia', 'ASIA', 'e.g. AIS D / NLI C5'],
           ['others', 'Others', 'c/o'],
-        ].forEach(([key, label, placeholder]) => {
+        ].forEach(([key, label, placeholder, readonly]) => {
           const lab = el('label', { class: key === 'others' ? 'asia-wide' : '' });
           lab.appendChild(el('span', {}, [label]));
           const inp = el('input', {
             type: 'text',
             placeholder,
             value: curObj[key] || '',
+            readonly: readonly ? 'readonly' : null,
           });
+          if (readonly) derivedInputs[key] = inp;
           inp.oninput = () => {
             if (inp.value === '') delete curObj[key];
             else curObj[key] = inp.value;
@@ -2089,9 +2249,15 @@
       const motor = a.motor && typeof a.motor === 'object' ? a.motor : {};
       const hasMotor = Object.values(motor).some(row =>
         row && typeof row === 'object' && (row.r || row.l));
+      const sensory = a.sensory && typeof a.sensory === 'object' ? a.sensory : {};
+      const hasSensoryChange = ['lightTouch', 'pinprick'].some(modality =>
+        ASIA_SENSORY_LEVELS.some(level => ['r', 'l'].some(side => {
+          const cell = sensory[modality] && sensory[modality][level] && sensory[modality][level][side];
+          return cell && typeof cell === 'object' && cell.grade && cell.grade !== '2';
+        })));
       const hasText = ['lightTouch', 'pinprick', 'proprioception', 'lightTouchSubscore', 'pinprickSubscore', 'asia', 'others']
-        .some(key => a[key] !== '' && a[key] !== undefined && a[key] !== null);
-      return !hasMotor && !hasText;
+        .some(key => a[key] !== '' && a[key] !== undefined && a[key] !== null && !['lightTouch', 'pinprick', 'lightTouchSubscore', 'pinprickSubscore'].includes(key));
+      return !hasMotor && !hasSensoryChange && !hasText;
     }
     if (q.type === 'composite' || q.type === 'hdrs_table' || q.type === 'fthue_grade') {
       if (typeof a !== 'object') return true;
@@ -2192,16 +2358,20 @@
         lines.push(...motorLines);
       }
       const sensory = [];
-      if (a.lightTouch) sensory.push(`Light touch sensation: ${a.lightTouch}`);
-      if (a.pinprick) sensory.push(`Pinprick sensation: ${a.pinprick}`);
+      const lightTouchSummary = a.lightTouch || asiaSensorySummary(a, 'lightTouch');
+      const pinprickSummary = a.pinprick || asiaSensorySummary(a, 'pinprick');
+      if (lightTouchSummary) sensory.push(`Light touch sensation: ${lightTouchSummary}`);
+      if (pinprickSummary) sensory.push(`Pinprick sensation: ${pinprickSummary}`);
       if (a.proprioception) sensory.push(`Proprioception: ${a.proprioception}`);
       if (sensory.length) {
         lines.push('Sensation');
         lines.push(...sensory);
       }
       const asiaBits = [];
-      if (a.lightTouchSubscore) asiaBits.push(`light touch subscore: ${a.lightTouchSubscore}/112`);
-      if (a.pinprickSubscore) asiaBits.push(`pinprick subscore: ${a.pinprickSubscore}/112`);
+      const lightTouchTotal = a.lightTouchSubscore || String(asiaSensoryTotal(a, 'lightTouch'));
+      const pinprickTotal = a.pinprickSubscore || String(asiaSensoryTotal(a, 'pinprick'));
+      if (lightTouchTotal) asiaBits.push(`light touch subscore: ${lightTouchTotal}/112`);
+      if (pinprickTotal) asiaBits.push(`pinprick subscore: ${pinprickTotal}/112`);
       if (a.asia) asiaBits.push(a.asia);
       if (asiaBits.length) lines.push(`ASIA: ${asiaBits.join('  ')}`);
       if (a.others) lines.push(`Others: ${a.others}`);
