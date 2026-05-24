@@ -1967,8 +1967,10 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 }
 .asia-figure {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   min-height: 360px;
   padding: 10px;
   border: 1px solid var(--border);
@@ -1977,10 +1979,16 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
     linear-gradient(180deg, rgba(36, 137, 95, 0.08), rgba(255, 255, 255, 0.95));
   color: #1f2937;
 }
-.asia-figure svg {
+.asia-figure img {
   width: 100%;
   max-width: 210px;
   height: auto;
+  display: block;
+}
+.asia-figure-credit {
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
 }
 .asia-sensory-cell {
   display: inline-flex;
