@@ -2700,7 +2700,7 @@
       blockList.forEach(b => {
         if (out.length) out.push('');
         if (!b.hideTitle && !isProblem(b) && !isRecommend(b)) out.push(stripPrefix(b.title));
-        out.push(...b.lines.flatMap((line, index) => index ? ['', line] : [line]));
+        out.push(...b.lines);
       });
       return out.join('\n').trim();
     };
@@ -2751,7 +2751,7 @@
     blocks.forEach(b => {
       out.push('');
       if (!b.hideTitle) out.push(stripPrefix(b.title));
-      out.push(...b.lines.flatMap((line, index) => index ? ['', line] : [line]));
+      out.push(...b.lines);
     });
     return out.join('\n').trim();
   }
