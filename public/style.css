@@ -2119,22 +2119,22 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 }
 .asia-sensory-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 10px 14px;
-  margin-top: 14px;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 8px 10px;
+  margin-top: 10px;
 }
 .asia-sensory-grid label {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
   color: var(--muted-strong);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
 }
 .asia-sensory-grid input {
   width: 100%;
-  padding: 8px 10px;
-  font-size: 13.5px;
+  padding: 7px 8px;
+  font-size: 13px;
 }
 .asia-sensory-grid input[readonly] {
   background: var(--surface-soft);
@@ -2145,6 +2145,35 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 }
 .asia-sensory-grid .asia-subscore input {
   width: 88px;
+}
+.asia-sensory-grid .asia-field-lightTouch {
+  grid-column: 1 / 4;
+}
+.asia-sensory-grid .asia-field-pinprick {
+  grid-column: 4 / 7;
+}
+.asia-sensory-grid .asia-field-proprioception {
+  grid-column: 1 / 3;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.asia-sensory-grid .asia-field-lightTouchSubscore {
+  grid-column: 3 / 5;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.asia-sensory-grid .asia-field-pinprickSubscore {
+  grid-column: 5 / 7;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.asia-sensory-grid .asia-field-proprioception span,
+.asia-sensory-grid .asia-field-lightTouchSubscore span,
+.asia-sensory-grid .asia-field-pinprickSubscore span {
+  white-space: nowrap;
 }
 @media (max-width: 760px) {
   .asia-chart-table {
@@ -2157,6 +2186,22 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   .asia-figure {
     max-width: 100%;
   }
+  .asia-sensory-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    gap: 10px 12px;
+    margin-top: 14px;
+  }
+  .asia-sensory-grid .asia-field-lightTouch,
+  .asia-sensory-grid .asia-field-pinprick,
+  .asia-sensory-grid .asia-field-proprioception,
+  .asia-sensory-grid .asia-field-lightTouchSubscore,
+  .asia-sensory-grid .asia-field-pinprickSubscore {
+    grid-column: auto;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+@media (max-width: 560px) {
   .asia-sensory-grid {
     grid-template-columns: 1fr;
   }

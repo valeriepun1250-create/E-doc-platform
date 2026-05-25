@@ -1934,8 +1934,9 @@
         ].forEach(([key, label, placeholder, readonly]) => {
           const classes = [];
           if (key === 'others') classes.push('asia-wide');
-          if (key === 'proprioception') classes.push('asia-wide');
+          if (key === 'proprioception') classes.push('asia-subscore');
           if (key === 'lightTouchSubscore' || key === 'pinprickSubscore') classes.push('asia-subscore');
+          classes.push(`asia-field-${key}`);
           const lab = el('label', { class: classes.join(' ') });
           lab.appendChild(el('span', {}, [label]));
           const inp = el('input', {
