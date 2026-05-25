@@ -2924,13 +2924,15 @@
       const parts = [];
       const amtQ = allQs.amt, amt = answers.amt;
       if (amtQ && !isEmptyAnswer(amtQ, amt)) {
-        let line = `Abbreviated Mental Test (AMT): ${formatAnswer(amtQ, amt)}`;
+        const label = opts.brief ? 'AMT' : 'Abbreviated Mental Test (AMT)';
+        let line = `${label}: ${formatAnswer(amtQ, amt)}`;
         if (!opts.brief) line += ' (Cut off scores: <6 indicated further evaluations for possibility of cognitive impairment)';
         parts.push(line);
       }
       const cdtQ = allQs.cdt, cdt = answers.cdt;
       if (cdtQ && !isEmptyAnswer(cdtQ, cdt)) {
-        let line = `Clock Drawing Test (CDT): ${formatAnswer(cdtQ, cdt)}`;
+        const label = opts.brief ? 'CDT' : 'Clock Drawing Test (CDT)';
+        let line = `${label}: ${formatAnswer(cdtQ, cdt)}`;
         if (!opts.brief) line += ' (Cut off score: 3/4; Lower score indicated higher cognitive function)';
         parts.push(line);
       }
@@ -2938,7 +2940,8 @@
       if (mocaQ && !isEmptyAnswer(mocaQ, moca)) {
         const totalNumber = mocaTotal(moca);
         const norm = mocaNormFor(answers, totalNumber);
-        let s = `HK-Montreal Cognitive Assessment (MoCA): ${formatAnswer(mocaQ, moca)}`;
+        const label = opts.brief ? 'MoCA' : 'HK-Montreal Cognitive Assessment (MoCA)';
+        let s = `${label}: ${formatAnswer(mocaQ, moca)}`;
         const inner = [];
         const cut = norm ? norm.cutoff : answers.moca_cutoff;
         if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
