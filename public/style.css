@@ -2143,6 +2143,9 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 .asia-sensory-grid .asia-wide {
   grid-column: 1 / -1;
 }
+.asia-sensory-grid .asia-subscore input {
+  width: 88px;
+}
 @media (max-width: 760px) {
   .asia-chart-table {
     display: block;

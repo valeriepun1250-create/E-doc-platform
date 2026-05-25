@@ -1932,7 +1932,10 @@
           ['pinprickSubscore', 'Pinprick subscore', '/112', true],
           ['others', 'Others', 'c/o'],
         ].forEach(([key, label, placeholder, readonly]) => {
-          const lab = el('label', { class: key === 'others' ? 'asia-wide' : '' });
+          const classes = [];
+          if (key === 'others') classes.push('asia-wide');
+          if (key === 'lightTouchSubscore' || key === 'pinprickSubscore') classes.push('asia-subscore');
+          const lab = el('label', { class: classes.join(' ') });
           lab.appendChild(el('span', {}, [label]));
           const inp = el('input', {
             type: 'text',
