@@ -1708,6 +1708,20 @@ table.subscore.mbi-subscore tr:nth-child(even):not(.total-row) td {
 table.subscore.mbi-subscore tr:last-child td {
   border-bottom: none;
 }
+table.subscore.amt-subscore {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+table.subscore.amt-subscore td {
+  border-bottom: 1px solid #d7e1dc;
+  padding: 12px 12px;
+}
+table.subscore.amt-subscore tr:nth-child(even):not(.total-row) td {
+  background: #fbfcfb;
+}
+table.subscore.amt-subscore tr:last-child td {
+  border-bottom: none;
+}
 table.subscore.mbi-subscore .si-label {
   width: 24%;
   font-size: 16px;
@@ -1955,6 +1969,9 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 .asia-sensory-table {
   max-width: none;
 }
+.asia-sensory-table tbody tr:nth-child(even) td {
+  background: #fbfcfb;
+}
 .asia-sensory-layout {
   display: grid;
   grid-template-columns: minmax(210px, 0.86fr) minmax(180px, 240px) minmax(210px, 0.86fr);
@@ -2016,7 +2033,7 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   min-height: 34px;
 }
 .asia-grade-detail input {
-  width: 52px;
+  width: 76px;
   min-height: 34px;
   font-size: 13px;
 }

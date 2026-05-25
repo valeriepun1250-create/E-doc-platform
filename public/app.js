@@ -1481,7 +1481,11 @@
           }
         });
 
-        const table = el('table', { class: 'subscore' + (q.id === 'mbi' ? ' mbi-subscore' : '') });
+        const table = el('table', {
+          class: 'subscore'
+            + (q.id === 'mbi' ? ' mbi-subscore' : '')
+            + (q.id === 'amt' ? ' amt-subscore' : ''),
+        });
         const totalCell = el('strong', {}, ['0']);
         const totalSuffix = el('span', { class: 'si-pending' }, ['']);
         // Track each row's chip-row so we can re-paint after exclusiveWith flips.
@@ -1758,6 +1762,7 @@
         };
         const renderSensoryCell = (modality, level, side) => {
           const cell = ensureCell(modality, level, side);
+          if (cell.grade === '1' && !cell.direction) cell.direction = '↓';
           const holder = el('div', { class: 'asia-sensory-cell' });
           const select = el('select', { 'aria-label': `${modality} ${level} ${side}` });
           ['2', '1', '0', 'NT'].forEach(value => {
@@ -1792,9 +1797,14 @@
           detail.appendChild(percent);
           const syncGrade = () => {
             cell.grade = select.value;
-            if (cell.grade !== '1') {
+            if (cell.grade === '1' && !cell.direction) {
+              cell.direction = '↓';
+              direction.value = '↓';
+            } else if (cell.grade !== '1') {
               delete cell.direction;
               delete cell.percent;
+              direction.value = '';
+              percent.value = '';
             }
             detail.style.display = cell.grade === '1' ? '' : 'none';
             if (cell.grade === '1') direction.focus();
