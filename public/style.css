@@ -1970,6 +1970,11 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   font-weight: 700;
   text-align: left;
 }
+.asia-motor-table .asia-level {
+  width: 230px;
+  font-weight: 500;
+  white-space: nowrap;
+}
 .asia-chart-table input {
   width: 72px;
   min-height: 38px;
