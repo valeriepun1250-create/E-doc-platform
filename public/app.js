@@ -63,7 +63,7 @@
       return sum + asiaSensoryGradeValue(row.r || '2') + asiaSensoryGradeValue(row.l || '2');
     }, 0);
   };
-  const asiaGradeText = cell => {
+  const asiaGradeText = (cell, opts = {}) => {
     const grade = cell && cell.grade ? cell.grade : '2';
     if (grade === '2') return null;
     if (grade === '0') return 'absent';
@@ -73,20 +73,79 @@
         : '';
     const percent = cell && cell.percent ? `${cell.percent}%` : '';
     const detail = [direction, percent].filter(Boolean).join(' ');
+    if (opts.compact) return detail || 'altered';
     return `altered${detail ? ' ' + detail : ''}`;
+  };
+  const asiaLevelRange = items => {
+    if (!items.length) return '';
+    if (items.length === 1) return items[0].level;
+    return `${items[0].level}-${items[items.length - 1].level}`;
+  };
+  const asiaPercentRange = items => {
+    const values = items
+      .map(item => item.percent)
+      .filter(value => value !== '' && value !== undefined && value !== null);
+    if (!values.length) return '';
+    const nums = values
+      .map(value => Number(value))
+      .filter(value => Number.isFinite(value));
+    if (nums.length !== values.length) return values[0] === values[values.length - 1]
+      ? `${values[0]}%`
+      : `${values[0]}-${values[values.length - 1]}%`;
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return min === max ? `${min}%` : `${min}-${max}%`;
+  };
+  const asiaSensorySideSummary = entries => {
+    const groups = [];
+    entries.forEach(entry => {
+      const prev = groups[groups.length - 1];
+      if (prev && prev.key === entry.key && entry.levelIndex === prev.lastLevelIndex + 1) {
+        prev.items.push(entry);
+        prev.lastLevelIndex = entry.levelIndex;
+      } else {
+        groups.push({ key: entry.key, items: [entry], lastLevelIndex: entry.levelIndex });
+      }
+    });
+    return groups.map(group => {
+      const first = group.items[0];
+      const levelText = asiaLevelRange(group.items);
+      if (first.grade === '1') {
+        return [levelText, first.directionText || 'altered', asiaPercentRange(group.items)].filter(Boolean).join(' ');
+      }
+      return `${levelText} ${first.text}`;
+    }).join(', ');
   };
   const asiaSensorySummary = (chart, modality) => {
     const sensory = chart && chart.sensory && chart.sensory[modality] ? chart.sensory[modality] : {};
-    const parts = [];
-    ASIA_SENSORY_LEVELS.forEach(level => {
+    const bySide = { r: [], l: [] };
+    ASIA_SENSORY_LEVELS.forEach((level, levelIndex) => {
       ['r', 'l'].forEach(side => {
         const row = sensory[level] || {};
         const cell = row[side] || { grade: '2' };
-        const text = asiaGradeText(cell);
-        if (text) parts.push(`${level} ${side === 'r' ? 'Right' : 'Left'} ${text}`);
+        const text = asiaGradeText(cell, { compact: true });
+        if (!text) return;
+        const directionText = cell.direction === '↑' ? 'increase'
+          : cell.direction === '↓' ? 'decrease'
+            : '';
+        bySide[side].push({
+          level,
+          levelIndex,
+          grade: cell.grade || '2',
+          directionText,
+          percent: cell.percent || '',
+          text,
+          key: cell.grade === '1' ? `1:${directionText}` : text,
+        });
       });
     });
-    return parts.length ? parts.join(', ') : 'intact bilaterally';
+    const right = asiaSensorySideSummary(bySide.r);
+    const left = asiaSensorySideSummary(bySide.l);
+    if (!right && !left) return 'Bilateral intact';
+    return [
+      right ? `Right: ${right}` : '',
+      left ? `Left: ${left}` : '',
+    ].filter(Boolean).join('; ');
   };
 
   // ---------- forms loader (replaces former /api/forms backend) ----------
@@ -2464,8 +2523,8 @@
         });
       }
       const sensory = [];
-      const lightTouchSummary = a.lightTouch || asiaSensorySummary(a, 'lightTouch');
-      const pinprickSummary = a.pinprick || asiaSensorySummary(a, 'pinprick');
+      const lightTouchSummary = asiaSensorySummary(a, 'lightTouch');
+      const pinprickSummary = asiaSensorySummary(a, 'pinprick');
       if (lightTouchSummary) sensory.push(`Light touch sensation: ${lightTouchSummary}`);
       if (pinprickSummary) sensory.push(`Pinprick sensation: ${pinprickSummary}`);
       if (a.proprioception) sensory.push(`Proprioception: ${a.proprioception}`);
