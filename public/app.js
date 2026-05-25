@@ -38,6 +38,18 @@
     { id: 't', label: 'T-Spine', levels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'] },
     { id: 'ls', label: 'LS-Spine', levels: ['L1', 'L2', 'L3', 'L4', 'L5', 'S1', 'S2', 'S3', 'S4-5'] },
   ];
+  const ASIA_MOTOR_LABELS = {
+    C5: 'Elbow flexors',
+    C6: 'Wrist extensors',
+    C7: 'Elbow extensors',
+    C8: 'Finger flexors',
+    T1: 'Finger abductors',
+    L2: 'Hip flexors',
+    L3: 'Knee extensors',
+    L4: 'Ankle dorsiflexors',
+    L5: 'Long toe extensors',
+    S1: 'Ankle plantar flexors',
+  };
   const asiaSensoryGradeValue = grade => {
     if (grade && typeof grade === 'object') return asiaSensoryGradeValue(grade.grade || '2');
     if (grade === '2') return 2;
@@ -1684,6 +1696,7 @@
           ? curObj.sensory.pinprick : {};
         curObj.sensorySections = (curObj.sensorySections && typeof curObj.sensorySections === 'object')
           ? curObj.sensorySections : {};
+        curObj.showSensoryReference = !!curObj.showSensoryReference;
         answers[q.id] = curObj;
         const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
         const derivedInputs = {};
@@ -1747,7 +1760,8 @@
           const row = curObj.motor[level] || {};
           curObj.motor[level] = row;
           const tr = el('tr');
-          tr.appendChild(el('td', { class: 'asia-level' }, [level]));
+          const motorLabel = ASIA_MOTOR_LABELS[level];
+          tr.appendChild(el('td', { class: 'asia-level' }, [motorLabel ? `${level} (${motorLabel})` : level]));
           ['r', 'l'].forEach(side => {
             const inp = el('input', {
               type: 'number',
@@ -1770,8 +1784,20 @@
         table.appendChild(tbody);
         wrap.appendChild(table);
 
-        const sensoryTitle = el('div', { class: 'asia-subtitle' }, ['Sensory scoring']);
-        wrap.appendChild(sensoryTitle);
+        const sensoryHeader = el('div', { class: 'asia-sensory-header' }, [
+          el('div', { class: 'asia-subtitle' }, ['Sensory scoring']),
+        ]);
+        const referenceBtn = el('button', {
+          type: 'button',
+          class: 'asia-reference-toggle' + (curObj.showSensoryReference ? ' is-active' : ''),
+          onclick: () => {
+            curObj.showSensoryReference = !curObj.showSensoryReference;
+            if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+            else save();
+          },
+        }, ['ASIA sensory points reference']);
+        sensoryHeader.appendChild(referenceBtn);
+        wrap.appendChild(sensoryHeader);
         const ensureCell = (modality, level, side) => {
           const rows = curObj.sensory[modality];
           rows[level] = rows[level] && typeof rows[level] === 'object' ? rows[level] : {};
@@ -1867,7 +1893,7 @@
           }),
           el('span', { class: 'asia-figure-credit' }, ['ASIA/ISCoS worksheet reference']),
         ]);
-        wrap.appendChild(buildSensoryFigure());
+        if (curObj.showSensoryReference) wrap.appendChild(buildSensoryFigure());
         const toggleBar = el('div', { class: 'asia-sensory-toggles' });
         ASIA_SENSORY_GROUPS.forEach(group => {
           const expanded = !!curObj.sensorySections[group.id];

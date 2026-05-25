@@ -1977,11 +1977,32 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   font-size: 15px;
   font-weight: 700;
 }
-.asia-subtitle {
+.asia-sensory-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
   margin: 16px 0 8px;
+}
+.asia-subtitle {
+  margin: 0;
   color: var(--fg);
   font-size: 14px;
   font-weight: 800;
+}
+.asia-reference-toggle {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(36, 137, 95, 0.2);
+  background: rgba(36, 137, 95, 0.08);
+  color: var(--primary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.asia-reference-toggle.is-active {
+  background: rgba(36, 137, 95, 0.16);
+  border-color: rgba(36, 137, 95, 0.34);
+  color: #0f5f43;
 }
 .asia-sensory-toggles {
   display: flex;
@@ -2044,7 +2065,7 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 }
 .asia-figure img {
   width: 100%;
-  max-width: 230px;
+  max-width: 440px;
   height: auto;
   display: block;
 }
