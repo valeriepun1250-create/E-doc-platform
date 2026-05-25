@@ -684,32 +684,36 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 }
 
 .home-history-main {
-  display: grid;
-  gap: 5px;
+  min-width: 0;
 }
 
 .history-detail {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
-.history-title-row {
+.history-summary {
   display: grid;
   gap: 2px;
+  min-width: 140px;
+  flex: 0 0 auto;
 }
 
-.history-title-row .case-name {
+.history-summary .case-name {
   font-size: 16px;
   line-height: 1.05;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .history-date {
   font-size: 12px;
   line-height: 1.1;
   color: #596567;
+  white-space: nowrap;
 }
 
 .history-form-chip {
@@ -723,6 +727,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   color: #6e2d70;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .home-history-card .badge {
@@ -732,6 +737,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   font-size: 12px;
   text-transform: none;
   letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .home-history-card .badge.NS {

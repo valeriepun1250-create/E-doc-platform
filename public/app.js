@@ -3256,18 +3256,18 @@
     for (const h of items) {
       const c = (h.answers && h.answers.__case) || {};
       const dateLabel = (c.assessmentDate ? fmtDate(c.assessmentDate, { long: true }) : fmtDate(h.savedAt, { long: true }));
-      const detailRow = el('div', { class: 'history-detail' }, [
-        el('span', { class: 'badge ' + h.specialty }, [h.specialty || 'Case']),
-        h.draft ? el('span', { class: 'badge draft-badge' }, ['Draft']) : null,
-        h.customText ? el('span', { class: 'badge edited-badge', title: 'Saved with manually edited report text' }, ['Edited']) : null,
-        el('span', { class: 'history-form-chip' }, [h.formTitle]),
-      ].filter(Boolean));
-
       const primaryName = c.caseId || h.formTitle || 'Untitled case';
-      const titleRow = el('div', { class: 'history-title-row' }, [
+      const summary = el('div', { class: 'history-summary' }, [
         el('strong', { class: 'case-name' }, [primaryName]),
         el('span', { class: 'history-date' }, [dateLabel]),
       ]);
+      const detailRow = el('div', { class: 'history-detail' }, [
+        el('span', { class: 'badge ' + h.specialty }, [h.specialty || 'Case']),
+        summary,
+        el('span', { class: 'history-form-chip' }, [h.formTitle]),
+        h.draft ? el('span', { class: 'badge draft-badge' }, ['Draft']) : null,
+        h.customText ? el('span', { class: 'badge edited-badge', title: 'Saved with manually edited report text' }, ['Edited']) : null,
+      ].filter(Boolean));
 
       const buttons = el('div', { class: 'card-actions home-history-actions' });
       if (h.draft) {
@@ -3293,7 +3293,6 @@
       const card = el('div', { class: 'card home-history-card' }, [
         el('div', { class: 'home-history-main' }, [
           detailRow,
-          titleRow,
         ]),
         buttons,
       ]);
