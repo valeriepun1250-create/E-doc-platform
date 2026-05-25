@@ -2443,14 +2443,25 @@
     if (q.type === 'asia_chart') {
       const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
       const motor = a.motor && typeof a.motor === 'object' ? a.motor : {};
-      const motorLines = levels
+      const motorRows = levels
         .filter(level => motor[level] && (motor[level].r || motor[level].l))
-        .map(level => `${level}: Right ${motor[level].r || '-'}  Left ${motor[level].l || '-'}`);
+        .map(level => ({
+          level,
+          right: String(motor[level].r || '-'),
+          left: String(motor[level].l || '-'),
+        }));
       const lines = [];
-      if (motorLines.length) {
+      if (motorRows.length) {
+        const levelWidth = 12;
+        const scoreWidth = 10;
+        const pad = (value, width) => String(value).padEnd(width, ' ');
         lines.push('Sensory and Motor Assessment');
         lines.push('Motor');
-        lines.push(...motorLines);
+        lines.push(`${pad('', levelWidth)}${pad('Right', scoreWidth)}${pad('Left', scoreWidth)}`.trimEnd());
+        motorRows.forEach((row, idx) => {
+          if (idx > 0 && row.level === 'L2' && motorRows[idx - 1].level === 'T1') lines.push('');
+          lines.push(`${pad(row.level, levelWidth)}${pad(row.right, scoreWidth)}${pad(row.left, scoreWidth)}`.trimEnd());
+        });
       }
       const sensory = [];
       const lightTouchSummary = a.lightTouch || asiaSensorySummary(a, 'lightTouch');
