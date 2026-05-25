@@ -33,6 +33,11 @@
     'L2', 'L3', 'L4', 'L5', 'S1',
     'S2', 'S3', 'S4-5',
   ];
+  const ASIA_SENSORY_GROUPS = [
+    { id: 'c', label: 'C-Spine', levels: ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8'] },
+    { id: 't', label: 'T-Spine', levels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'] },
+    { id: 'ls', label: 'LS-Spine', levels: ['L1', 'L2', 'L3', 'L4', 'L5', 'S1', 'S2', 'S3', 'S4-5'] },
+  ];
   const asiaSensoryGradeValue = grade => {
     if (grade && typeof grade === 'object') return asiaSensoryGradeValue(grade.grade || '2');
     if (grade === '2') return 2;
@@ -1484,7 +1489,8 @@
         const table = el('table', {
           class: 'subscore'
             + (q.id === 'mbi' ? ' mbi-subscore' : '')
-            + (q.id === 'amt' ? ' amt-subscore' : ''),
+            + (q.id === 'amt' ? ' amt-subscore' : '')
+            + (q.id === 'moca' ? ' moca-subscore' : ''),
         });
         const totalCell = el('strong', {}, ['0']);
         const totalSuffix = el('span', { class: 'si-pending' }, ['']);
@@ -1663,6 +1669,8 @@
           ? curObj.sensory.lightTouch : {};
         curObj.sensory.pinprick = (curObj.sensory.pinprick && typeof curObj.sensory.pinprick === 'object')
           ? curObj.sensory.pinprick : {};
+        curObj.sensorySections = (curObj.sensorySections && typeof curObj.sensorySections === 'object')
+          ? curObj.sensorySections : {};
         answers[q.id] = curObj;
         const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
         const derivedInputs = {};
@@ -1713,7 +1721,7 @@
         ]);
         wrap.appendChild(tools);
 
-        const table = el('table', { class: 'asia-chart-table' });
+        const table = el('table', { class: 'asia-chart-table asia-motor-table' });
         const thead = el('thead');
         thead.appendChild(el('tr', {}, [
           el('th', {}, ['Level']),
@@ -1816,7 +1824,7 @@
           holder.appendChild(detail);
           return holder;
         };
-        const renderSensorySideTable = (side, title) => {
+        const renderSensorySideTable = (side, title, sensoryLevels) => {
           const table = el('table', { class: 'asia-chart-table asia-sensory-table' });
           table.appendChild(el('thead', {}, [
             el('tr', {}, [
@@ -1826,7 +1834,7 @@
             ]),
           ]));
           const body = el('tbody');
-          ASIA_SENSORY_LEVELS.forEach(level => {
+          sensoryLevels.forEach(level => {
             body.appendChild(el('tr', {}, [
               el('td', { class: 'asia-level' }, [level]),
               el('td', {}, [renderSensoryCell('lightTouch', level, side)]),
@@ -1836,7 +1844,7 @@
           table.appendChild(body);
           return table;
         };
-        const sensoryFigure = el('div', {
+        const buildSensoryFigure = () => el('div', {
           class: 'asia-figure',
         }, [
           el('img', {
@@ -1846,12 +1854,33 @@
           }),
           el('span', { class: 'asia-figure-credit' }, ['ASIA/ISCoS worksheet reference']),
         ]);
-        const sensoryLayout = el('div', { class: 'asia-sensory-layout' }, [
-          el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('r', 'Right')]),
-          sensoryFigure,
-          el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('l', 'Left')]),
-        ]);
-        wrap.appendChild(sensoryLayout);
+        const toggleBar = el('div', { class: 'asia-sensory-toggles' });
+        ASIA_SENSORY_GROUPS.forEach(group => {
+          const expanded = !!curObj.sensorySections[group.id];
+          const btn = el('button', {
+            type: 'button',
+            class: expanded ? 'is-active' : '',
+            onclick: () => {
+              curObj.sensorySections[group.id] = !curObj.sensorySections[group.id];
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              else save();
+            },
+          }, [group.label]);
+          toggleBar.appendChild(btn);
+        });
+        wrap.appendChild(toggleBar);
+        ASIA_SENSORY_GROUPS.forEach(group => {
+          if (!curObj.sensorySections[group.id]) return;
+          const panel = el('section', { class: 'asia-sensory-panel' }, [
+            el('div', { class: 'asia-sensory-panel-title' }, [group.label]),
+            el('div', { class: 'asia-sensory-layout' }, [
+              el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('r', 'Right', group.levels)]),
+              buildSensoryFigure(),
+              el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('l', 'Left', group.levels)]),
+            ]),
+          ]);
+          wrap.appendChild(panel);
+        });
 
         updateSensoryDerivedFields();
         answers[q.id] = curObj;
