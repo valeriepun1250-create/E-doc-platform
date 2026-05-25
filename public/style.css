@@ -2018,7 +2018,7 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 }
 .asia-sensory-layout {
   display: grid;
-  grid-template-columns: minmax(210px, 0.86fr) minmax(180px, 240px) minmax(210px, 0.86fr);
+  grid-template-columns: minmax(210px, 1fr) minmax(210px, 1fr);
   gap: 10px;
   align-items: start;
 }
@@ -2032,7 +2032,9 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   gap: 6px;
   justify-content: center;
   align-items: center;
-  min-height: 360px;
+  min-height: 300px;
+  max-width: 520px;
+  margin: 0 0 14px;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -2115,10 +2117,7 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   .asia-sensory-layout {
     grid-template-columns: 1fr;
   }
-  .asia-figure {
-    order: -1;
-    min-height: 260px;
-  }
+  .asia-figure { min-height: 260px; }
   .asia-sensory-grid {
     grid-template-columns: 1fr;
   }

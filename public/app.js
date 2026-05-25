@@ -413,7 +413,9 @@
 
     onChange(rebuildTabs);
 
-    function renderSection(i) {
+    function renderSection(i, opts = {}) {
+      const preserveScroll = !!opts.preserveScroll;
+      const scrollY = preserveScroll ? window.scrollY : null;
       const visIdxs = visibleSectionIndexes();
       if (!visIdxs.length) {
         sectionHost.innerHTML = '<p class="muted">All sections removed. Click a section tab to restore.</p>';
@@ -434,13 +436,20 @@
         const tq = s.questions.find(q => q.id === tid);
         if (tq && tq.tickStyle) headerTriggerQId = tid;
       }
+      const sectionRenderCtx = {
+        onChange,
+        fireChange,
+        formQuestions,
+        missingRequired,
+        rerenderSection: rerenderOpts => renderSection(currentIdx, rerenderOpts),
+      };
 
       const head = el('div', { class: 'row between section-head-row' }, [
         el('h3', { style: 'margin:0' }, [s.title]),
       ]);
       if (headerTriggerQId) {
         const tq = s.questions.find(q => q.id === headerTriggerQId);
-        const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, missingRequired, rerenderSection: () => renderSection(currentIdx) });
+        const triggerWidget = renderQuestion(tq, answers, comments, sectionRenderCtx);
         triggerWidget.dataset.qid = tq.id;
         triggerWidget.classList.add('header-trigger');
         head.appendChild(triggerWidget);
@@ -476,11 +485,11 @@
       for (const q of s.questions) {
         if (q.id && renderedQuestionIds.has(q.id)) continue;
         if (q.id === headerTriggerQId) continue; // rendered in section header
-        const widget = renderQuestion(q, answers, comments, { onChange, fireChange, formQuestions, missingRequired, rerenderSection: () => renderSection(currentIdx) });
+        const widget = renderQuestion(q, answers, comments, sectionRenderCtx);
         if (q.type === 'heading' && q.headerTriggerQuestionId) {
           const tq = s.questions.find(item => item.id === q.headerTriggerQuestionId);
           if (tq) {
-            const triggerWidget = renderQuestion(tq, answers, comments, { onChange, fireChange, formQuestions, missingRequired, rerenderSection: () => renderSection(currentIdx) });
+            const triggerWidget = renderQuestion(tq, answers, comments, sectionRenderCtx);
             triggerWidget.dataset.qid = tq.id;
             triggerWidget.classList.add('header-trigger');
             widget.classList.add('heading-with-trigger');
@@ -526,7 +535,11 @@
       ]);
       sec.appendChild(navRow);
       sectionHost.appendChild(sec);
-      sectionHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (preserveScroll) {
+        requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
+      } else {
+        sectionHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       fireChange();
     }
 
@@ -1854,6 +1867,7 @@
           }),
           el('span', { class: 'asia-figure-credit' }, ['ASIA/ISCoS worksheet reference']),
         ]);
+        wrap.appendChild(buildSensoryFigure());
         const toggleBar = el('div', { class: 'asia-sensory-toggles' });
         ASIA_SENSORY_GROUPS.forEach(group => {
           const expanded = !!curObj.sensorySections[group.id];
@@ -1862,7 +1876,7 @@
             class: expanded ? 'is-active' : '',
             onclick: () => {
               curObj.sensorySections[group.id] = !curObj.sensorySections[group.id];
-              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
               else save();
             },
           }, [group.label]);
@@ -1875,7 +1889,6 @@
             el('div', { class: 'asia-sensory-panel-title' }, [group.label]),
             el('div', { class: 'asia-sensory-layout' }, [
               el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('r', 'Right', group.levels)]),
-              buildSensoryFigure(),
               el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('l', 'Left', group.levels)]),
             ]),
           ]);
@@ -1891,7 +1904,6 @@
           ['proprioception', 'Proprioception', 'e.g. intact / impaired'],
           ['lightTouchSubscore', 'Light touch subscore', '/112', true],
           ['pinprickSubscore', 'Pinprick subscore', '/112', true],
-          ['asia', 'ASIA', 'e.g. AIS D / NLI C5'],
           ['others', 'Others', 'c/o'],
         ].forEach(([key, label, placeholder, readonly]) => {
           const lab = el('label', { class: key === 'others' ? 'asia-wide' : '' });
