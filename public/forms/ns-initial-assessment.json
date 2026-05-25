@@ -782,68 +782,6 @@
             "width": "full"
           },
           {
-            "id": "spinal_region",
-            "label": "Spinal assessment",
-            "type": "checkbox",
-            "width": "full",
-            "hint": "Select one or both to expand spinal assessment tools.",
-            "options": [
-              "Spinal_Cervical",
-              "Spinal_Thoraco-Lumba"
-            ]
-          },
-          {
-            "id": "asia_chart",
-            "label": "Sensory and Motor Chart (ASIA)",
-            "type": "asia_chart",
-            "width": "full",
-            "hint": "Use quick-fill for normal power, then adjust individual levels. Sensory details and ASIA subscores can be typed below the motor table.",
-            "motorLevels": [
-              "C5",
-              "C6",
-              "C7",
-              "C8",
-              "T1",
-              "L2",
-              "L3",
-              "L4",
-              "L5",
-              "S1"
-            ],
-            "reportTemplate": "{answer}",
-            "showIf": {
-              "questionId": "spinal_region",
-              "anyOf": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
-              ]
-            }
-          },
-          {
-            "id": "spinal_cervical_other",
-            "label": "Spinal_Cervical other assessment",
-            "type": "long_text",
-            "width": "full",
-            "placeholder": "e.g. collar tolerance, upper limb function, respiratory status, pressure area, precautions",
-            "reportTemplate": "Spinal_Cervical other assessment: {answer}",
-            "showIf": {
-              "questionId": "spinal_region",
-              "equals": "Spinal_Cervical"
-            }
-          },
-          {
-            "id": "spinal_thoraco_lumba_other",
-            "label": "Spinal_Thoraco-Lumba other assessment",
-            "type": "long_text",
-            "width": "full",
-            "placeholder": "e.g. TLSO tolerance, lower limb function, sitting balance, transfer, bladder/bowel, precautions",
-            "reportTemplate": "Spinal_Thoraco-Lumba other assessment: {answer}",
-            "showIf": {
-              "questionId": "spinal_region",
-              "equals": "Spinal_Thoraco-Lumba"
-            }
-          },
-          {
             "id": "power",
             "label": "Power",
             "type": "composite",
@@ -1066,6 +1004,68 @@
             "type": "long_text",
             "width": "full",
             "mergeUp": true
+          },
+          {
+            "id": "spinal_region",
+            "label": "Spinal assessment",
+            "type": "checkbox",
+            "width": "full",
+            "hint": "Select one or both to expand spinal assessment tools.",
+            "options": [
+              "Spinal_Cervical",
+              "Spinal_Thoraco-Lumba"
+            ]
+          },
+          {
+            "id": "asia_chart",
+            "label": "Sensory and Motor Chart (ASIA)",
+            "type": "asia_chart",
+            "width": "full",
+            "hint": "Use quick-fill for normal power, then adjust individual levels. Sensory details and ASIA subscores can be typed below the motor table.",
+            "motorLevels": [
+              "C5",
+              "C6",
+              "C7",
+              "C8",
+              "T1",
+              "L2",
+              "L3",
+              "L4",
+              "L5",
+              "S1"
+            ],
+            "reportTemplate": "{answer}",
+            "showIf": {
+              "questionId": "spinal_region",
+              "anyOf": [
+                "Spinal_Cervical",
+                "Spinal_Thoraco-Lumba"
+              ]
+            }
+          },
+          {
+            "id": "spinal_cervical_other",
+            "label": "Spinal_Cervical other assessment",
+            "type": "long_text",
+            "width": "full",
+            "placeholder": "e.g. collar tolerance, upper limb function, respiratory status, pressure area, precautions",
+            "reportTemplate": "Spinal_Cervical other assessment: {answer}",
+            "showIf": {
+              "questionId": "spinal_region",
+              "equals": "Spinal_Cervical"
+            }
+          },
+          {
+            "id": "spinal_thoraco_lumba_other",
+            "label": "Spinal_Thoraco-Lumba other assessment",
+            "type": "long_text",
+            "width": "full",
+            "placeholder": "e.g. TLSO tolerance, lower limb function, sitting balance, transfer, bladder/bowel, precautions",
+            "reportTemplate": "Spinal_Thoraco-Lumba other assessment: {answer}",
+            "showIf": {
+              "questionId": "spinal_region",
+              "equals": "Spinal_Thoraco-Lumba"
+            }
           }
         ],
         "reportTitle": "E. Physical Assessment"
