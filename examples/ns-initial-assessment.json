@@ -804,7 +804,6 @@
               "label": "Sensory and Motor Chart (ASIA)",
               "type": "asia_chart",
               "width": "full",
-              "hint": "Use quick-fill for normal power, then adjust individual levels. Sensory details and ASIA subscores can be typed below the motor table.",
               "motorLevels": [
                 "C5",
                 "C6",

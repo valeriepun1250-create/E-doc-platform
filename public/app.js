@@ -1781,7 +1781,7 @@
               levels.forEach(level => {
                 curObj.motor[level] = { r: '5', l: '5' };
               });
-              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
               else save();
             },
           }, ['Set all motor 5/5']),
@@ -1792,14 +1792,14 @@
                 curObj.sensory[modality] = {};
               });
               save();
-              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
             },
           }, ['Set all sensory 2/2']),
           el('button', {
             type: 'button',
             onclick: () => {
               delete answers[q.id];
-              if (ctx && ctx.rerenderSection) ctx.rerenderSection();
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
               else fire();
             },
           }, ['Clear ASIA chart']),
