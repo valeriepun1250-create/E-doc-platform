@@ -1698,6 +1698,36 @@ table.subscore .total-row td {
 }
 table.subscore .total-row td:first-child { color: var(--primary); letter-spacing: 0.02em; }
 table.subscore .rating button { min-width: 34px; padding: 4px 10px; font-size: 12.5px; }
+.subscore-desc {
+  margin-top: 6px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 500;
+}
+.subscore-desc summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 700;
+}
+.subscore-desc-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+.subscore-desc-row {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 8px;
+  line-height: 1.35;
+}
+.subscore-desc-score {
+  color: var(--fg);
+  font-weight: 800;
+}
 
 /* Modified Barthel Index: clearer row separation and balanced score controls. */
 table.subscore.mbi-subscore {

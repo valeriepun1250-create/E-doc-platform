@@ -848,16 +848,126 @@
                 "equals": "Spinal_Cervical"
               },
               "items": [
-                { "id": "pain_intensity", "label": "Pain intensity", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "personal_care", "label": "Personal care", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "lifting", "label": "Lifting", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "reading", "label": "Reading", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "headaches", "label": "Headaches", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "concentration", "label": "Concentration", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "work", "label": "Work", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "driving", "label": "Driving", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "sleeping", "label": "Sleeping", "options": [0, 1, 2, 3, 4, 5] },
-                { "id": "recreation", "label": "Recreation", "options": [0, 1, 2, 3, 4, 5] }
+                {
+                  "id": "pain_intensity",
+                  "label": "Pain intensity",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "personal_care",
+                  "label": "Personal care",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "lifting",
+                  "label": "Lifting",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "reading",
+                  "label": "Reading",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "headaches",
+                  "label": "Headaches",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "concentration",
+                  "label": "Concentration",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "work",
+                  "label": "Work",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "driving",
+                  "label": "Driving",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "sleeping",
+                  "label": "Sleeping",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                {
+                  "id": "recreation",
+                  "label": "Recreation",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ]
+                }
               ]
             },
             {
@@ -888,9 +998,21 @@
                 "equals": "Spinal_Cervical"
               },
               "items": [
-                { "id": "motor_function", "label": "Motor Function", "max": 8 },
-                { "id": "sensory_function", "label": "Sensory Function", "max": 6 },
-                { "id": "bladder_function", "label": "Bladder Function", "max": 3 }
+                {
+                  "id": "motor_function",
+                  "label": "Motor Function",
+                  "max": 8
+                },
+                {
+                  "id": "sensory_function",
+                  "label": "Sensory Function",
+                  "max": 6
+                },
+                {
+                  "id": "bladder_function",
+                  "label": "Bladder Function",
+                  "max": 3
+                }
               ]
             },
             {

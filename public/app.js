@@ -1556,11 +1556,14 @@
         const mode = q.mode || 'max';
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         answers[q.id] = curObj;
+        const itemOptionValues = it => (it.options || []).map(opt =>
+          typeof opt === 'object' && opt !== null ? opt.value : opt);
+        const itemMaxValue = it => mode === 'max'
+          ? Number(it.max || 0)
+          : Math.max(...itemOptionValues(it), 0);
         const totalMax = typeof q.totalMax === 'number'
           ? q.totalMax
-          : q.items.reduce((a, it) => a + (mode === 'max'
-              ? Number(it.max || 0)
-              : Math.max(...(it.options || [0]))), 0);
+          : q.items.reduce((a, it) => a + itemMaxValue(it), 0);
 
         // For items flagged allowNA + defaultNA, ensure NA is the initial state
         // when the answer hasn't been set yet (re-opened drafts keep their values).
@@ -1577,14 +1580,25 @@
             + (q.id === 'moca' ? ' moca-subscore' : ''),
         });
         const totalCell = el('strong', {}, ['0']);
+        let totalMaxCell = null;
         const totalSuffix = el('span', { class: 'si-pending' }, ['']);
         // Track each row's chip-row so we can re-paint after exclusiveWith flips.
         const rowRefs = {};
+
+        const dynamicTotalMax = () => {
+          if (q.totalMaxMode === 'completed_items') {
+            const perItem = Number(q.totalMaxPerItem || 1);
+            const completed = q.items.filter(it => typeof curObj[it.id] === 'number').length;
+            return Math.max(perItem, completed * perItem);
+          }
+          return totalMax;
+        };
 
         function refreshTotal() {
           const t = Object.values(curObj).reduce((a, v) =>
             a + (typeof v === 'number' ? v : 0), 0);
           totalCell.textContent = String(t);
+          if (totalMaxCell) totalMaxCell.textContent = '/' + dynamicTotalMax();
           if (q.id === 'moca') {
             refreshMocaNormDisplay(wrap, answers);
           }
@@ -1614,7 +1628,24 @@
           const tr = el('tr', {
             class: missingRows && missingRows.has(it.id) ? 'is-required-missing' : '',
           });
-          tr.appendChild(el('td', { class: 'si-label' }, [it.label]));
+          const labelCell = el('td', { class: 'si-label' });
+          labelCell.appendChild(el('span', {}, [it.label]));
+          if (Array.isArray(it.descriptions) && it.descriptions.length) {
+            const details = el('details', { class: 'subscore-desc' });
+            details.appendChild(el('summary', {}, ['Show scoring descriptions']));
+            const list = el('div', { class: 'subscore-desc-list' });
+            it.descriptions.forEach(desc => {
+              const value = typeof desc === 'object' && desc !== null ? desc.value : '';
+              const text = typeof desc === 'object' && desc !== null ? desc.text : String(desc);
+              list.appendChild(el('div', { class: 'subscore-desc-row' }, [
+                el('span', { class: 'subscore-desc-score' }, [String(value)]),
+                el('span', {}, [text]),
+              ]));
+            });
+            details.appendChild(list);
+            labelCell.appendChild(details);
+          }
+          tr.appendChild(labelCell);
           const valCell = el('td', { class: 'si-val' });
           const row = el('div', { class: 'rating' });
           const btnByVal = new Map();
@@ -1636,15 +1667,18 @@
           };
 
           if (mode === 'options') {
-            it.options.forEach(v => {
+            (it.options || []).forEach(opt => {
+              const v = typeof opt === 'object' && opt !== null ? opt.value : opt;
+              const label = typeof opt === 'object' && opt !== null && opt.label !== undefined ? opt.label : String(v);
               const b = el('button', { type: 'button' }, [String(v)]);
+              if (label !== String(v)) b.title = label;
               if (curObj[it.id] === v) b.classList.add('sel');
               b.onclick = () => setVal(v);
               row.appendChild(b);
               btnByVal.set(v, b);
             });
             valCell.appendChild(row);
-            valCell.appendChild(el('span', { class: 'si-max' }, ['/' + Math.max(...it.options)]));
+            valCell.appendChild(el('span', { class: 'si-max' }, ['/' + itemMaxValue(it)]));
           } else {
             numInp = el('input', {
               type: 'number', min: '0', max: String(it.max),
@@ -1701,8 +1735,9 @@
           table.appendChild(tr);
         });
 
+        totalMaxCell = el('span', { class: 'si-max' }, ['/' + totalMax]);
         const totalCellWrap = el('td', { class: 'si-val' },
-          [totalCell, el('span', { class: 'si-max' }, ['/' + totalMax]), totalSuffix]);
+          [totalCell, totalMaxCell, totalSuffix]);
 
         if (q.id === 'moca') {
           totalCellWrap.appendChild(el('span', {
@@ -2712,10 +2747,11 @@
 
     spinal_cervical_disease(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
-      const total = formatAnswer(q, a);
       const entries = numericSubScoreEntries(q, a);
-      const disability = Math.round((entries.reduce((sum, entry) => sum + entry.value, 0) / 50) * 100);
-      const ndiLine = `Neck Disability Index: ${total} (${disability}% disability)`;
+      const ndiTotal = entries.reduce((sum, entry) => sum + entry.value, 0);
+      const ndiMax = Math.max(5, entries.length * 5);
+      const disability = Math.round((ndiTotal / ndiMax) * 100);
+      const ndiLine = `Neck Disability Index: ${ndiTotal}/${ndiMax} (${disability}% disability)`;
       const ndiBreakdown = subScoreBreakdownLines(q, a, undefined, answers);
       const lines = [ndiLine, ...ndiBreakdown];
       const vasQ = allQs.cervical_pain_vas;
