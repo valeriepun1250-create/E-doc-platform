@@ -2698,6 +2698,9 @@
     }
     return line;
   }
+  const numericSubScoreEntries = (q, a) => (q.items || [])
+    .map(it => ({ item: it, value: a && typeof a[it.id] === 'number' ? a[it.id] : null }))
+    .filter(entry => entry.value !== null);
 
   const customReportFns = {
     mbi_summary(q, a, allQs, answers) {
@@ -2705,6 +2708,28 @@
       const line = buildMbiSummaryLine(allQs, answers);
       const breakdown = q.showBreakdown === false ? [] : subScoreBreakdownLines(q, a, undefined, answers);
       return [line, ...breakdown].join('\n');
+    },
+
+    spinal_cervical_disease(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const total = formatAnswer(q, a);
+      const entries = numericSubScoreEntries(q, a);
+      const disability = Math.round((entries.reduce((sum, entry) => sum + entry.value, 0) / 50) * 100);
+      const ndiLine = `Neck Disability Index: ${total} (${disability}% disability)`;
+      const ndiBreakdown = subScoreBreakdownLines(q, a, undefined, answers);
+      const lines = [ndiLine, ...ndiBreakdown];
+      const vasQ = allQs.cervical_pain_vas;
+      const vas = answers.cervical_pain_vas;
+      if (vasQ && !isEmptyAnswer(vasQ, vas)) lines.push(`Pain assessment: VAS ${formatAnswer(vasQ, vas)}`);
+
+      const joaQ = allQs.cervical_joa;
+      const joa = answers.cervical_joa;
+      if (joaQ && !isEmptyAnswer(joaQ, joa)) {
+        lines.push(`JOA: ${formatAnswer(joaQ, joa)}`);
+        const joaBreakdown = subScoreBreakdownLines(joaQ, joa, undefined, answers);
+        if (joaBreakdown.length) lines.push(...joaBreakdown);
+      }
+      return lines.join('\n');
     },
 
     // Compact two-line summary for the Premorbid ADL section. Attach this to
