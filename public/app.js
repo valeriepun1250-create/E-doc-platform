@@ -1524,9 +1524,14 @@
           const b = el('button', { type: 'button' }, [String(i)]);
           if (cur === i) b.classList.add('sel');
           b.onclick = () => {
-            set(i);
-            [...group.children].forEach(c => c.classList.remove('sel'));
-            b.classList.add('sel');
+            if (b.classList.contains('sel')) {
+              set('');
+              b.classList.remove('sel');
+            } else {
+              set(i);
+              [...group.children].forEach(c => c.classList.remove('sel'));
+              b.classList.add('sel');
+            }
             if (otherInp) otherInp.value = '';
           };
           group.appendChild(b);
@@ -1615,7 +1620,6 @@
           const ref = rowRefs[itemId];
           if (!ref) return;
           const v = curObj[itemId];
-          [...ref.row.children].forEach(c => c.classList.remove('sel'));
           ref.btnByVal.forEach((btn, val) => btn.classList.toggle('sel', val === v));
           if (ref.naBtn) ref.naBtn.classList.toggle('sel', v === 'NA');
           if (ref.numInp) ref.numInp.value = (typeof v === 'number') ? v : '';
@@ -1669,9 +1673,10 @@
           let naBtn = null, numInp = null;
 
           const setVal = (newVal) => {
-            curObj[it.id] = newVal;
+            if (curObj[it.id] === newVal) delete curObj[it.id];
+            else curObj[it.id] = newVal;
             // exclusiveWith: when this item gets a numeric value, partner is forced to NA.
-            if (typeof newVal === 'number' && it.exclusiveWith) {
+            if (curObj[it.id] === newVal && typeof newVal === 'number' && it.exclusiveWith) {
               const partner = q.items.find(x => x.id === it.exclusiveWith);
               if (partner && partner.allowNA) {
                 curObj[partner.id] = 'NA';
@@ -1760,7 +1765,8 @@
           q.items.forEach(it => {
             const btnByVal = new Map();
             const setVal = newVal => {
-              curObj[it.id] = newVal;
+              if (curObj[it.id] === newVal) delete curObj[it.id];
+              else curObj[it.id] = newVal;
               repaintRow(it.id);
               refreshTotal();
               fire();
@@ -2778,6 +2784,17 @@
   const numericSubScoreEntries = (q, a) => (q.items || [])
     .map(it => ({ item: it, value: a && typeof a[it.id] === 'number' ? a[it.id] : null }))
     .filter(entry => entry.value !== null);
+  const cervicalNdiBreakdownLines = (q, a) => {
+    const parts = (q.items || []).map(it => {
+      const v = a && typeof a[it.id] === 'number' ? a[it.id] : null;
+      return `${it.label}: ${v === null ? 'Not applicable' : v}/5`;
+    });
+    const lines = [];
+    for (let i = 0; i < parts.length; i += 5) {
+      lines.push(parts.slice(i, i + 5).join('   '));
+    }
+    return lines;
+  };
 
   const customReportFns = {
     mbi_summary(q, a, allQs, answers) {
@@ -2794,7 +2811,7 @@
       const ndiMax = Math.max(5, entries.length * 5);
       const disability = Math.round((ndiTotal / ndiMax) * 100);
       const ndiLine = `Neck Disability Index: ${ndiTotal}/${ndiMax} (${disability}% disability)`;
-      const ndiBreakdown = subScoreBreakdownLines(q, a, undefined, answers);
+      const ndiBreakdown = cervicalNdiBreakdownLines(q, a);
       const lines = [ndiLine, ...ndiBreakdown];
       const vasQ = allQs.cervical_pain_vas;
       const vas = answers.cervical_pain_vas;
