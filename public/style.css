@@ -1728,6 +1728,64 @@ table.subscore .rating button { min-width: 34px; padding: 4px 10px; font-size: 1
   color: var(--fg);
   font-weight: 800;
 }
+.subscore-described {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+.subscore-described.is-grid {
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+}
+.subscore-described.is-list {
+  grid-template-columns: 1fr;
+}
+.subscore-desc-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  overflow: hidden;
+}
+.subscore-desc-card-title {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 800;
+}
+.subscore-described .subscore-desc-list {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.subscore-described .subscore-desc-row {
+  grid-template-columns: 44px 1fr;
+  align-items: start;
+  padding: 2px 0;
+}
+.subscore-described .subscore-desc-score {
+  min-width: 34px;
+  min-height: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
+}
+.subscore-described .subscore-desc-score.sel {
+  background: var(--selected-green);
+  border-color: var(--selected-green-border);
+  color: var(--selected-green-text);
+}
+@media (max-width: 760px) {
+  .subscore-described.is-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Modified Barthel Index: clearer row separation and balanced score controls. */
 table.subscore.mbi-subscore {

@@ -1616,12 +1616,29 @@
           if (!ref) return;
           const v = curObj[itemId];
           [...ref.row.children].forEach(c => c.classList.remove('sel'));
-          ref.btnByVal.forEach((btn, val) => { if (val === v) btn.classList.add('sel'); });
+          ref.btnByVal.forEach((btn, val) => btn.classList.toggle('sel', val === v));
           if (ref.naBtn) ref.naBtn.classList.toggle('sel', v === 'NA');
           if (ref.numInp) ref.numInp.value = (typeof v === 'number') ? v : '';
         }
 
-        q.items.forEach(it => {
+        const renderDescriptionChoices = (it, btnByVal, setVal) => {
+          const list = el('div', { class: 'subscore-desc-list' });
+          (it.descriptions || []).forEach(desc => {
+            const value = typeof desc === 'object' && desc !== null ? desc.value : '';
+            const text = typeof desc === 'object' && desc !== null ? desc.text : String(desc);
+            const btn = el('button', { type: 'button', class: 'subscore-desc-score' }, [String(value)]);
+            if (curObj[it.id] === value) btn.classList.add('sel');
+            btn.onclick = () => setVal(value);
+            btnByVal.set(value, btn);
+            list.appendChild(el('div', { class: 'subscore-desc-row' }, [
+              btn,
+              el('span', {}, [text]),
+            ]));
+          });
+          return list;
+        };
+
+        const renderSubScoreItem = it => {
           const missingRows = ctx.missingRequired && ctx.missingRequired.itemIdsByQuestion
             ? ctx.missingRequired.itemIdsByQuestion.get(q.id)
             : null;
@@ -1630,7 +1647,7 @@
           });
           const labelCell = el('td', { class: 'si-label' });
           labelCell.appendChild(el('span', {}, [it.label]));
-          if (Array.isArray(it.descriptions) && it.descriptions.length) {
+          if (Array.isArray(it.descriptions) && it.descriptions.length && !q.displayDescriptions) {
             const details = el('details', { class: 'subscore-desc' });
             details.appendChild(el('summary', {}, ['Show scoring descriptions']));
             const list = el('div', { class: 'subscore-desc-list' });
@@ -1732,8 +1749,33 @@
 
           rowRefs[it.id] = { row, btnByVal, naBtn, numInp };
           tr.appendChild(valCell);
-          table.appendChild(tr);
-        });
+          return tr;
+        };
+
+        if (q.displayDescriptions === 'grid' || q.displayDescriptions === 'list') {
+          const grid = el('div', {
+            class: 'subscore-described '
+              + (q.displayDescriptions === 'grid' ? 'is-grid' : 'is-list'),
+          });
+          q.items.forEach(it => {
+            const btnByVal = new Map();
+            const setVal = newVal => {
+              curObj[it.id] = newVal;
+              repaintRow(it.id);
+              refreshTotal();
+              fire();
+            };
+            const card = el('section', { class: 'subscore-desc-card' }, [
+              el('div', { class: 'subscore-desc-card-title' }, [it.label]),
+              renderDescriptionChoices(it, btnByVal, setVal),
+            ]);
+            rowRefs[it.id] = { row: card.querySelector('.subscore-desc-list'), btnByVal };
+            grid.appendChild(card);
+          });
+          wrap.appendChild(grid);
+        } else {
+          q.items.forEach(it => table.appendChild(renderSubScoreItem(it)));
+        }
 
         totalMaxCell = el('span', { class: 'si-max' }, ['/' + totalMax]);
         const totalCellWrap = el('td', { class: 'si-val' },
