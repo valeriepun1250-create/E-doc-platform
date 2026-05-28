@@ -680,40 +680,42 @@
         itemIdsByQuestion: new Map(),
         hasMissing: false,
       };
-      if (answers.cog_status !== 'Performed') return result;
 
       const missing = [];
-      const amtQ = formQuestions.amt;
-      const amtStarted = hasAnySubScoreInput(amtQ, answers.amt);
-      const amtMissing = amtStarted ? subScoreMissingItems(amtQ, answers.amt) : [];
-      if (amtStarted && amtMissing.length) {
-        result.itemIdsByQuestion.set('amt', new Set(amtMissing.map(item => item.id)));
-        missing.push(`AMT: ${amtMissing.map(item => item.label).join(', ')}`);
-      }
+      if (answers.cog_status === 'Performed') {
+        const amtQ = formQuestions.amt;
+        const amtStarted = hasAnySubScoreInput(amtQ, answers.amt);
+        const amtMissing = amtStarted ? subScoreMissingItems(amtQ, answers.amt) : [];
+        if (amtStarted && amtMissing.length) {
+          result.itemIdsByQuestion.set('amt', new Set(amtMissing.map(item => item.id)));
+          missing.push(`AMT: ${amtMissing.map(item => item.label).join(', ')}`);
+        }
 
-      const mocaQ = formQuestions.moca;
-      const mocaStarted = hasAnySubScoreInput(mocaQ, answers.moca) ||
-        !!answers.moca_age_cluster || !!answers.moca_education;
-      const mocaMissing = [];
-      if (mocaStarted && !answers.moca_age_cluster) {
-        result.headerIds.add('moca_age_cluster');
-        mocaMissing.push({ id: 'moca_age_cluster', label: 'Age' });
-      }
-      if (mocaStarted && !answers.moca_education) {
-        result.headerIds.add('moca_education');
-        mocaMissing.push({ id: 'moca_education', label: 'Education' });
-      }
-      const mocaItemMissing = mocaStarted ? subScoreMissingItems(mocaQ, answers.moca) : [];
-      mocaMissing.push(...mocaItemMissing);
-      if (mocaStarted && mocaItemMissing.length) {
-        result.itemIdsByQuestion.set('moca', new Set(mocaItemMissing.map(item => item.id)));
-      }
-      if (mocaStarted && mocaMissing.length) {
-        missing.push(`MoCA: ${mocaMissing.map(item => item.label).join(', ')}`);
+        const mocaQ = formQuestions.moca;
+        const mocaStarted = hasAnySubScoreInput(mocaQ, answers.moca) ||
+          !!answers.moca_age_cluster || !!answers.moca_education;
+        const mocaMissing = [];
+        if (mocaStarted && !answers.moca_age_cluster) {
+          result.headerIds.add('moca_age_cluster');
+          mocaMissing.push({ id: 'moca_age_cluster', label: 'Age' });
+        }
+        if (mocaStarted && !answers.moca_education) {
+          result.headerIds.add('moca_education');
+          mocaMissing.push({ id: 'moca_education', label: 'Education' });
+        }
+        const mocaItemMissing = mocaStarted ? subScoreMissingItems(mocaQ, answers.moca) : [];
+        mocaMissing.push(...mocaItemMissing);
+        if (mocaStarted && mocaItemMissing.length) {
+          result.itemIdsByQuestion.set('moca', new Set(mocaItemMissing.map(item => item.id)));
+        }
+        if (mocaStarted && mocaMissing.length) {
+          missing.push(`MoCA: ${mocaMissing.map(item => item.label).join(', ')}`);
+        }
       }
 
       const cervicalActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Cervical');
       if (cervicalActive) {
+        result.sectionIdx = sectionIndexForQuestion('cervical_joa');
         const joaQ = formQuestions.cervical_joa;
         const joaMissing = subScoreMissingItems(joaQ, answers.cervical_joa);
         if (joaMissing.length) {
@@ -736,8 +738,10 @@
         itemIdsByQuestion: new Map(missing.itemIdsByQuestion || []),
       };
       renderSection(targetIdx);
-      const firstMissing = sectionHost.querySelector('.is-required-missing');
-      if (firstMissing) firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      requestAnimationFrame(() => {
+        const firstMissing = sectionHost.querySelector('.is-required-missing');
+        if (firstMissing) firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
     }
 
     function validateBeforeGenerate() {
@@ -750,8 +754,9 @@
 
     function goToSection(targetIdx) {
       const missing = collectCognitiveMissing();
-      if (missing.hasMissing && currentIdx === missing.sectionIdx && targetIdx !== currentIdx) {
-        applyMissingHighlights(missing);
+      if (missing.hasMissing && targetIdx !== currentIdx) {
+        const targetMissingIdx = missing.sectionIdx >= 0 ? missing.sectionIdx : currentIdx;
+        applyMissingHighlights(missing, targetMissingIdx);
         return;
       }
       missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
