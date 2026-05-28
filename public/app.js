@@ -2890,7 +2890,7 @@
     let line = `Modified Barthel Index (MBI): ${formatAnswer(q, answers.mbi)}`;
     const overallQ = allQs.mbi_overall, overall = answers.mbi_overall;
     if (overallQ && !isEmptyAnswer(overallQ, overall)) {
-      line += ` (Overall ADL ${formatAnswer(overallQ, overall)}.)`;
+      line += ` (${formatAnswer(overallQ, overall)} Level)`;
     }
     return line;
   }
