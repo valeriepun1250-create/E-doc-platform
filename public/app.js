@@ -3057,7 +3057,7 @@
     // bare (no "Lives with" prefix). "Hostel" emits as "Live in Hostel".
     // Everything else groups under "Lives with <a, b, c>".
     social_lives_home(q, a, allQs, answers) {
-      const parts = [];
+      const livingParts = [];
       const lwQ = allQs.lives_with, lw = answers.lives_with;
       if (lwQ && Array.isArray(lw) && lw.length) {
         const segs = [];
@@ -3075,14 +3075,20 @@
           else if (v === 'Night time alone' || v === 'Nighttime alone') segs.push('Night time alone');
           else segs.push(formatCheckEntry(entry));
         });
-        if (segs.length) parts.push(segs.join('; '));
+        if (segs.length) livingParts.push(segs.join('; '));
       }
-      const haQ = allQs.home_access, ha = answers.home_access;
-      if (haQ && !isEmptyAnswer(haQ, ha)) parts.push(formatAnswer(haQ, ha));
       const cmts = answers.__comments || {};
-      if (cmts.lives_with) parts.push(`Main carer / details: ${cmts.lives_with}`);
-      if (cmts.home_access) parts.push(`Floor / stairs detail: ${cmts.home_access}`);
-      return parts.length ? parts.join('. ') + '.' : null;
+      if (cmts.lives_with) livingParts.push(`Main carer / details: ${cmts.lives_with}`);
+
+      const homeParts = [];
+      const haQ = allQs.home_access, ha = answers.home_access;
+      if (haQ && !isEmptyAnswer(haQ, ha)) homeParts.push(formatAnswer(haQ, ha));
+      if (cmts.home_access) homeParts.push(`Floor / stairs detail: ${cmts.home_access}`);
+
+      const lines = [];
+      if (livingParts.length) lines.push(livingParts.join('. ') + '.');
+      if (homeParts.length) lines.push(homeParts.join('. ') + '.');
+      return lines.length ? lines.join('\n') : null;
     },
 
     // Bathing setup + Bath by in concise sentence style.
