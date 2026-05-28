@@ -2252,7 +2252,7 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 }
 .asia-sensory-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(95px, 1fr));
+  grid-template-columns: repeat(8, minmax(82px, 1fr));
   gap: 8px 10px;
   margin-top: 10px;
 }
@@ -2283,10 +2283,10 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   grid-column: 1 / 5;
 }
 .asia-sensory-grid .asia-field-pinprick {
-  grid-column: 5 / 8;
+  grid-column: 5 / 9;
 }
 .asia-sensory-grid .asia-field-proprioception {
-  grid-column: 1 / 4;
+  grid-column: 1 / 5;
   flex-direction: row;
   align-items: center;
   gap: 6px;
@@ -2296,13 +2296,13 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   max-width: 100%;
 }
 .asia-sensory-grid .asia-field-lightTouchSubscore {
-  grid-column: 4 / 6;
+  grid-column: 5 / 7;
   flex-direction: row;
   align-items: center;
   gap: 6px;
 }
 .asia-sensory-grid .asia-field-pinprickSubscore {
-  grid-column: 6 / 8;
+  grid-column: 7 / 9;
   flex-direction: row;
   align-items: center;
   gap: 6px;
