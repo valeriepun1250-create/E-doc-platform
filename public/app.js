@@ -2836,14 +2836,15 @@
     return lines;
   };
   const cervicalJoaGroupedLine = (joa = {}) => {
+    const fmt = n => Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
     const value = id => typeof joa[id] === 'number' ? joa[id] : 0;
     const motor = value('finger_function') + value('shoulder_elbow') + value('lower_extremity_motor');
     const sensory = value('upper_extremity_sensory') + value('trunk_sensory') + value('lower_extremity_sensory');
     const bladder = value('bladder_function');
     const total = motor + sensory + bladder;
     return [
-      `JOA: ${total}/17`,
-      `Motor Function: ${motor}/8   Sensory Function: ${sensory}/6   Bladder Function: ${bladder}/3`,
+      `JOA: ${fmt(total)}/17`,
+      `Motor Function: ${fmt(motor)}/8   Sensory Function: ${fmt(sensory)}/6   Bladder Function: ${fmt(bladder)}/3`,
     ];
   };
 
@@ -2863,7 +2864,7 @@
       const disability = Math.round((ndiTotal / ndiMax) * 100);
       const ndiLine = `Neck Disability Index: ${ndiTotal}/${ndiMax} (${disability}% disability)`;
       const ndiBreakdown = cervicalNdiBreakdownLines(q, a);
-      const lines = [ndiLine, ...ndiBreakdown];
+      const lines = ['Disease-specific Assessment', ndiLine, ...ndiBreakdown];
       const vasQ = allQs.cervical_pain_vas;
       const vas = answers.cervical_pain_vas;
       if (vasQ && !isEmptyAnswer(vasQ, vas)) lines.push(`Pain assessment: VAS ${formatAnswer(vasQ, vas)}`);
