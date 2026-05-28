@@ -201,7 +201,7 @@
             },
             {
               "id": "financial",
-              "label": "Financial support",
+              "label": "Financial",
               "type": "checkbox",
               "width": "full",
               "options": [

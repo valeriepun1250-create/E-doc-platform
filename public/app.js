@@ -3113,9 +3113,9 @@
       const disoriented = Array.isArray(a) ? a.map(it => (typeof it === 'object' && it !== null) ? it.value : it) : [];
       const oriented = all.filter(v => !disoriented.includes(v));
       const parts = [];
-      if (oriented.length)    parts.push(`Orientated to: ${oriented.join(', ')}.`);
-      if (disoriented.length) parts.push(`Disorientated to: ${disoriented.join(', ')}.`);
-      return parts.length ? parts.join('   ') : null;
+      if (oriented.length)    parts.push(`Orientated to: ${oriented.join(', ')}`);
+      if (disoriented.length) parts.push(`Disorientated to: ${disoriented.join(', ')}`);
+      return parts.length ? parts.join('; ') + '.' : null;
     },
 
     // Mental state + Follow command on one line.
@@ -3172,7 +3172,7 @@
       const total = formatAnswer(q, a);
       const totalNumber = mocaTotal(a);
       const norm = mocaNormFor(answers, totalNumber);
-      let header = `HK-Montreal Cognitive Assessment (MoCA): Total score: ${total}`;
+      let header = `HK-Montreal Cognitive Assessment (MoCA): ${total}`;
       const cutoff = norm ? norm.cutoff : answers.moca_cutoff;
       const band = norm ? norm.band : answers.moca_band;
       const inner = [];
