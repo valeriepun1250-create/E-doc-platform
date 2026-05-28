@@ -2373,6 +2373,7 @@
             "label": "Treatment",
             "type": "checkbox",
             "width": "full",
+            "reportTemplate": "Treatment:\n{answer}\n",
             "options": [
               "Pre-op assessment done",
               "Pre-LP assessment done",
@@ -2388,6 +2389,7 @@
             "label": "Treatment plan",
             "type": "checkbox",
             "width": "full",
+            "reportTemplate": "Treatment plan:\n{answer}\n",
             "options": [
               "Post-op assessment",
               "Post-LP assessment",
@@ -2415,6 +2417,7 @@
             "label": "Recommendation",
             "type": "checkbox",
             "width": "full",
+            "reportTemplate": "Recommendation:\n{answer}",
             "options": [
               "Functionally fit home",
               {
