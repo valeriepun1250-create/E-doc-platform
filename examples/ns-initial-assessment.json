@@ -657,7 +657,7 @@
               "items": [
                 {
                   "id": "pain_intensity",
-                  "label": "Pain intensity",
+                  "label": "1. Pain intensity",
                   "options": [
                     0,
                     1,
@@ -695,7 +695,7 @@
                 },
                 {
                   "id": "personal_care",
-                  "label": "Personal care",
+                  "label": "2. Personal care",
                   "options": [
                     0,
                     1,
@@ -733,7 +733,7 @@
                 },
                 {
                   "id": "lifting",
-                  "label": "Lifting",
+                  "label": "3. Lifting",
                   "options": [
                     0,
                     1,
@@ -771,7 +771,7 @@
                 },
                 {
                   "id": "reading",
-                  "label": "Reading",
+                  "label": "4. Reading",
                   "options": [
                     0,
                     1,
@@ -809,7 +809,7 @@
                 },
                 {
                   "id": "headaches",
-                  "label": "Headaches",
+                  "label": "5. Headaches",
                   "options": [
                     0,
                     1,
@@ -847,7 +847,7 @@
                 },
                 {
                   "id": "concentration",
-                  "label": "Concentration",
+                  "label": "6. Concentration",
                   "options": [
                     0,
                     1,
@@ -885,7 +885,7 @@
                 },
                 {
                   "id": "work",
-                  "label": "Work",
+                  "label": "7. Work",
                   "options": [
                     0,
                     1,
@@ -923,7 +923,7 @@
                 },
                 {
                   "id": "driving",
-                  "label": "Driving",
+                  "label": "8. Driving",
                   "options": [
                     0,
                     1,
@@ -961,7 +961,7 @@
                 },
                 {
                   "id": "sleeping",
-                  "label": "Sleeping",
+                  "label": "9. Sleeping",
                   "options": [
                     0,
                     1,
@@ -999,7 +999,7 @@
                 },
                 {
                   "id": "recreation",
-                  "label": "Recreation",
+                  "label": "10. Recreation",
                   "options": [
                     0,
                     1,

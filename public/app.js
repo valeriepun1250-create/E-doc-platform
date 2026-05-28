@@ -2834,9 +2834,10 @@
     .map(it => ({ item: it, value: a && typeof a[it.id] === 'number' ? a[it.id] : null }))
     .filter(entry => entry.value !== null);
   const cervicalNdiBreakdownLines = (q, a) => {
+    const cleanLabel = label => String(label || '').replace(/^\d+\.\s*/, '');
     const parts = (q.items || []).map(it => {
       const v = a && typeof a[it.id] === 'number' ? a[it.id] : null;
-      return `${it.label}: ${v === null ? 'Not applicable' : v}/5`;
+      return `${cleanLabel(it.label)}: ${v === null ? 'Not applicable' : v}/5`;
     });
     const lines = [];
     for (let i = 0; i < parts.length; i += 5) {
