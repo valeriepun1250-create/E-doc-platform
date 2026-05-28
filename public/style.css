@@ -2125,6 +2125,7 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 10px 12px;
   margin: 16px 0 8px;
 }
@@ -2135,6 +2136,10 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   font-weight: 800;
 }
 .asia-reference-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid rgba(36, 137, 95, 0.2);
