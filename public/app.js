@@ -235,8 +235,8 @@
     }
   };
 
-  // Saved reports auto-expire 7 days after savedAt. The user can extend the
-  // expiry by another 7 days from the History list.
+  // All saved entries (including drafts) auto-expire 7 days after savedAt.
+  // The user can extend the expiry by another 7 days from the History list.
   const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
   const expiryFromSavedAt = savedAt => {
     const t = Date.parse(savedAt);
@@ -252,10 +252,9 @@
       arr.forEach(e => {
         if (!e.expiresAt) { e.expiresAt = expiryFromSavedAt(e.savedAt); dirty = true; }
       });
-      // Drop anything past its expiry. Drafts are kept indefinitely.
+      // Drop anything past its expiry.
       const now = Date.now();
       const kept = arr.filter(e => {
-        if (e.draft) return true;
         if (!e.expiresAt) return true;
         const exp = Date.parse(e.expiresAt);
         if (!Number.isFinite(exp)) return true;
@@ -676,7 +675,7 @@
         editedParts: existingEntry && existingEntry.editedParts ? existingEntry.editedParts : undefined,
         draft: !!asDraft,
         savedAt,
-        expiresAt: asDraft ? null : expiryFromSavedAt(savedAt),
+        expiresAt: expiryFromSavedAt(savedAt),
       };
       if (historyId) history.update(historyId, entry);
       else { history.add(entry); historyId = entry.id; }
