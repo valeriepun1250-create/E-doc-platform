@@ -599,7 +599,8 @@
                 "Spinal_Thoraco-Lumba"
               ],
               "hideLabel": true,
-              "singleSelect": true
+              "singleSelect": true,
+              "hideInReport": true
             },
             {
               "id": "asia_chart",
