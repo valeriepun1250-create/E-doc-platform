@@ -3324,7 +3324,7 @@
       const impText = (impQ && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
       const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
       const tail = [
-        parts.length ? `Cognitive: ${parts.join('; ')}.` : '',
+        parts.length ? `${opts.brief ? 'Cognitive Function' : 'Cognitive'}: ${parts.join('; ')}.` : '',
         impText ? `Impression: ${impText}.` : '',
         userText.trim(),
       ].filter(Boolean).join(' ');
@@ -3568,29 +3568,31 @@
 
     const mbiQ = allQs.mbi;
     if (mbiQ && !isEmptyAnswer(mbiQ, answers.mbi)) {
-      add(`MBI: ${formatAnswer(mbiQ, answers.mbi)}`);
+      add(`MBI ${formatAnswer(mbiQ, answers.mbi)}`);
     }
 
+    const spinalParts = [];
     const ndiQ = allQs.cervical_ndi;
     if (ndiQ && !isEmptyAnswer(ndiQ, answers.cervical_ndi)) {
-      add(cervicalNdiSummaryLine(ndiQ, answers.cervical_ndi));
-    }
-    const joaQ = allQs.cervical_joa;
-    if (joaQ && !isEmptyAnswer(joaQ, answers.cervical_joa)) {
-      add(cervicalJoaGroupedLine(answers.cervical_joa)[0]);
-    }
-    const cervicalVasQ = allQs.cervical_pain_vas;
-    if (cervicalVasQ && !isEmptyAnswer(cervicalVasQ, answers.cervical_pain_vas)) {
-      add(`VAS: ${formatAnswer(cervicalVasQ, answers.cervical_pain_vas)}`);
+      spinalParts.push(cervicalNdiSummaryLine(ndiQ, answers.cervical_ndi));
     }
     const odiQ = allQs.thoracolumbar_odi;
     if (odiQ && !isEmptyAnswer(odiQ, answers.thoracolumbar_odi)) {
-      add(spinalOdiSummaryLine(odiQ, answers.thoracolumbar_odi));
+      spinalParts.push(spinalOdiSummaryLine(odiQ, answers.thoracolumbar_odi));
+    }
+    const joaQ = allQs.cervical_joa;
+    if (joaQ && !isEmptyAnswer(joaQ, answers.cervical_joa)) {
+      spinalParts.push(cervicalJoaGroupedLine(answers.cervical_joa)[0]);
+    }
+    const cervicalVasQ = allQs.cervical_pain_vas;
+    if (cervicalVasQ && !isEmptyAnswer(cervicalVasQ, answers.cervical_pain_vas)) {
+      spinalParts.push(`VAS: ${formatAnswer(cervicalVasQ, answers.cervical_pain_vas)}`);
     }
     const thoracolumbarVasQ = allQs.thoracolumbar_pain_vas;
     if (thoracolumbarVasQ && !isEmptyAnswer(thoracolumbarVasQ, answers.thoracolumbar_pain_vas)) {
-      add(`VAS: ${formatAnswer(thoracolumbarVasQ, answers.thoracolumbar_pain_vas)}`);
+      spinalParts.push(`VAS: ${formatAnswer(thoracolumbarVasQ, answers.thoracolumbar_pain_vas)}`);
     }
+    if (spinalParts.length) add(spinalParts.join('; '));
 
     const cognitiveLine = customReportFns.cognitive(
       allQs.ot_cognitive || { id: 'ot_cognitive' },
