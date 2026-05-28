@@ -3568,7 +3568,11 @@
 
     const mbiQ = allQs.mbi;
     if (mbiQ && !isEmptyAnswer(mbiQ, answers.mbi)) {
-      add(`MBI ${formatAnswer(mbiQ, answers.mbi)}`);
+      const overallQ = allQs.mbi_overall;
+      const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
+        ? `(${formatAnswer(overallQ, answers.mbi_overall)})`
+        : '';
+      add(`MBI ${formatAnswer(mbiQ, answers.mbi)}${overall}`);
     }
 
     const spinalParts = [];
