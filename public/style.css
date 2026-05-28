@@ -1752,6 +1752,14 @@ table.subscore .rating button { min-width: 34px; padding: 4px 10px; font-size: 1
   background: var(--card);
   overflow: hidden;
 }
+.subscore-desc-card.is-required-missing {
+  border-color: rgba(202, 84, 84, 0.32);
+  background: rgba(202, 84, 84, 0.08);
+}
+.subscore-desc-card.is-required-missing .subscore-desc-card-title {
+  background: rgba(202, 84, 84, 0.12);
+  color: #8f3e3e;
+}
 .subscore-desc-card-title {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);

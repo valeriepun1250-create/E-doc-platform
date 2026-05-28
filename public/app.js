@@ -1785,6 +1785,9 @@
         };
 
         if (q.displayDescriptions === 'grid' || q.displayDescriptions === 'list') {
+          const missingRows = ctx.missingRequired && ctx.missingRequired.itemIdsByQuestion
+            ? ctx.missingRequired.itemIdsByQuestion.get(q.id)
+            : null;
           const grid = el('div', {
             class: 'subscore-described '
               + (q.displayDescriptions === 'grid' ? 'is-grid' : 'is-list'),
@@ -1798,7 +1801,9 @@
               refreshTotal();
               fire();
             };
-            const card = el('section', { class: 'subscore-desc-card' }, [
+            const card = el('section', {
+              class: 'subscore-desc-card' + (missingRows && missingRows.has(it.id) ? ' is-required-missing' : ''),
+            }, [
               el('div', { class: 'subscore-desc-card-title' }, [it.label]),
               renderDescriptionChoices(it, btnByVal, setVal),
             ]);
