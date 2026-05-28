@@ -3252,6 +3252,7 @@
       // we've already inserted it so we only emit once.
       let suspendSummaryEmitted = false;
       const suspendSummaryBefore = s.suspendSummaryBefore || null;
+      const delayedSectionReports = [];
       if (currentReportTitle === 'I. OT comment') {
         const mbiLine = buildMbiSummaryLine(allQs, answers);
         if (mbiLine) sectionLines.push(mbiLine);
@@ -3288,7 +3289,10 @@
             answers,
             { brief: currentReportTitle === 'I. OT comment' },
           );
-          if (out) sectionLines.push(out);
+          if (out) {
+            if (q.appendReportToSectionEnd) delayedSectionReports.push(out);
+            else sectionLines.push(out);
+          }
           continue;
         }
         // Non-customReport: a suspended question simply omits its line; the
@@ -3388,6 +3392,10 @@
       if (sectionReasons.length && !suspendSummaryEmitted) {
         sectionLines.push(`Not test due to ${sectionReasons.join(' / ')}.`);
       }
+      delayedSectionReports.forEach(out => {
+        if (sectionLines.length) sectionLines.push('');
+        sectionLines.push(out);
+      });
       if (sectionLines.length) blocks.push({
         title: currentReportTitle,
         lines: sectionLines,

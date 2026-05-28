@@ -839,6 +839,7 @@
             "displayDescriptions": "grid",
             "width": "full",
             "customReport": "spinal_cervical_disease",
+            "appendReportToSectionEnd": true,
             "breakdownItemsPerLine": 5,
             "breakdownSep": "   ",
             "showIf": {
