@@ -2710,7 +2710,6 @@
         const levelWidth = 12;
         const scoreWidth = 10;
         const pad = (value, width) => String(value).padEnd(width, ' ');
-        lines.push('Sensory and Motor Assessment');
         lines.push('Motor');
         lines.push(`${pad('', levelWidth)}${pad('Right', scoreWidth)}${pad('Left', scoreWidth)}`.trimEnd());
         motorRows.forEach((row, idx) => {
