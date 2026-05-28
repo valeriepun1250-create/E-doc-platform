@@ -448,6 +448,9 @@
     let currentIdx = Number.isInteger(idOrHistoryEntry && idOrHistoryEntry.currentIdx) ? idOrHistoryEntry.currentIdx : 0;
     let currentPrevIdx = undefined;
     let currentNextIdx = undefined;
+    const restoredScrollY = Number.isFinite(idOrHistoryEntry && idOrHistoryEntry.scrollY)
+      ? idOrHistoryEntry.scrollY
+      : null;
     const persistActiveSession = () => {
       activeSession.save({
         view: 'fill',
@@ -455,6 +458,7 @@
         id: historyId,
         answers,
         currentIdx,
+        scrollY: window.scrollY,
         savedAt: new Date().toISOString(),
       });
     };
@@ -466,6 +470,10 @@
     // Flat lookup for prefillFromQuestions / cross references during fill.
     const formQuestions = flattenQuestions(form);
     let missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
+    window.addEventListener('pagehide', persistActiveSession, { once: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') persistActiveSession();
+    });
 
     // Section tabs — avoids one long scroll.
     const tabsBar = el('div', { class: 'tabs' });
@@ -515,7 +523,8 @@
 
     function renderSection(i, opts = {}) {
       const preserveScroll = !!opts.preserveScroll;
-      const scrollY = preserveScroll ? window.scrollY : null;
+      const restoreScrollY = Number.isFinite(opts.restoreScrollY) ? opts.restoreScrollY : null;
+      const scrollY = preserveScroll ? window.scrollY : restoreScrollY;
       const visIdxs = visibleSectionIndexes();
       if (!visIdxs.length) {
         sectionHost.innerHTML = '<p class="muted">All sections removed. Click a section tab to restore.</p>';
@@ -637,7 +646,7 @@
       ]);
       sec.appendChild(navRow);
       sectionHost.appendChild(sec);
-      if (preserveScroll) {
+      if (preserveScroll || restoreScrollY !== null) {
         requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
       } else {
         sectionHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -645,7 +654,7 @@
       fireChange();
     }
 
-    renderSection(visibleSectionIndexes()[0] ?? 0);
+    renderSection(currentIdx, restoredScrollY !== null ? { restoreScrollY: restoredScrollY } : {});
     app.querySelector('#btnPrevSection').onclick = () => {
       if (currentPrevIdx !== undefined) renderSection(currentPrevIdx);
     };
@@ -816,12 +825,20 @@
     app.appendChild(tpl('tpl-report'));
     const { form, answers, entry } = arg || {};
     if (!form || !answers) { setView('browse'); return; }
-    activeSession.save({
-      view: 'report',
-      formId: form.id,
-      answers,
-      entry,
-      savedAt: new Date().toISOString(),
+    const persistReportSession = () => {
+      activeSession.save({
+        view: 'report',
+        formId: form.id,
+        answers,
+        entry,
+        scrollY: window.scrollY,
+        savedAt: new Date().toISOString(),
+      });
+    };
+    persistReportSession();
+    window.addEventListener('pagehide', persistReportSession, { once: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') persistReportSession();
     });
 
     app.querySelector('.back').onclick = () => {
@@ -998,6 +1015,9 @@
     renderPart('Common Assessment', parts.common, '(no assessment notes filled in)', 'common');
     renderPart('Problem Identification', parts.problem, '', 'problem');
     renderPart('Recommendation', parts.recommendation, '', 'recommendation');
+    if (Number.isFinite(arg && arg.scrollY)) {
+      requestAnimationFrame(() => window.scrollTo({ top: arg.scrollY }));
+    }
   }
 
   function evalShowIf(cond, answers) {
@@ -3658,7 +3678,7 @@
     }
     if (session && session.view === 'report' && session.formId && session.answers) {
       const form = await loadForm(session.formId);
-      setView('report', { form, answers: session.answers, entry: session.entry || null });
+      setView('report', { form, answers: session.answers, entry: session.entry || null, scrollY: session.scrollY });
       return;
     }
     setView('browse');
