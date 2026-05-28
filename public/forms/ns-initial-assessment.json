@@ -2289,7 +2289,7 @@
                 "label": "Level"
               }
             ],
-            "reportTemplate": "ADL: MBI {q:mbi}; Level: {q:mbi_overall}. {answer}"
+            "reportTemplate": "ADL: MBI {q:mbi} ({q:mbi_overall} Level)"
           },
           {
             "id": "ot_cognitive",

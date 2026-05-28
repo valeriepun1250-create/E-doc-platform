@@ -3325,9 +3325,8 @@
       const statusVal = (typeof status === 'object' && status !== null) ? status.value : status;
       const statusDetail = (typeof status === 'object' && status !== null) ? status.detail : '';
       if (statusVal && statusVal !== 'Performed') {
-        const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
         const reason = statusDetail ? `${statusVal} ${statusDetail}` : statusVal;
-        return `Cognitive assessment: ${reason}.${userText}`;
+        return `Cognitive assessment: ${reason}.`;
       }
       const parts = [];
       const amtQ = allQs.amt, amt = answers.amt;
@@ -3361,11 +3360,9 @@
       // Append Impression (extracted from the Mental Function section).
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
       const impText = (impQ && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
-      const userText = (typeof a === 'string' && a.trim()) ? ' ' + a.trim() : '';
       const tail = [
         parts.length ? `${opts.brief ? 'Cognitive Function' : 'Cognitive'}: ${parts.join('; ')}.` : '',
         impText ? `Impression: ${impText}.` : '',
-        userText.trim(),
       ].filter(Boolean).join(' ');
       return tail || null;
     },
@@ -3416,10 +3413,6 @@
       let suspendSummaryEmitted = false;
       const suspendSummaryBefore = s.suspendSummaryBefore || null;
       const delayedSectionReports = [];
-      if (currentReportTitle === 'I. OT comment') {
-        const mbiLine = buildMbiSummaryLine(allQs, answers);
-        if (mbiLine) sectionLines.push(mbiLine);
-      }
       const emitSuspendSummary = () => {
         if (suspendSummaryEmitted || !sectionReasons.length) return;
         sectionLines.push(`Not test due to ${sectionReasons.join(' / ')}.`);
