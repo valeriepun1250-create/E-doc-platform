@@ -1206,6 +1206,7 @@
             "type": "rating",
             "min": 0,
             "max": 10,
+            "required": true,
             "width": "full",
             "hideInReport": true,
             "showIf": {
@@ -1220,6 +1221,7 @@
             "mode": "options",
             "totalMax": 17,
             "displayDescriptions": "list",
+            "required": true,
             "width": "full",
             "hideInReport": true,
             "breakdownItemsPerLine": 3,

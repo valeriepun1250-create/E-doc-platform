@@ -656,6 +656,11 @@
         .map(item => ({ id: item.id, label: item.label || item.id }));
     }
 
+    function hasSelectedCheckboxValue(value, option) {
+      if (!Array.isArray(value)) return false;
+      return value.some(item => ((typeof item === 'object' && item !== null) ? item.value : item) === option);
+    }
+
     function hasAnySubScoreInput(q, value) {
       if (!q || !Array.isArray(q.items) || !value || typeof value !== 'object') return false;
       return q.items.some(item => typeof value[item.id] === 'number');
@@ -705,6 +710,20 @@
       }
       if (mocaStarted && mocaMissing.length) {
         missing.push(`MoCA: ${mocaMissing.map(item => item.label).join(', ')}`);
+      }
+
+      const cervicalActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Cervical');
+      if (cervicalActive) {
+        const joaQ = formQuestions.cervical_joa;
+        const joaMissing = subScoreMissingItems(joaQ, answers.cervical_joa);
+        if (joaMissing.length) {
+          result.itemIdsByQuestion.set('cervical_joa', new Set(joaMissing.map(item => item.id)));
+          missing.push(`JOA: ${joaMissing.map(item => item.label).join(', ')}`);
+        }
+        if (answers.cervical_pain_vas === undefined || answers.cervical_pain_vas === '' || answers.cervical_pain_vas === null) {
+          result.headerIds.add('cervical_pain_vas');
+          missing.push('VAS: Pain assessment');
+        }
       }
 
       result.hasMissing = missing.length > 0;
@@ -956,6 +975,9 @@
                    : q.width === 'half' ? 'half'
                    : '';
     const wrap = el('div', { class: 'qfill' + (widthCls ? ' ' + widthCls : '') });
+    if (q.id && ctx && ctx.missingRequired && ctx.missingRequired.headerIds && ctx.missingRequired.headerIds.has(q.id)) {
+      wrap.classList.add('is-required-missing');
+    }
     if (['treatment_done', 'treatment_plan', 'recommendation', 'problems'].includes(q.id)) {
       wrap.classList.add('large-question-label');
     }
@@ -2795,6 +2817,17 @@
     }
     return lines;
   };
+  const cervicalJoaGroupedLine = (joa = {}) => {
+    const value = id => typeof joa[id] === 'number' ? joa[id] : 0;
+    const motor = value('finger_function') + value('shoulder_elbow') + value('lower_extremity_motor');
+    const sensory = value('upper_extremity_sensory') + value('trunk_sensory') + value('lower_extremity_sensory');
+    const bladder = value('bladder_function');
+    const total = motor + sensory + bladder;
+    return [
+      `JOA: ${total}/17`,
+      `Motor Function: ${motor}/8   Sensory Function: ${sensory}/6   Bladder Function: ${bladder}/3`,
+    ];
+  };
 
   const customReportFns = {
     mbi_summary(q, a, allQs, answers) {
@@ -2820,9 +2853,7 @@
       const joaQ = allQs.cervical_joa;
       const joa = answers.cervical_joa;
       if (joaQ && !isEmptyAnswer(joaQ, joa)) {
-        lines.push(`JOA: ${formatAnswer(joaQ, joa)}`);
-        const joaBreakdown = subScoreBreakdownLines(joaQ, joa, undefined, answers);
-        if (joaBreakdown.length) lines.push(...joaBreakdown);
+        lines.push(...cervicalJoaGroupedLine(joa));
       }
       return lines.join('\n');
     },

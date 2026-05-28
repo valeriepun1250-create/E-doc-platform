@@ -1297,6 +1297,13 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   background: rgba(202, 84, 84, 0.10);
   color: #8f3e3e;
 }
+.qfill.is-required-missing {
+  border-color: rgba(202, 84, 84, 0.32);
+  background: rgba(202, 84, 84, 0.08);
+}
+.qfill.is-required-missing .qhead .label {
+  color: #8f3e3e;
+}
 .qhead-extras .header-extra input {
   width: 140px; padding: 6px 10px; font-size: 13px;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
