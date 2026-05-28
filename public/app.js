@@ -729,6 +729,15 @@
         }
       }
 
+      const thoracolumbarActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Thoraco-Lumba');
+      if (thoracolumbarActive) {
+        result.sectionIdx = sectionIndexForQuestion('thoracolumbar_pain_vas');
+        if (answers.thoracolumbar_pain_vas === undefined || answers.thoracolumbar_pain_vas === '' || answers.thoracolumbar_pain_vas === null) {
+          result.headerIds.add('thoracolumbar_pain_vas');
+          missing.push('VAS: Pain assessment');
+        }
+      }
+
       result.hasMissing = missing.length > 0;
       return result;
     }
@@ -2835,6 +2844,30 @@
     }
     return lines;
   };
+  const scorePercent = (score, max) => {
+    if (!max) return '0';
+    const rounded = Math.round((score / max) * 1000) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  };
+  const odiDisabilityLabel = percent => {
+    if (percent <= 20) return 'minimal disability';
+    if (percent <= 40) return 'moderate disability';
+    if (percent <= 60) return 'severe disability';
+    if (percent <= 80) return 'crippled';
+    return 'bed-bound or symptoms exaggerated';
+  };
+  const spinalOdiBreakdownLines = (q, a) => {
+    const cleanLabel = label => String(label || '').replace(/^\d+\.\s*/, '');
+    const parts = (q.items || []).map(it => {
+      const v = a && typeof a[it.id] === 'number' ? a[it.id] : null;
+      return `${cleanLabel(it.label)}: ${v === null ? 'Not applicable' : v}/5`;
+    });
+    const lines = [];
+    for (let i = 0; i < parts.length; i += 6) {
+      lines.push(parts.slice(i, i + 6).join('   '));
+    }
+    return lines;
+  };
   const cervicalJoaGroupedLine = (joa = {}) => {
     const fmt = n => Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
     const value = id => typeof joa[id] === 'number' ? joa[id] : 0;
@@ -2874,6 +2907,24 @@
       if (joaQ && !isEmptyAnswer(joaQ, joa)) {
         lines.push(...cervicalJoaGroupedLine(joa));
       }
+      return lines.join('\n');
+    },
+
+    spinal_thoracolumbar_disease(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const entries = numericSubScoreEntries(q, a);
+      const odiTotal = entries.reduce((sum, entry) => sum + entry.value, 0);
+      const odiMax = Math.max(5, entries.length * 5);
+      const percentText = scorePercent(odiTotal, odiMax);
+      const disability = odiDisabilityLabel(Number(percentText));
+      const lines = [
+        'Disease-specific Assessment',
+        `Oswestry Disability Index: ${percentText}% (${disability})`,
+        ...spinalOdiBreakdownLines(q, a),
+      ];
+      const vasQ = allQs.thoracolumbar_pain_vas;
+      const vas = answers.thoracolumbar_pain_vas;
+      if (vasQ && !isEmptyAnswer(vasQ, vas)) lines.push(`Pain assessment: VAS ${formatAnswer(vasQ, vas)}`);
       return lines.join('\n');
     },
 
