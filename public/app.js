@@ -3259,6 +3259,39 @@
       return line;
     },
 
+    fall_assessment_compact(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const lines = [];
+      const risk = formatAnswer(q, a);
+      const factorsQ = allQs.fall_factors;
+      const factors = factorsQ && !isEmptyAnswer(factorsQ, answers.fall_factors)
+        ? formatAnswer(factorsQ, answers.fall_factors)
+        : '';
+      let first = `Fall Risk: ${risk}`;
+      if (factors) first += `; Risk factors: ${factors}`;
+      lines.push(first);
+
+      const historyQ = allQs.fall_history;
+      const history = historyQ && !isEmptyAnswer(historyQ, answers.fall_history)
+        ? formatAnswer(historyQ, answers.fall_history)
+        : '';
+      if (history) {
+        const freqQ = allQs.fall_freq;
+        const freq = freqQ && !isEmptyAnswer(freqQ, answers.fall_freq)
+          ? formatAnswer(freqQ, answers.fall_freq)
+          : '';
+        let second = `History of fall in recent year: ${history}`;
+        if (freq) second += `; Frequency: ${freq}`;
+        lines.push(second);
+      }
+
+      const notesQ = allQs.fall_notes;
+      if (notesQ && !isEmptyAnswer(notesQ, answers.fall_notes)) {
+        lines.push(`Fall Details: ${formatAnswer(notesQ, answers.fall_notes)}`);
+      }
+      return lines.join('\n');
+    },
+
     // Two-line Carer interview block: contact on the first line, care plan on the second.
     carer_interview(q, a) {
       if (!a || typeof a !== 'object') return null;

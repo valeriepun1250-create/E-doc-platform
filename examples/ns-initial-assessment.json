@@ -2144,6 +2144,7 @@
               "label": "Fall risk",
               "type": "multiple_choice",
               "width": "half",
+              "customReport": "fall_assessment_compact",
               "options": [
                 "No",
                 {
@@ -2169,6 +2170,7 @@
                 "Poor safety awareness"
               ],
               "allowOther": true,
+              "hideInReport": true,
               "showIf": {
                 "questionId": "fall_risk",
                 "equals": "Yes"
@@ -2178,13 +2180,15 @@
               "id": "fall_history",
               "label": "Fall in recent year",
               "type": "yes_no",
-              "width": "half"
+              "width": "half",
+              "hideInReport": true
             },
             {
               "id": "fall_freq",
               "label": "Fall frequency",
               "type": "short_text",
               "width": "half",
+              "hideInReport": true,
               "hint": "e.g. 1 fall in 6 months",
               "showIf": {
                 "questionId": "fall_history",
@@ -2196,6 +2200,7 @@
               "label": "Fall details",
               "type": "long_text",
               "width": "full",
+              "hideInReport": true,
               "showIf": {
                 "questionId": "fall_history",
                 "equals": "Yes"
