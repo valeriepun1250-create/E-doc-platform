@@ -590,6 +590,721 @@
               "width": "full"
             },
             {
+              "id": "spinal_region",
+              "label": "Spinal assessment",
+              "type": "checkbox",
+              "width": "full",
+              "options": [
+                "Spinal_Cervical",
+                "Spinal_Thoraco-Lumba"
+              ],
+              "hideLabel": true,
+              "singleSelect": true
+            },
+            {
+              "id": "asia_chart",
+              "label": "Sensory and Motor Chart (ASIA)",
+              "type": "asia_chart",
+              "width": "full",
+              "motorLevels": [
+                "C5",
+                "C6",
+                "C7",
+                "C8",
+                "T1",
+                "L2",
+                "L3",
+                "L4",
+                "L5",
+                "S1"
+              ],
+              "reportTemplate": "{answer}",
+              "showIf": {
+                "questionId": "spinal_region",
+                "anyOf": [
+                  "Spinal_Cervical",
+                  "Spinal_Thoraco-Lumba"
+                ]
+              }
+            },
+            {
+              "type": "heading",
+              "label": "Disease-specific Assessment — Spinal_Cervical",
+              "showIf": {
+                "questionId": "spinal_region",
+                "equals": "Spinal_Cervical"
+              }
+            },
+            {
+              "id": "cervical_ndi",
+              "label": "Neck Disability Index",
+              "type": "sub_score",
+              "mode": "options",
+              "totalMax": 50,
+              "totalMaxMode": "completed_items",
+              "totalMaxPerItem": 5,
+              "displayDescriptions": "grid",
+              "width": "full",
+              "customReport": "spinal_cervical_disease",
+              "breakdownItemsPerLine": 5,
+              "breakdownSep": "   ",
+              "showIf": {
+                "questionId": "spinal_region",
+                "equals": "Spinal_Cervical"
+              },
+              "items": [
+                {
+                  "id": "pain_intensity",
+                  "label": "Pain intensity",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I have no pain at the moment"
+                    },
+                    {
+                      "value": 1,
+                      "text": "The pain is very mild at the moment"
+                    },
+                    {
+                      "value": 2,
+                      "text": "The pain is moderate at the moment"
+                    },
+                    {
+                      "value": 3,
+                      "text": "The pain is fairly severe at the moment"
+                    },
+                    {
+                      "value": 4,
+                      "text": "The pain is very severe at the moment"
+                    },
+                    {
+                      "value": 5,
+                      "text": "The pain is the worst imaginable at the moment"
+                    }
+                  ]
+                },
+                {
+                  "id": "personal_care",
+                  "label": "Personal care",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I can look after myself normally without causing extra pain"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I can look after myself normally but it causes extra pain"
+                    },
+                    {
+                      "value": 2,
+                      "text": "It is painful to look after myself and I am slow and careful"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I need some help but can manage most of my personal care"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I need help every day in most aspects of self care"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I do not get dressed, I wash with difficulty and stay in bed"
+                    }
+                  ]
+                },
+                {
+                  "id": "lifting",
+                  "label": "Lifting",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I can lift heavy weights without extra pain"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I can lift heavy weights but it gives extra pain"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Pain prevents me lifting heavy weights off the floor, but I can manage if they are conveniently placed"
+                    },
+                    {
+                      "value": 3,
+                      "text": "Pain prevents me from lifting heavy weights but I can manage light to medium weights if conveniently positioned"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I can only lift very light weights"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I cannot lift or carry anything"
+                    }
+                  ]
+                },
+                {
+                  "id": "reading",
+                  "label": "Reading",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I can read as much as I want to with no pain in my neck"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I can read as much as I want to with slight pain in my neck"
+                    },
+                    {
+                      "value": 2,
+                      "text": "I can read as much as I want with moderate pain in my neck"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I cannot read as much as I want because of moderate pain in my neck"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I can hardly read at all because of severe pain in my neck"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I cannot read at all"
+                    }
+                  ]
+                },
+                {
+                  "id": "headaches",
+                  "label": "Headaches",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I have no headaches at all"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I have slight headaches, which come infrequently"
+                    },
+                    {
+                      "value": 2,
+                      "text": "I have moderate headaches, which come infrequently"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I have moderate headaches, which come frequently"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I have severe headaches, which come frequently"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I have headaches almost all the time"
+                    }
+                  ]
+                },
+                {
+                  "id": "concentration",
+                  "label": "Concentration",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I can concentrate fully when I want to with no difficulty"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I can concentrate fully when I want to with slight difficulty"
+                    },
+                    {
+                      "value": 2,
+                      "text": "I have a fair degree of difficulty in concentrating when I want to"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I have a lot of difficulty in concentrating when I want to"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I have a great deal of difficulty in concentrating when I want to"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I cannot concentrate at all"
+                    }
+                  ]
+                },
+                {
+                  "id": "work",
+                  "label": "Work",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I can do as much work as I want to"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I can only do my usual work, but no more"
+                    },
+                    {
+                      "value": 2,
+                      "text": "I can do most of my usual work, but no more"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I cannot do my usual work"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I can hardly do any work at all"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I cannot do any work at all"
+                    }
+                  ]
+                },
+                {
+                  "id": "driving",
+                  "label": "Driving",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I can drive my car without any neck pain"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I can drive my car as long as I want with slight pain in my neck"
+                    },
+                    {
+                      "value": 2,
+                      "text": "I can drive my car as long as I want with moderate pain in my neck"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I cannot drive my car as long as I want because of moderate pain in my neck"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I can hardly drive at all because of severe pain in my neck"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I cannot drive my car at all"
+                    }
+                  ]
+                },
+                {
+                  "id": "sleeping",
+                  "label": "Sleeping",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I have no trouble sleeping"
+                    },
+                    {
+                      "value": 1,
+                      "text": "My sleep is slightly disturbed (less than 1 hr sleepless)"
+                    },
+                    {
+                      "value": 2,
+                      "text": "My sleep is mildly disturbed (1-2 hrs sleepless)"
+                    },
+                    {
+                      "value": 3,
+                      "text": "My sleep is moderately disturbed (2-3 hrs sleepless)"
+                    },
+                    {
+                      "value": 4,
+                      "text": "My sleep is greatly disturbed (3-5 hrs sleepless)"
+                    },
+                    {
+                      "value": 5,
+                      "text": "My sleep is completely disturbed (5-7 hrs sleepless)"
+                    }
+                  ]
+                },
+                {
+                  "id": "recreation",
+                  "label": "Recreation",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "I am able to engage in all my recreation activities with no neck pain at all"
+                    },
+                    {
+                      "value": 1,
+                      "text": "I am able to engage in all my recreation activities, with some pain in my neck"
+                    },
+                    {
+                      "value": 2,
+                      "text": "I am able to engage in most, but not all of my usual recreation activities because of pain in my neck"
+                    },
+                    {
+                      "value": 3,
+                      "text": "I am able to engage in a few of my usual recreation activities because of pain in my neck"
+                    },
+                    {
+                      "value": 4,
+                      "text": "I can hardly do any recreation activities because of pain in my neck"
+                    },
+                    {
+                      "value": 5,
+                      "text": "I cannot do any recreation activities at all"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "cervical_pain_vas",
+              "label": "Pain assessment — VAS",
+              "type": "rating",
+              "min": 0,
+              "max": 10,
+              "required": true,
+              "width": "full",
+              "hideInReport": true,
+              "showIf": {
+                "questionId": "spinal_region",
+                "equals": "Spinal_Cervical"
+              }
+            },
+            {
+              "id": "cervical_joa",
+              "label": "JOA",
+              "type": "sub_score",
+              "mode": "options",
+              "totalMax": 17,
+              "displayDescriptions": "list",
+              "required": true,
+              "width": "full",
+              "hideInReport": true,
+              "breakdownItemsPerLine": 3,
+              "breakdownSep": "   ",
+              "showIf": {
+                "questionId": "spinal_region",
+                "equals": "Spinal_Cervical"
+              },
+              "items": [
+                {
+                  "id": "finger_function",
+                  "label": "Motor Function - Fingers",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "Unable to feed oneself with any tableware including chopsticks, a spoon or fork, and/or unable to fasten buttons of any size"
+                    },
+                    {
+                      "value": 1,
+                      "text": "Can manage to feed oneself with a spoon and/or a fork but not with chopsticks"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Either chopstick feeding or writing is possible but not practical, and/or large buttons can be fastened"
+                    },
+                    {
+                      "value": 3,
+                      "text": "Either chopstick feeding or writing is clumsy but practical, and/or cuff buttons can be fastened"
+                    },
+                    {
+                      "value": 4,
+                      "text": "Normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "shoulder_elbow",
+                  "label": "Motor Function - Shoulder and elbow",
+                  "options": [
+                    -2,
+                    -1,
+                    -0.5,
+                    0
+                  ],
+                  "descriptions": [
+                    {
+                      "value": -2,
+                      "text": "MMT 2 or below"
+                    },
+                    {
+                      "value": -1,
+                      "text": "MMT 3"
+                    },
+                    {
+                      "value": -0.5,
+                      "text": "MMT 4"
+                    },
+                    {
+                      "value": 0,
+                      "text": "MMT 5"
+                    }
+                  ]
+                },
+                {
+                  "id": "lower_extremity_motor",
+                  "label": "Motor Function - Lower Extremity",
+                  "options": [
+                    0,
+                    0.5,
+                    1,
+                    1.5,
+                    2,
+                    2.5,
+                    3,
+                    4
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "Unable to stand up and walk by any means"
+                    },
+                    {
+                      "value": 0.5,
+                      "text": "Able to stand up but unable to walk"
+                    },
+                    {
+                      "value": 1,
+                      "text": "Unable to walk without a cane or other support on a level"
+                    },
+                    {
+                      "value": 1.5,
+                      "text": "Able to walk without a support but with a clumsy gait"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Walks independently on a level but needs support on stairs"
+                    },
+                    {
+                      "value": 2.5,
+                      "text": "Walks independently going upstairs, but needs support going downstairs"
+                    },
+                    {
+                      "value": 3,
+                      "text": "Capable of fast walking but clumsily"
+                    },
+                    {
+                      "value": 4,
+                      "text": "Normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "upper_extremity_sensory",
+                  "label": "Sensory Function - Upper Extremity",
+                  "options": [
+                    0,
+                    0.5,
+                    1,
+                    1.5,
+                    2
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "Complete loss of touch and pain sensation"
+                    },
+                    {
+                      "value": 0.5,
+                      "text": "50% or below of normal sensation and/or severe pain or numbness"
+                    },
+                    {
+                      "value": 1,
+                      "text": "More than 60% of normal sensation and/or moderate pain or numbness"
+                    },
+                    {
+                      "value": 1.5,
+                      "text": "Subjective numbness of a slight degree without any objective sensory deficit"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "trunk_sensory",
+                  "label": "Sensory Function - Trunk",
+                  "options": [
+                    0,
+                    0.5,
+                    1,
+                    1.5,
+                    2
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "Complete loss of touch and pain sensation"
+                    },
+                    {
+                      "value": 0.5,
+                      "text": "50% or below of normal sensation and/or severe pain or numbness"
+                    },
+                    {
+                      "value": 1,
+                      "text": "More than 60% of normal sensation and/or moderate pain or numbness"
+                    },
+                    {
+                      "value": 1.5,
+                      "text": "Subjective numbness of a slight degree without any objective sensory deficit"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "lower_extremity_sensory",
+                  "label": "Sensory Function - Lower Extremity",
+                  "options": [
+                    0,
+                    0.5,
+                    1,
+                    1.5,
+                    2
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "Complete loss of touch and pain sensation"
+                    },
+                    {
+                      "value": 0.5,
+                      "text": "50% or below of normal sensation and/or severe pain or numbness"
+                    },
+                    {
+                      "value": 1,
+                      "text": "More than 60% of normal sensation and/or moderate pain or numbness"
+                    },
+                    {
+                      "value": 1.5,
+                      "text": "Subjective numbness of a slight degree without any objective sensory deficit"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "bladder_function",
+                  "label": "Bladder Function",
+                  "options": [
+                    0,
+                    1,
+                    2,
+                    3
+                  ],
+                  "descriptions": [
+                    {
+                      "value": 0,
+                      "text": "Urinary retention and/or incontinence"
+                    },
+                    {
+                      "value": 1,
+                      "text": "Sense of retention and/or dribbling and/or thin stream and/or complete continence"
+                    },
+                    {
+                      "value": 2,
+                      "text": "Urinary retardation and/or pollakiuria"
+                    },
+                    {
+                      "value": 3,
+                      "text": "Normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
               "id": "power",
               "label": "Power",
               "type": "composite",
@@ -621,7 +1336,14 @@
                   "placeholder": "5"
                 }
               ],
-              "reportTemplate": "Power:\n{rul} | {lul}\n{rll} | {lll}"
+              "reportTemplate": "Power:\n{rul} | {lul}\n{rll} | {lll}",
+              "showIf": {
+                "questionId": "spinal_region",
+                "notAnyOf": [
+                  "Spinal_Cervical",
+                  "Spinal_Thoraco-Lumba"
+                ]
+              }
             },
             {
               "id": "tone",
@@ -775,7 +1497,14 @@
               "max": 7,
               "width": "half",
               "hint": "Functional Test for the Hemiplegic Upper Extremity",
-              "reportTemplate": "Hand function (FTHUE): {answer}"
+              "reportTemplate": "Hand function (FTHUE): {answer}",
+              "showIf": {
+                "questionId": "spinal_region",
+                "notAnyOf": [
+                  "Spinal_Cervical",
+                  "Spinal_Thoraco-Lumba"
+                ]
+              }
             },
             {
               "id": "sensation",
@@ -786,261 +1515,18 @@
                 "NAD"
               ],
               "allowOther": true,
-              "otherPlaceholder": "describe deficit"
-            },
-            {
-              "id": "spinal_region",
-              "label": "Spinal assessment",
-              "type": "checkbox",
-              "width": "full",
-              "hint": "Select one or both to expand spinal assessment tools.",
-              "options": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
-              ]
-            },
-            {
-              "id": "asia_chart",
-              "label": "Sensory and Motor Chart (ASIA)",
-              "type": "asia_chart",
-              "width": "full",
-              "motorLevels": [
-                "C5",
-                "C6",
-                "C7",
-                "C8",
-                "T1",
-                "L2",
-                "L3",
-                "L4",
-                "L5",
-                "S1"
-              ],
-              "reportTemplate": "{answer}",
+              "otherPlaceholder": "describe deficit",
               "showIf": {
                 "questionId": "spinal_region",
-                "anyOf": [
+                "notAnyOf": [
                   "Spinal_Cervical",
                   "Spinal_Thoraco-Lumba"
                 ]
               }
-            },
-            {
-              "type": "heading",
-              "label": "Disease-specific Assessment — Spinal_Cervical",
-              "showIf": {
-                "questionId": "spinal_region",
-                "equals": "Spinal_Cervical"
-              }
-            },
-            {
-              "id": "cervical_ndi",
-              "label": "Neck Disability Index",
-              "type": "sub_score",
-              "mode": "options",
-              "totalMax": 50,
-              "width": "full",
-              "customReport": "spinal_cervical_disease",
-              "breakdownItemsPerLine": 5,
-              "breakdownSep": "   ",
-              "showIf": {
-                "questionId": "spinal_region",
-                "equals": "Spinal_Cervical"
-              },
-              "items": [
-                {
-                  "id": "pain_intensity",
-                  "label": "Pain intensity",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "personal_care",
-                  "label": "Personal care",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "lifting",
-                  "label": "Lifting",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "reading",
-                  "label": "Reading",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "headaches",
-                  "label": "Headaches",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "concentration",
-                  "label": "Concentration",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "work",
-                  "label": "Work",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "driving",
-                  "label": "Driving",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "sleeping",
-                  "label": "Sleeping",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                },
-                {
-                  "id": "recreation",
-                  "label": "Recreation",
-                  "options": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                  ]
-                }
-              ]
-            },
-            {
-              "id": "cervical_pain_vas",
-              "label": "Pain assessment — VAS",
-              "type": "rating",
-              "min": 0,
-              "max": 10,
-              "width": "full",
-              "hideInReport": true,
-              "showIf": {
-                "questionId": "spinal_region",
-                "equals": "Spinal_Cervical"
-              }
-            },
-            {
-              "id": "cervical_joa",
-              "label": "JOA",
-              "type": "sub_score",
-              "mode": "max",
-              "totalMax": 17,
-              "width": "full",
-              "hideInReport": true,
-              "breakdownItemsPerLine": 3,
-              "breakdownSep": "   ",
-              "showIf": {
-                "questionId": "spinal_region",
-                "equals": "Spinal_Cervical"
-              },
-              "items": [
-                {
-                  "id": "motor_function",
-                  "label": "Motor Function",
-                  "max": 8
-                },
-                {
-                  "id": "sensory_function",
-                  "label": "Sensory Function",
-                  "max": 6
-                },
-                {
-                  "id": "bladder_function",
-                  "label": "Bladder Function",
-                  "max": 3
-                }
-              ]
-            },
-            {
-              "id": "spinal_cervical_other",
-              "label": "Spinal_Cervical other assessment",
-              "type": "long_text",
-              "width": "full",
-              "placeholder": "e.g. collar tolerance, upper limb function, respiratory status, pressure area, precautions",
-              "reportTemplate": "Spinal_Cervical other assessment: {answer}",
-              "showIf": {
-                "questionId": "spinal_region",
-                "equals": "Spinal_Cervical"
-              }
-            },
-            {
-              "id": "spinal_thoraco_lumba_other",
-              "label": "Spinal_Thoraco-Lumba other assessment",
-              "type": "long_text",
-              "width": "full",
-              "placeholder": "e.g. TLSO tolerance, lower limb function, sitting balance, transfer, bladder/bowel, precautions",
-              "reportTemplate": "Spinal_Thoraco-Lumba other assessment: {answer}",
-              "showIf": {
-                "questionId": "spinal_region",
-                "equals": "Spinal_Thoraco-Lumba"
-              }
             }
           ],
-          "reportTitle": "D. Physical Assessment"
+          "reportTitle": "D. Physical Assessment",
+          "headerQuestionId": "spinal_region"
         },
         {
           "title": "Functional Assessment (Modified Barthel Index)",

@@ -1269,6 +1269,34 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   text-transform: none;
   letter-spacing: 0;
 }
+.section-head-row .section-title-control {
+  width: auto;
+  max-width: none;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.section-head-row .section-title-control:focus-within {
+  box-shadow: none;
+}
+.section-head-row .section-title-control .qhead,
+.section-head-row .section-title-control .hint {
+  display: none;
+}
+.section-head-row .section-title-control .checks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.section-head-row .section-title-control .checks label {
+  margin: 0;
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
 .qfill .label { font-weight: 600; margin-bottom: 8px; color: var(--fg); }
 .qfill.large-question-label .label {
   font-size: 16px;

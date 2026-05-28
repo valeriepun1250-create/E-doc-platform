@@ -501,8 +501,8 @@
       const sec = el('div', { class: 'section-block' });
 
       // If the section has a tick-style trigger question, pull it into the header.
-      let headerTriggerQId = null;
-      if (s.hideQuestionsIf) {
+      let headerTriggerQId = s.headerQuestionId || null;
+      if (!headerTriggerQId && s.hideQuestionsIf) {
         const tid = s.hideQuestionsIf.questionId;
         const tq = s.questions.find(q => q.id === tid);
         if (tq && tq.tickStyle) headerTriggerQId = tid;
@@ -523,6 +523,7 @@
         const triggerWidget = renderQuestion(tq, answers, comments, sectionRenderCtx);
         triggerWidget.dataset.qid = tq.id;
         triggerWidget.classList.add('header-trigger');
+        if (s.headerQuestionId) triggerWidget.classList.add('section-title-control');
         head.appendChild(triggerWidget);
       }
       sec.appendChild(head);
@@ -967,6 +968,7 @@
     };
     if (cond.equals !== undefined) return matchVal(cond.equals);
     if (cond.anyOf !== undefined && Array.isArray(cond.anyOf)) return cond.anyOf.some(matchVal);
+    if (cond.notAnyOf !== undefined && Array.isArray(cond.notAnyOf)) return !cond.notAnyOf.some(matchVal);
     if (cond.notEquals !== undefined) return !matchVal(cond.notEquals);
     return true;
   }
@@ -1476,6 +1478,12 @@
               const idxs = curArr.map(it => optValues.indexOf(valueOf(it))).filter(i => i >= 0);
               const newIdx = optValues.indexOf(opt.value);
               const wouldBe = idxs.concat([newIdx]);
+              if (q.singleSelect) {
+                curArr.splice(0, curArr.length);
+                group.querySelectorAll('input[type=checkbox]').forEach(other => {
+                  if (other !== c) other.checked = false;
+                });
+              }
               if (typeof q.maxSelect === 'number' && wouldBe.length > q.maxSelect) {
                 c.checked = false;
                 alert(`Pick at most ${q.maxSelect} option${q.maxSelect === 1 ? '' : 's'}.`);
