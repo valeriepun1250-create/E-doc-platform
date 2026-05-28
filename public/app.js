@@ -3051,7 +3051,7 @@
       const lines = [];
       if (l1.length) lines.push(l1.join('  '));
       if (l2.length) lines.push(l2.join('  '));
-      return lines.length ? lines.join('\n') : null;
+      return lines.length ? ['Premorbid ADL:', ...lines].join('\n') : null;
     },
     // Lives with + Home access on one line. "Live alone" / "OAHR" emit
     // bare (no "Lives with" prefix). "Hostel" emits as "Live in Hostel".
