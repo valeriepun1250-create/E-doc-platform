@@ -3567,7 +3567,7 @@
     const isRecommend = b => /recommendation/i.test(b.title || '');
     const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
     const linesWithTargetedSpacing = lines => lines.flatMap((line, index) =>
-      index > 0 && /^Vital signs:/.test(lines[index - 1] || '') && /^Basic ADL:/.test(line || '')
+      index > 0 && /^Vital signs:/.test(lines[index - 1] || '') && /^Premorbid ADL:/.test(line || '')
         ? ['', line]
         : [line]);
 
