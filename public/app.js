@@ -5,6 +5,7 @@
   const nav = document.getElementById('nav');
   const state = { view: 'browse', currentForm: null };
   const HISTORY_KEY = 'edoc_history_v1';
+  const ACTIVE_SESSION_KEY = 'edoc_active_session_v1';
   const FORMS_DIR = 'forms/';
   const MOCA_NORM_ROWS = {
     '65-69': {
@@ -277,6 +278,20 @@
       history.update(id, { expiresAt: newExpiry });
     },
   };
+  const activeSession = {
+    load() {
+      try { return JSON.parse(sessionStorage.getItem(ACTIVE_SESSION_KEY) || 'null'); }
+      catch { return null; }
+    },
+    save(session) {
+      try { sessionStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(session)); }
+      catch { /* ignore storage quota / private mode failures */ }
+    },
+    clear() {
+      try { sessionStorage.removeItem(ACTIVE_SESSION_KEY); }
+      catch { /* ignore */ }
+    },
+  };
 
   // ---------- nav ----------
   nav.addEventListener('click', e => {
@@ -287,6 +302,7 @@
 
   function setView(v, arg) {
     state.view = v;
+    if (v === 'browse') activeSession.clear();
     document.body.classList.toggle('is-home', v === 'browse');
     document.body.classList.toggle('is-work', v === 'fill');
     document.body.classList.toggle('is-summary', v === 'report');
@@ -429,8 +445,24 @@
 
     // Global change listeners so showIf-dependent questions can refresh.
     const changeListeners = new Set();
+    let currentIdx = Number.isInteger(idOrHistoryEntry && idOrHistoryEntry.currentIdx) ? idOrHistoryEntry.currentIdx : 0;
+    let currentPrevIdx = undefined;
+    let currentNextIdx = undefined;
+    const persistActiveSession = () => {
+      activeSession.save({
+        view: 'fill',
+        formId: form.id,
+        id: historyId,
+        answers,
+        currentIdx,
+        savedAt: new Date().toISOString(),
+      });
+    };
     const onChange = fn => { changeListeners.add(fn); return () => changeListeners.delete(fn); };
-    const fireChange = () => changeListeners.forEach(fn => fn());
+    const fireChange = () => {
+      persistActiveSession();
+      changeListeners.forEach(fn => fn());
+    };
     // Flat lookup for prefillFromQuestions / cross references during fill.
     const formQuestions = flattenQuestions(form);
     let missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
@@ -441,9 +473,6 @@
     root.appendChild(tabsBar);
     root.appendChild(sectionHost);
 
-    let currentIdx = 0;
-    let currentPrevIdx = undefined;
-    let currentNextIdx = undefined;
     const sections = form.schema.sections;
 
     function visibleSectionIndexes() {
@@ -494,6 +523,7 @@
       }
       if (!visIdxs.includes(i)) i = visIdxs[0];
       currentIdx = i;
+      persistActiveSession();
       rebuildTabs();
       sectionHost.innerHTML = '';
 
@@ -786,6 +816,13 @@
     app.appendChild(tpl('tpl-report'));
     const { form, answers, entry } = arg || {};
     if (!form || !answers) { setView('browse'); return; }
+    activeSession.save({
+      view: 'report',
+      formId: form.id,
+      answers,
+      entry,
+      savedAt: new Date().toISOString(),
+    });
 
     app.querySelector('.back').onclick = () => {
       if (entry) setView('fill', entry);
@@ -3613,5 +3650,19 @@
   }
 
   // ---------- boot ----------
-  setView('browse');
+  async function boot() {
+    const session = activeSession.load();
+    if (session && session.view === 'fill' && session.formId && session.answers) {
+      setView('fill', session);
+      return;
+    }
+    if (session && session.view === 'report' && session.formId && session.answers) {
+      const form = await loadForm(session.formId);
+      setView('report', { form, answers: session.answers, entry: session.entry || null });
+      return;
+    }
+    setView('browse');
+  }
+
+  boot();
 })();
