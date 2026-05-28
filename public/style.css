@@ -1273,6 +1273,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   width: auto;
   max-width: none;
   margin-left: auto;
+  flex: 0 0 auto;
   padding: 0;
   border: 0;
   background: transparent;
@@ -1296,6 +1297,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   min-height: 34px;
   padding: 7px 12px;
   font-size: 13px;
+  font-weight: 700;
 }
 .qfill .label { font-weight: 600; margin-bottom: 8px; color: var(--fg); }
 .qfill.large-question-label .label {

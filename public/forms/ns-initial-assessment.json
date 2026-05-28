@@ -787,8 +787,8 @@
             "type": "checkbox",
             "width": "full",
             "options": [
-              "Spinal_Cervical",
-              "Spinal_Thoraco-Lumba"
+              "Spinal_Cervical Ax",
+              "Spinal_Thoraco-Lumba Ax"
             ],
             "hideLabel": true,
             "singleSelect": true,
@@ -815,17 +815,17 @@
             "showIf": {
               "questionId": "spinal_region",
               "anyOf": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
+                "Spinal_Cervical Ax",
+                "Spinal_Thoraco-Lumba Ax"
               ]
             }
           },
           {
             "type": "heading",
-            "label": "Disease-specific Assessment — Spinal_Cervical",
+            "label": "Disease-specific Assessment — Spinal_Cervical Ax",
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Cervical"
+              "equals": "Spinal_Cervical Ax"
             }
           },
           {
@@ -844,7 +844,7 @@
             "breakdownSep": "   ",
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Cervical"
+              "equals": "Spinal_Cervical Ax"
             },
             "items": [
               {
@@ -1240,7 +1240,7 @@
             "hideInReport": true,
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Cervical"
+              "equals": "Spinal_Cervical Ax"
             }
           },
           {
@@ -1257,7 +1257,7 @@
             "breakdownSep": "   ",
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Cervical"
+              "equals": "Spinal_Cervical Ax"
             },
             "items": [
               {
@@ -1500,10 +1500,10 @@
           },
           {
             "type": "heading",
-            "label": "Disease-specific Assessment — Spinal_Thoraco-Lumba",
+            "label": "Disease-specific Assessment — Spinal_Thoraco-Lumba Ax",
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Thoraco-Lumba"
+              "equals": "Spinal_Thoraco-Lumba Ax"
             }
           },
           {
@@ -1522,7 +1522,7 @@
             "breakdownSep": "   ",
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Thoraco-Lumba"
+              "equals": "Spinal_Thoraco-Lumba Ax"
             },
             "items": [
               {
@@ -1668,7 +1668,7 @@
             "hideInReport": true,
             "showIf": {
               "questionId": "spinal_region",
-              "equals": "Spinal_Thoraco-Lumba"
+              "equals": "Spinal_Thoraco-Lumba Ax"
             }
           },
           {
@@ -1707,8 +1707,8 @@
             "showIf": {
               "questionId": "spinal_region",
               "notAnyOf": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
+                "Spinal_Cervical Ax",
+                "Spinal_Thoraco-Lumba Ax"
               ]
             }
           },
@@ -1747,8 +1747,8 @@
             "showIf": {
               "questionId": "spinal_region",
               "notAnyOf": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
+                "Spinal_Cervical Ax",
+                "Spinal_Thoraco-Lumba Ax"
               ]
             }
           },
@@ -1904,8 +1904,8 @@
             "showIf": {
               "questionId": "spinal_region",
               "notAnyOf": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
+                "Spinal_Cervical Ax",
+                "Spinal_Thoraco-Lumba Ax"
               ]
             }
           },
@@ -1918,8 +1918,8 @@
             "showIf": {
               "questionId": "spinal_region",
               "notAnyOf": [
-                "Spinal_Cervical",
-                "Spinal_Thoraco-Lumba"
+                "Spinal_Cervical Ax",
+                "Spinal_Thoraco-Lumba Ax"
               ]
             }
           }

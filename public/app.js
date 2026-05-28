@@ -714,7 +714,7 @@
         }
       }
 
-      const cervicalActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Cervical');
+      const cervicalActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Cervical Ax');
       if (cervicalActive) {
         result.sectionIdx = sectionIndexForQuestion('cervical_joa');
         const joaQ = formQuestions.cervical_joa;
@@ -729,7 +729,7 @@
         }
       }
 
-      const thoracolumbarActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Thoraco-Lumba');
+      const thoracolumbarActive = hasSelectedCheckboxValue(answers.spinal_region, 'Spinal_Thoraco-Lumba Ax');
       if (thoracolumbarActive) {
         result.sectionIdx = sectionIndexForQuestion('thoracolumbar_pain_vas');
         if (answers.thoracolumbar_pain_vas === undefined || answers.thoracolumbar_pain_vas === '' || answers.thoracolumbar_pain_vas === null) {
