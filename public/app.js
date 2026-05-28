@@ -2909,6 +2909,14 @@
     }
     return lines;
   };
+  const cervicalNdiSummaryLine = (q, a) => {
+    const entries = numericSubScoreEntries(q, a);
+    if (!entries.length) return null;
+    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+    const max = Math.max(5, entries.length * 5);
+    const disability = Math.round((total / max) * 100);
+    return `NDI: ${total}/${max} (${disability}% disability)`;
+  };
   const scorePercent = (score, max) => {
     if (!max) return '0';
     const rounded = Math.round((score / max) * 1000) / 10;
@@ -2933,6 +2941,14 @@
     }
     return lines;
   };
+  const spinalOdiSummaryLine = (q, a) => {
+    const entries = numericSubScoreEntries(q, a);
+    if (!entries.length) return null;
+    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+    const max = Math.max(5, entries.length * 5);
+    const percentText = scorePercent(total, max);
+    return `ODI: ${percentText}% (${odiDisabilityLabel(Number(percentText))})`;
+  };
   const cervicalJoaGroupedLine = (joa = {}) => {
     const fmt = n => Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
     const value = id => typeof joa[id] === 'number' ? joa[id] : 0;
@@ -2956,11 +2972,7 @@
 
     spinal_cervical_disease(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
-      const entries = numericSubScoreEntries(q, a);
-      const ndiTotal = entries.reduce((sum, entry) => sum + entry.value, 0);
-      const ndiMax = Math.max(5, entries.length * 5);
-      const disability = Math.round((ndiTotal / ndiMax) * 100);
-      const ndiLine = `Neck Disability Index: ${ndiTotal}/${ndiMax} (${disability}% disability)`;
+      const ndiLine = cervicalNdiSummaryLine(q, a).replace(/^NDI:/, 'Neck Disability Index:');
       const ndiBreakdown = cervicalNdiBreakdownLines(q, a);
       const lines = ['Disease-specific Assessment', ndiLine, ...ndiBreakdown];
       const vasQ = allQs.cervical_pain_vas;
@@ -2977,14 +2989,10 @@
 
     spinal_thoracolumbar_disease(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
-      const entries = numericSubScoreEntries(q, a);
-      const odiTotal = entries.reduce((sum, entry) => sum + entry.value, 0);
-      const odiMax = Math.max(5, entries.length * 5);
-      const percentText = scorePercent(odiTotal, odiMax);
-      const disability = odiDisabilityLabel(Number(percentText));
+      const odiLine = spinalOdiSummaryLine(q, a).replace(/^ODI:/, 'Oswestry Disability Index:');
       const lines = [
         'Disease-specific Assessment',
-        `Oswestry Disability Index: ${percentText}% (${disability})`,
+        odiLine,
         ...spinalOdiBreakdownLines(q, a),
       ];
       const vasQ = allQs.thoracolumbar_pain_vas;
@@ -3561,6 +3569,27 @@
     const mbiQ = allQs.mbi;
     if (mbiQ && !isEmptyAnswer(mbiQ, answers.mbi)) {
       add(`MBI: ${formatAnswer(mbiQ, answers.mbi)}`);
+    }
+
+    const ndiQ = allQs.cervical_ndi;
+    if (ndiQ && !isEmptyAnswer(ndiQ, answers.cervical_ndi)) {
+      add(cervicalNdiSummaryLine(ndiQ, answers.cervical_ndi));
+    }
+    const joaQ = allQs.cervical_joa;
+    if (joaQ && !isEmptyAnswer(joaQ, answers.cervical_joa)) {
+      add(cervicalJoaGroupedLine(answers.cervical_joa)[0]);
+    }
+    const cervicalVasQ = allQs.cervical_pain_vas;
+    if (cervicalVasQ && !isEmptyAnswer(cervicalVasQ, answers.cervical_pain_vas)) {
+      add(`VAS: ${formatAnswer(cervicalVasQ, answers.cervical_pain_vas)}`);
+    }
+    const odiQ = allQs.thoracolumbar_odi;
+    if (odiQ && !isEmptyAnswer(odiQ, answers.thoracolumbar_odi)) {
+      add(spinalOdiSummaryLine(odiQ, answers.thoracolumbar_odi));
+    }
+    const thoracolumbarVasQ = allQs.thoracolumbar_pain_vas;
+    if (thoracolumbarVasQ && !isEmptyAnswer(thoracolumbarVasQ, answers.thoracolumbar_pain_vas)) {
+      add(`VAS: ${formatAnswer(thoracolumbarVasQ, answers.thoracolumbar_pain_vas)}`);
     }
 
     const cognitiveLine = customReportFns.cognitive(
