@@ -985,6 +985,13 @@
   function renderQuestion(q, answers, comments, ctx) {
     if (q.type === 'heading') {
       const h = el('div', { class: 'qfill heading full' }, [q.label || '']);
+      if (q.showIf && ctx && ctx.onChange) {
+        const apply = () => {
+          h.style.display = evalShowIf(q.showIf, answers) ? '' : 'none';
+        };
+        apply();
+        ctx.onChange(apply);
+      }
       return h;
     }
     const widthCls = q.width === 'full' ? 'full'
