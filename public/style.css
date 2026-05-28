@@ -2280,10 +2280,10 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   width: 88px;
 }
 .asia-sensory-grid .asia-field-lightTouch {
-  grid-column: 1 / 4;
+  grid-column: 1 / 5;
 }
 .asia-sensory-grid .asia-field-pinprick {
-  grid-column: 4 / 7;
+  grid-column: 5 / 8;
 }
 .asia-sensory-grid .asia-field-proprioception {
   grid-column: 1 / 4;
