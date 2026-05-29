@@ -688,9 +688,12 @@
               {
                 "id": "moca_education",
                 "label": "Education",
-                "type": "select",
+                "type": "number",
+                "inputType": "number",
                 "required": true,
-                "placeholder": "Select education"
+                "placeholder": "Years",
+                "min": 0,
+                "step": 1
               }
             ],
             "items": [

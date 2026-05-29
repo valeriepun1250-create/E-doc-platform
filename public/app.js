@@ -201,21 +201,50 @@
     kids.forEach(k => e.appendChild(typeof k === 'string' ? document.createTextNode(k) : k));
     return e;
   };
-  const mocaEducationOptions = ageCluster =>
-    ageCluster === '≥80' ? ['0-6', '>6'] : ['0-3', '4-6', '7-9', '10-12', '>12'];
+  const normalizeReportSymbols = text => String(text || '').replace(/≥/g, '>=').replace(/≤/g, '<=');
+  const mocaEducationBucket = (ageCluster, educationValue) => {
+    if (educationValue === undefined || educationValue === null || educationValue === '') return null;
+    const s = String(educationValue).trim();
+    const known = new Set(['0-3', '4-6', '7-9', '10-12', '>12', '0-6', '>6']);
+    if (known.has(s)) return s; // backward-compatible with older saved entries
+    const years = Number(educationValue);
+    if (!Number.isFinite(years) || years < 0) return null;
+    const is80plus = ageCluster === '≥80' || ageCluster === '>=80';
+    if (is80plus) return years <= 6 ? '0-6' : '>6';
+    if (years <= 3) return '0-3';
+    if (years <= 6) return '4-6';
+    if (years <= 9) return '7-9';
+    if (years <= 12) return '10-12';
+    return '>12';
+  };
+  const mocaEducationYears = value => {
+    const years = Number(value);
+    return Number.isFinite(years) && years >= 0 ? years : null;
+  };
+  const mocaBandWithDsm = band => {
+    if (!band) return '';
+    const normalized = normalizeReportSymbols(band);
+    const dsm = {
+      '>16th percentile': 'DSM-5 mild NCD',
+      '<=16th percentile': 'DSM-5 mild NCD',
+      '<=7th percentile': 'DSM-5 mild MCI',
+      '<=2nd percentile': 'DSM-5 Major NCD',
+    }[normalized];
+    return dsm ? `${normalized}: ${dsm}` : normalized;
+  };
   const mocaTotal = value => {
     if (!value || typeof value !== 'object') return null;
     return Object.values(value).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
   };
   const mocaNormFor = (answers, total) => {
     const age = answers.moca_age_cluster;
-    const edu = answers.moca_education;
+    const edu = mocaEducationBucket(age, answers.moca_education);
     const row = age && edu && MOCA_NORM_ROWS[age] && MOCA_NORM_ROWS[age][edu];
     if (!row || typeof total !== 'number') return null;
     let band = '>16th percentile';
-    if (total <= row.p2) band = '≤2nd percentile';
-    else if (total <= row.p7) band = '≤7th percentile';
-    else if (total <= row.p16) band = '≤16th percentile';
+    if (total <= row.p2) band = '<=2nd percentile';
+    else if (total <= row.p7) band = '<=7th percentile';
+    else if (total <= row.p16) band = '<=16th percentile';
     return { cutoff: row.p16, band };
   };
   const refreshMocaNormDisplay = (root, answers) => {
@@ -230,8 +259,8 @@
     const normText = root && root.querySelector('.moca-norm-result');
     if (normText) {
       normText.textContent = norm
-        ? `Cut-off: ${norm.cutoff}/30 · ${norm.band}`
-        : 'Select Age and Education cluster to calculate cut-off / percentile.';
+        ? `Cut-off: ${norm.cutoff}/30 · ${mocaBandWithDsm(norm.band)}`
+        : 'Select Age and Education years to calculate cut-off / percentile.';
     }
   };
 
@@ -731,14 +760,17 @@
         }
 
         const mocaQ = formQuestions.moca;
+        const hasMocaEducation = answers.moca_education !== undefined
+          && answers.moca_education !== null
+          && answers.moca_education !== '';
         const mocaStarted = hasAnySubScoreInput(mocaQ, answers.moca) ||
-          !!answers.moca_age_cluster || !!answers.moca_education;
+          !!answers.moca_age_cluster || hasMocaEducation;
         const mocaMissing = [];
         if (mocaStarted && !answers.moca_age_cluster) {
           result.headerIds.add('moca_age_cluster');
           mocaMissing.push({ id: 'moca_age_cluster', label: 'Age' });
         }
-        if (mocaStarted && !answers.moca_education) {
+        if (mocaStarted && !hasMocaEducation) {
           result.headerIds.add('moca_education');
           mocaMissing.push({ id: 'moca_education', label: 'Education' });
         }
@@ -1090,15 +1122,10 @@
         wrap.appendChild(document.createTextNode((hi.label || '') + (hi.required ? ' *' : '') + ': '));
         if (hi.type === 'select') {
           const sel = el('select', { 'data-header-id': hi.id });
-          const options = hi.id === 'moca_education'
-            ? mocaEducationOptions(answers.moca_age_cluster)
-            : (hi.options || []);
           const populateSelect = select => {
             select.innerHTML = '';
             select.appendChild(el('option', { value: '' }, [hi.placeholder || 'Select']));
-            const nextOptions = hi.id === 'moca_education'
-              ? mocaEducationOptions(answers.moca_age_cluster)
-              : options;
+            const nextOptions = hi.options || [];
             nextOptions.forEach(opt => select.appendChild(el('option', { value: opt }, [opt])));
           };
           populateSelect(sel);
@@ -1106,27 +1133,30 @@
           sel.onchange = () => {
             if (sel.value === '') delete answers[hi.id];
             else answers[hi.id] = sel.value;
-            if (hi.id === 'moca_age_cluster') {
-              const allowed = mocaEducationOptions(sel.value);
-              if (answers.moca_education && !allowed.includes(answers.moca_education)) delete answers.moca_education;
-              const eduSelect = extras.querySelector('select[data-header-id="moca_education"]');
-              if (eduSelect) {
-                eduSelect.innerHTML = '';
-                eduSelect.appendChild(el('option', { value: '' }, ['Select education']));
-                allowed.forEach(opt => eduSelect.appendChild(el('option', { value: opt }, [opt])));
-                eduSelect.value = answers.moca_education || '';
-              }
-            }
             refreshMocaNormDisplay(wrap.closest('.qfill') || wrap, answers);
             if (ctx && ctx.fireChange) ctx.fireChange();
           };
           wrap.appendChild(sel);
         } else {
-          const inp = el('input', { type: hi.inputType || 'text', placeholder: hi.placeholder || '' });
+          const inputType = hi.inputType || (hi.type === 'number' ? 'number' : 'text');
+          const inpProps = {
+            type: inputType,
+            placeholder: hi.placeholder || '',
+          };
+          if (hi.min !== undefined) inpProps.min = String(hi.min);
+          if (hi.max !== undefined) inpProps.max = String(hi.max);
+          if (hi.step !== undefined) inpProps.step = String(hi.step);
+          if (inputType === 'number') inpProps.inputmode = 'numeric';
+          const inp = el('input', inpProps);
           inp.value = answers[hi.id] != null ? answers[hi.id] : '';
           inp.oninput = () => {
             if (inp.value === '') delete answers[hi.id];
-            else answers[hi.id] = inp.value;
+            else if (inputType === 'number') {
+              const n = Number(inp.value);
+              if (!Number.isFinite(n) || n < 0) return;
+              answers[hi.id] = n;
+            } else answers[hi.id] = inp.value;
+            refreshMocaNormDisplay(wrap.closest('.qfill') || wrap, answers);
             if (ctx && ctx.fireChange) ctx.fireChange();
           };
           wrap.appendChild(inp);
@@ -1902,7 +1932,7 @@
         if (q.id === 'moca') {
           totalCellWrap.appendChild(el('span', {
             class: 'moca-norm-result',
-          }, ['Select Age and Education cluster to calculate cut-off / percentile.']));
+          }, ['Select Age and Education years to calculate cut-off / percentile.']));
         }
 
         // totalExtras: extra inline fields rendered on the total row, bound to
@@ -2018,18 +2048,31 @@
           tr.appendChild(el('td', { class: 'asia-level' }, [motorLabel ? `${level} (${motorLabel})` : level]));
           ['r', 'l'].forEach(side => {
             const inp = el('input', {
-              type: 'number',
-              min: '0',
-              max: '5',
-              step: '1',
-              inputmode: 'numeric',
-              placeholder: '5',
+              type: 'text',
+              inputmode: 'text',
+              placeholder: '5 / 4-',
               value: row[side] || '',
             });
+            const normMotor = value => {
+              const t = String(value || '').trim();
+              if (!t) return null;
+              return /^[0-5][+-]?$/.test(t) ? t : undefined;
+            };
             inp.oninput = () => {
-              if (inp.value === '') delete row[side];
-              else row[side] = String(Math.max(0, Math.min(5, Number(inp.value))));
-              save();
+              const normalized = normMotor(inp.value);
+              if (normalized === null) {
+                delete row[side];
+                save();
+                return;
+              }
+              if (normalized !== undefined) {
+                row[side] = normalized;
+                save();
+              }
+            };
+            inp.onblur = () => {
+              const normalized = normMotor(inp.value);
+              inp.value = normalized || '';
             };
             tr.appendChild(el('td', {}, [inp]));
           });
@@ -3171,11 +3214,13 @@
       const totalNumber = mocaTotal(a);
       const norm = mocaNormFor(answers, totalNumber);
       let header = `HK-Montreal Cognitive Assessment (MoCA): ${total}`;
+      const eduYears = mocaEducationYears(answers.moca_education);
+      if (eduYears !== null) header += ` (Education: ${eduYears} years)`;
       const cutoff = norm ? norm.cutoff : answers.moca_cutoff;
       const band = norm ? norm.band : answers.moca_band;
       const inner = [];
       if (cutoff !== undefined && cutoff !== '' && cutoff !== null) inner.push(`cut-off: ${cutoff}/30`);
-      if (band) inner.push(band);
+      if (band) inner.push(mocaBandWithDsm(band));
       if (inner.length) header += ` (${inner.join(', ')})`;
       const lines = [header];
       const bd = subScoreBreakdownLines(q, a, undefined, answers);
@@ -3347,11 +3392,13 @@
         const norm = mocaNormFor(answers, totalNumber);
         const label = opts.brief ? 'MoCA' : 'HK-Montreal Cognitive Assessment (MoCA)';
         let s = `${label}: ${formatAnswer(mocaQ, moca)}`;
+        const eduYears = mocaEducationYears(answers.moca_education);
+        if (eduYears !== null) s += ` (Education: ${eduYears} years)`;
         const inner = [];
         const cut = norm ? norm.cutoff : answers.moca_cutoff;
         if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
         const band = norm ? norm.band : answers.moca_band;
-        if (band) inner.push(band);
+        if (band) inner.push(mocaBandWithDsm(band));
         if (inner.length) s += ` (${inner.join(', ')})`;
         parts.push(s);
       }
@@ -3578,7 +3625,7 @@
         if (!b.hideTitle && !isProblem(b) && !isRecommend(b)) out.push(stripPrefix(b.title));
         out.push(...linesWithTargetedSpacing(b.lines));
       });
-      return out.join('\n').trim();
+      return normalizeReportSymbols(out.join('\n').trim());
     };
 
     return {
@@ -3646,7 +3693,7 @@
       add(`Suggestion: ${recommendationLine.replace(/^Recommendation:\s*/i, '')}`);
     }
 
-    return parts.join('\n');
+    return normalizeReportSymbols(parts.join('\n'));
   }
 
   function buildReport(form, answers) {
@@ -3662,7 +3709,7 @@
       if (!b.hideTitle) out.push(stripPrefix(b.title));
       out.push(...linesWithTargetedSpacing(b.lines));
     });
-    return out.join('\n').trim();
+    return normalizeReportSymbols(out.join('\n').trim());
   }
 
   // ---------- history list (mounted inside the browse view) ----------
