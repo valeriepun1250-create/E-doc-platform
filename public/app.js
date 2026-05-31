@@ -2014,7 +2014,6 @@
       case 'asia_chart': {
         const useSensoryScoring = q.sensoryScoring !== false;
         const referenceLabel = q.referenceLabel || 'Dermatomes Reference';
-        const manualSensoryDefaults = q.manualSensoryDefaults || {};
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         curObj.motor = (curObj.motor && typeof curObj.motor === 'object') ? curObj.motor : {};
         curObj.sensory = (curObj.sensory && typeof curObj.sensory === 'object') ? curObj.sensory : {};
@@ -2025,11 +2024,6 @@
         curObj.sensorySections = (curObj.sensorySections && typeof curObj.sensorySections === 'object')
           ? curObj.sensorySections : {};
         curObj.showSensoryReference = !!curObj.showSensoryReference;
-        if (!useSensoryScoring) {
-          Object.entries(manualSensoryDefaults).forEach(([key, value]) => {
-            if (curObj[key] === undefined || curObj[key] === null) curObj[key] = value;
-          });
-        }
         answers[q.id] = curObj;
         const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
         const derivedInputs = {};
@@ -2285,9 +2279,9 @@
           ['pinprickSubscore', 'Pinprick subscore', '/112', true],
           ['others', 'Others', 'c/o'],
         ] : [
-          ['lightTouch', 'Light touch sensation', ''],
-          ['pinprick', 'Pinprick sensation', ''],
-          ['proprioception', 'Proprioception', ''],
+          ['lightTouch', 'Light touch sensation', 'Intact in bilateral side'],
+          ['pinprick', 'Pinprick sensation', 'Intact in bilateral side'],
+          ['proprioception', 'Proprioception', 'NAD'],
           ['others', 'Others', ''],
         ];
         sensoryFields.forEach(([key, label, placeholder, readonly]) => {
