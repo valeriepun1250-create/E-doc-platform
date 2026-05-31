@@ -209,7 +209,8 @@
         }
       }));
       _formsCache = items.filter(Boolean)
-        .sort((a, b) => (a.specialty || '').localeCompare(b.specialty || '')
+        .sort((a, b) => (b.id === 'ns-initial-assessment.json') - (a.id === 'ns-initial-assessment.json')
+          || (a.specialty || '').localeCompare(b.specialty || '')
           || (a.title || '').localeCompare(b.title || ''));
     }
     return specialty ? _formsCache.filter(f => f.specialty === specialty) : _formsCache;
