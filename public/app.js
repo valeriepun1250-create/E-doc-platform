@@ -142,7 +142,7 @@
     });
     const right = asiaSensorySideSummary(bySide.r);
     const left = asiaSensorySideSummary(bySide.l);
-    if (!right && !left) return 'Bilateral intact';
+    if (!right && !left) return 'Intact in bilateral side';
     return [
       right ? `Right: ${right}` : '',
       left ? `Left: ${left}` : '',
@@ -846,7 +846,14 @@
     app.querySelector('#btnSaveGenerate').onclick = () => {
       if (!validateBeforeGenerate()) return;
       const entry = persistEntry(false);
-      setView('report', { form, answers, entry });
+      const returnToFill = {
+        ...(entry || {}),
+        formId: form.id,
+        answers,
+        currentIdx,
+        scrollY: window.scrollY,
+      };
+      setView('report', { form, answers, entry, returnToFill });
     };
   }
 
@@ -854,7 +861,7 @@
   function renderReport(arg) {
     app.innerHTML = '';
     app.appendChild(tpl('tpl-report'));
-    const { form, answers, entry } = arg || {};
+    const { form, answers, entry, returnToFill } = arg || {};
     if (!form || !answers) { setView('browse'); return; }
     const persistReportSession = () => {
       activeSession.save({
@@ -862,6 +869,7 @@
         formId: form.id,
         answers,
         entry,
+        returnToFill,
         scrollY: window.scrollY,
         savedAt: new Date().toISOString(),
       });
@@ -873,11 +881,13 @@
     });
 
     app.querySelector('.back').onclick = () => {
-      if (entry) setView('fill', entry);
+      if (returnToFill) setView('fill', returnToFill);
+      else if (entry) setView('fill', entry);
       else setView('browse');
     };
     app.querySelector('#btnReportBack').onclick = () => {
-      if (entry) setView('fill', entry);
+      if (returnToFill) setView('fill', returnToFill);
+      else if (entry) setView('fill', entry);
       else setView('browse');
     };
     app.querySelector('#btnReportHome').onclick = () => setView('browse');
@@ -2050,7 +2060,7 @@
             const inp = el('input', {
               type: 'text',
               inputmode: 'text',
-              placeholder: '5 / 4-',
+              placeholder: '5',
               value: row[side] || '',
             });
             const normMotor = value => {
@@ -3392,14 +3402,18 @@
         const norm = mocaNormFor(answers, totalNumber);
         const label = opts.brief ? 'MoCA' : 'HK-Montreal Cognitive Assessment (MoCA)';
         let s = `${label}: ${formatAnswer(mocaQ, moca)}`;
-        const eduYears = mocaEducationYears(answers.moca_education);
-        if (eduYears !== null) s += ` (Education: ${eduYears} years)`;
-        const inner = [];
-        const cut = norm ? norm.cutoff : answers.moca_cutoff;
-        if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
         const band = norm ? norm.band : answers.moca_band;
-        if (band) inner.push(mocaBandWithDsm(band));
-        if (inner.length) s += ` (${inner.join(', ')})`;
+        if (opts.brief) {
+          if (band) s += ` (${mocaBandWithDsm(band)})`;
+        } else {
+          const eduYears = mocaEducationYears(answers.moca_education);
+          if (eduYears !== null) s += ` (Education: ${eduYears} years)`;
+          const inner = [];
+          const cut = norm ? norm.cutoff : answers.moca_cutoff;
+          if (cut !== undefined && cut !== '' && cut !== null) inner.push(`Cut-off ${cut}/30`);
+          if (band) inner.push(mocaBandWithDsm(band));
+          if (inner.length) s += ` (${inner.join(', ')})`;
+        }
         parts.push(s);
       }
       // Append Impression (extracted from the Mental Function section).
@@ -3685,12 +3699,16 @@
     add(cognitiveLine);
 
     const recommendationText = buildReportParts(form, answers).recommendation;
-    const recommendationLine = recommendationText
+    const recommendationLines = recommendationText
       .split('\n')
       .map(line => line.trim())
-      .find(line => /^Recommendation:\s*/i.test(line));
-    if (recommendationLine) {
-      add(`Suggestion: ${recommendationLine.replace(/^Recommendation:\s*/i, '')}`);
+      .filter(Boolean);
+    const recommendationIdx = recommendationLines.findIndex(line => /^Recommendation:\s*/i.test(line));
+    if (recommendationIdx >= 0) {
+      const inline = recommendationLines[recommendationIdx].replace(/^Recommendation:\s*/i, '').trim();
+      const next = (recommendationLines[recommendationIdx + 1] || '').trim();
+      const suggestion = inline || next;
+      if (suggestion) add(`Suggestion: ${suggestion}`);
     }
 
     return normalizeReportSymbols(parts.join('\n'));
@@ -3790,7 +3808,13 @@
     }
     if (session && session.view === 'report' && session.formId && session.answers) {
       const form = await loadForm(session.formId);
-      setView('report', { form, answers: session.answers, entry: session.entry || null, scrollY: session.scrollY });
+      setView('report', {
+        form,
+        answers: session.answers,
+        entry: session.entry || null,
+        returnToFill: session.returnToFill || null,
+        scrollY: session.scrollY,
+      });
       return;
     }
     setView('browse');
