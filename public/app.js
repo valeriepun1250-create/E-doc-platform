@@ -69,7 +69,7 @@
     if (grade === '2') return null;
     if (grade === '0') return 'absent';
     if (grade === 'NT') return 'Not testable';
-    const direction = cell && cell.direction === '↑' ? 'increase'
+    const direction = cell && cell.direction === '↑' ? 'hypersensitive'
       : cell && cell.direction === '↓' ? 'decrease'
         : '';
     const percent = cell && cell.percent ? `${cell.percent}%` : '';
@@ -126,7 +126,7 @@
         const cell = row[side] || { grade: '2' };
         const text = asiaGradeText(cell, { compact: true });
         if (!text) return;
-        const directionText = cell.direction === '↑' ? 'increase'
+        const directionText = cell.direction === '↑' ? 'hypersensitive'
           : cell.direction === '↓' ? 'decrease'
             : '';
         bySide[side].push({
