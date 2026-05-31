@@ -2281,7 +2281,6 @@
             "label": "ADL",
             "type": "short_text",
             "width": "full",
-            "hideInReportIfEmpty": true,
             "prefillFromQuestions": [
               {
                 "questionId": "mbi",
