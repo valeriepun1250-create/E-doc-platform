@@ -97,56 +97,88 @@
     const max = Math.max(...nums);
     return min === max ? `${min}%` : `${min}-${max}%`;
   };
-  const asiaSensorySideSummary = entries => {
+  const asiaSensoryFindingForCell = cell => {
+    const grade = cell && cell.grade ? cell.grade : '2';
+    if (grade === '2') return null;
+    if (grade === '0') return { finding: 'absent', label: 'Absent', percent: '' };
+    if (grade === 'NT') return { finding: 'not_test', label: 'Not test', percent: '' };
+    if (grade === '1') {
+      const isHyper = cell && cell.direction === '↑';
+      const label = isHyper ? 'Hypersensitive' : 'Decrease';
+      return {
+        finding: isHyper ? 'hypersensitive' : 'decrease',
+        label,
+        percent: cell && cell.percent ? String(cell.percent) : '',
+      };
+    }
+    return null;
+  };
+  const asiaSensorySegmentText = items => {
+    const first = items[0];
+    const levelText = asiaLevelRange(items);
+    const sideText = first.side === 'bilateral' ? 'bilateral'
+      : first.side === 'r' ? 'right'
+        : 'left';
+    return `${sideText} ${levelText}`;
+  };
+  const asiaSensoryGroupSegments = entries => {
     const groups = [];
     entries.forEach(entry => {
       const prev = groups[groups.length - 1];
-      if (prev && prev.key === entry.key && entry.levelIndex === prev.lastLevelIndex + 1) {
+      if (prev && prev.side === entry.side && entry.levelIndex === prev.lastLevelIndex + 1) {
         prev.items.push(entry);
         prev.lastLevelIndex = entry.levelIndex;
       } else {
-        groups.push({ key: entry.key, items: [entry], lastLevelIndex: entry.levelIndex });
+        groups.push({
+          side: entry.side,
+          items: [entry],
+          lastLevelIndex: entry.levelIndex,
+        });
       }
     });
-    return groups.map(group => {
-      const first = group.items[0];
-      const levelText = asiaLevelRange(group.items);
-      if (first.grade === '1') {
-        return [levelText, first.directionText || 'altered', asiaPercentRange(group.items)].filter(Boolean).join(' ');
-      }
-      return `${levelText} ${first.text}`;
-    }).join(', ');
+    return groups.map(group => asiaSensorySegmentText(group.items)).join(', ');
   };
   const asiaSensorySummary = (chart, modality) => {
     const sensory = chart && chart.sensory && chart.sensory[modality] ? chart.sensory[modality] : {};
-    const bySide = { r: [], l: [] };
+    const entries = [];
     ASIA_SENSORY_LEVELS.forEach((level, levelIndex) => {
-      ['r', 'l'].forEach(side => {
-        const row = sensory[level] || {};
-        const cell = row[side] || { grade: '2' };
-        const text = asiaGradeText(cell, { compact: true });
-        if (!text) return;
-        const directionText = cell.direction === '↑' ? 'hypersensitive'
-          : cell.direction === '↓' ? 'decrease'
-            : '';
-        bySide[side].push({
-          level,
-          levelIndex,
-          grade: cell.grade || '2',
-          directionText,
-          percent: cell.percent || '',
-          text,
-          key: cell.grade === '1' ? `1:${directionText}` : text,
-        });
-      });
+      const row = sensory[level] || {};
+      const right = asiaSensoryFindingForCell(row.r || { grade: '2' });
+      const left = asiaSensoryFindingForCell(row.l || { grade: '2' });
+      if (right && left && right.finding === left.finding && right.percent === left.percent) {
+        entries.push({ ...right, side: 'bilateral', level, levelIndex });
+        return;
+      }
+      if (right) entries.push({ ...right, side: 'r', level, levelIndex });
+      if (left) entries.push({ ...left, side: 'l', level, levelIndex });
     });
-    const right = asiaSensorySideSummary(bySide.r);
-    const left = asiaSensorySideSummary(bySide.l);
-    if (!right && !left) return 'Intact in bilateral side';
-    return [
-      right ? `Right: ${right}` : '',
-      left ? `Left: ${left}` : '',
-    ].filter(Boolean).join('; ');
+    if (!entries.length) return 'Intact in bilateral side';
+    const findingOrder = ['decrease', 'hypersensitive', 'absent', 'not_test'];
+    return findingOrder.map(finding => {
+      const findingEntries = entries
+        .filter(entry => entry.finding === finding)
+        .sort((a, b) => {
+          const ap = a.percent === '' ? Number.POSITIVE_INFINITY : Number(a.percent);
+          const bp = b.percent === '' ? Number.POSITIVE_INFINITY : Number(b.percent);
+          if (ap !== bp) return ap - bp;
+          return a.levelIndex - b.levelIndex;
+        });
+      if (!findingEntries.length) return '';
+      const percentGroups = [];
+      findingEntries.forEach(entry => {
+        const key = entry.percent || '';
+        let group = percentGroups.find(item => item.percent === key);
+        if (!group) {
+          group = { percent: key, label: entry.label, entries: [] };
+          percentGroups.push(group);
+        }
+        group.entries.push(entry);
+      });
+      return percentGroups.map(group => {
+        const percentText = group.percent ? ` ${group.percent}%` : '';
+        return `${group.label}${percentText} at ${asiaSensoryGroupSegments(group.entries)}`;
+      }).join('; ');
+    }).filter(Boolean).join('. ') + '.';
   };
 
   // ---------- forms loader (replaces former /api/forms backend) ----------
