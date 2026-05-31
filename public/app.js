@@ -1118,7 +1118,7 @@
 
     const head = el('div', { class: 'qhead' });
     if (!q.hideLabel) {
-      head.appendChild(el('div', { class: 'label' }, [q.label + (q.required ? ' *' : '')]));
+      head.appendChild(el('div', { class: 'label' }, [q.label]));
     } else {
       head.appendChild(el('div', { class: 'label' }, ['']));
     }
@@ -1128,7 +1128,7 @@
         const isMissing = ctx.missingRequired && ctx.missingRequired.headerIds &&
           ctx.missingRequired.headerIds.has(hi.id);
         const wrap = el('label', { class: 'header-extra' + (isMissing ? ' is-required-missing' : '') });
-        wrap.appendChild(document.createTextNode((hi.label || '') + (hi.required ? ' *' : '') + ': '));
+        wrap.appendChild(document.createTextNode((hi.label || '') + ': '));
         if (hi.type === 'select') {
           const sel = el('select', { 'data-header-id': hi.id });
           const populateSelect = select => {
