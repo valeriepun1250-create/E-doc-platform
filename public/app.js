@@ -225,7 +225,6 @@
     if (!band) return '';
     const normalized = normalizeReportSymbols(band);
     const dsm = {
-      '>16th percentile': 'DSM-5 mild NCD',
       '<=16th percentile': 'DSM-5 mild NCD',
       '<=7th percentile': 'DSM-5 mild MCI',
       '<=2nd percentile': 'DSM-5 Major NCD',
