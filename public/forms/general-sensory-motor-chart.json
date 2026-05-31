@@ -108,6 +108,11 @@
             "type": "asia_chart",
             "width": "full",
             "sensoryScoring": false,
+            "manualSensoryDefaults": {
+              "lightTouch": "Intact in bilateral side",
+              "pinprick": "Intact in bilateral side",
+              "proprioception": "NAD"
+            },
             "referenceLabel": "Dermatomes Reference",
             "clearLabel": "Clear chart",
             "motorLevels": [
