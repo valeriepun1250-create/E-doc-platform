@@ -2565,6 +2565,7 @@ button.ghost-danger:hover {
 }
 
 #version-badge {
+  display: none;
   position: fixed;
   bottom: 10px;
   right: 14px;
@@ -2574,6 +2575,10 @@ button.ghost-danger:hover {
   letter-spacing: 0.03em;
   pointer-events: none;
   z-index: 9999;
+}
+
+body.is-home #version-badge {
+  display: block;
 }
 
 /* Tick-style trigger checkbox rendered inline with the section title.
