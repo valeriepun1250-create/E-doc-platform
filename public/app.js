@@ -3810,6 +3810,9 @@
       const c = (h.answers && h.answers.__case) || {};
       const dateLabel = (c.assessmentDate ? fmtDate(c.assessmentDate, { long: true }) : fmtDate(h.savedAt, { long: true }));
       const primaryName = c.caseId || h.formTitle || 'Untitled case';
+      const formChipClass = h.formId
+        ? `history-form-chip form-${String(h.formId).replace(/[^a-z0-9_-]/gi, '-').toLowerCase()}`
+        : 'history-form-chip';
       const summary = el('div', { class: 'history-summary' }, [
         el('strong', { class: 'case-name' }, [primaryName]),
         el('span', { class: 'history-date' }, [dateLabel]),
@@ -3817,7 +3820,7 @@
       const detailRow = el('div', { class: 'history-detail' }, [
         el('span', { class: 'badge ' + h.specialty }, [h.specialty || 'Case']),
         summary,
-        el('span', { class: 'history-form-chip' }, [h.formTitle]),
+        el('span', { class: formChipClass }, [h.formTitle]),
         h.draft ? el('span', { class: 'badge draft-badge' }, ['Draft']) : null,
         h.customText ? el('span', { class: 'badge edited-badge', title: 'Saved with manually edited report text' }, ['Edited']) : null,
       ].filter(Boolean));

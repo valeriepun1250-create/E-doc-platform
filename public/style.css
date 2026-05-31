@@ -729,6 +729,21 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   font-weight: 700;
   white-space: nowrap;
 }
+.history-form-chip.form-ns-initial-assessment-json {
+  background: #e8f4ff;
+  border-color: #b8d5f0;
+  color: #2b4b69;
+}
+.history-form-chip.form-general-sensory-motor-chart-asia-json {
+  background: #eceafb;
+  border-color: #ccc8ed;
+  color: #4c4675;
+}
+.history-form-chip.form-general-sensory-motor-chart-json {
+  background: #e9f6ef;
+  border-color: #b7dec7;
+  color: #2c5b45;
+}
 
 .home-history-card .badge {
   min-height: 25px;
