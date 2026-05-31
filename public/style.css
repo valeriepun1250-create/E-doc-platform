@@ -746,6 +746,12 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border: 2px solid #b4d8e7;
 }
 
+.home-history-card .badge.General {
+  background: #e8f7ef;
+  color: #0f5f43;
+  border: 2px solid #24895f;
+}
+
 .home-history-card .badge.draft-badge {
   background: #fff8c5;
   color: #735c0f;
@@ -1085,6 +1091,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   margin-right: 8px;
 }
 .badge.NS     { background: #e0e7ff; color: #3730a3; }
+.badge.General { background: #e8f7ef; color: #0f5f43; border: 1px solid #24895f; }
 .badge.Stroke { background: #fdebec; color: #b7222d; }
 .badge.draft-badge {
   background: #fff8c5; color: #735c0f; border: 1px solid #d4a72c;
