@@ -1,0 +1,131 @@
+{
+  "specialty": "General",
+  "title": "Sensory Motor Chart",
+  "description": "Standalone sensory and motor chart with mental function screening.",
+  "schema": {
+    "sections": [
+      {
+        "title": "Mental & Cognitive Function",
+        "questions": [
+          {
+            "id": "gcs",
+            "label": "GCS",
+            "type": "composite",
+            "width": "half",
+            "parts": [
+              {
+                "id": "e",
+                "label": "E",
+                "placeholder": "1-4"
+              },
+              {
+                "id": "v",
+                "label": "V",
+                "placeholder": "1-5"
+              },
+              {
+                "id": "m",
+                "label": "M",
+                "placeholder": "1-6"
+              }
+            ],
+            "joinWith": " ",
+            "reportTemplate": "GCS: E{e} V{v} M{m}"
+          },
+          {
+            "id": "mental_state",
+            "label": "Mental state",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Alert",
+              "Confused",
+              "Drowsy",
+              "Stupor"
+            ],
+            "allowComment": true,
+            "commentSingleLine": true,
+            "customReport": "mental_followcmd"
+          },
+          {
+            "id": "follow_cmd",
+            "label": "Follow command",
+            "type": "checkbox",
+            "width": "half",
+            "options": [
+              "1 step",
+              "2 steps",
+              "3 steps",
+              "Not follow command"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "allowComment": true,
+            "commentSingleLine": true,
+            "commentLabel": "Other",
+            "hideInReport": true
+          },
+          {
+            "id": "orientation",
+            "label": "Orientated to",
+            "type": "checkbox",
+            "width": "half",
+            "options": [
+              "Name",
+              "Age",
+              "Time",
+              "Place",
+              "Person"
+            ],
+            "invertedCheckbox": true,
+            "unableToAssess": true,
+            "customReport": "orientation_split"
+          },
+          {
+            "id": "speech",
+            "label": "Speech",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Normal",
+              "Expressive dysphasia",
+              "Receptive dysphasia",
+              "Dysarthria"
+            ],
+            "allowOther": true
+          }
+        ],
+        "reportTitle": "Mental Function"
+      },
+      {
+        "title": "Sensory and Motor Chart",
+        "reportTitle": "Sensory and Motor Chart",
+        "questions": [
+          {
+            "id": "sensory_motor_chart",
+            "label": "Sensory and Motor Chart",
+            "type": "asia_chart",
+            "width": "full",
+            "sensoryScoring": false,
+            "referenceLabel": "Dermatomes Reference",
+            "clearLabel": "Clear chart",
+            "motorLevels": [
+              "C5",
+              "C6",
+              "C7",
+              "C8",
+              "T1",
+              "L2",
+              "L3",
+              "L4",
+              "L5",
+              "S1"
+            ],
+            "reportTemplate": "{answer}"
+          }
+        ]
+      }
+    ]
+  }
+}

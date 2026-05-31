@@ -2012,6 +2012,8 @@
         break;
       }
       case 'asia_chart': {
+        const useSensoryScoring = q.sensoryScoring !== false;
+        const referenceLabel = q.referenceLabel || 'Dermatomes Reference';
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         curObj.motor = (curObj.motor && typeof curObj.motor === 'object') ? curObj.motor : {};
         curObj.sensory = (curObj.sensory && typeof curObj.sensory === 'object') ? curObj.sensory : {};
@@ -2026,6 +2028,7 @@
         const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
         const derivedInputs = {};
         const updateSensoryDerivedFields = () => {
+          if (!useSensoryScoring) return;
           curObj.lightTouch = asiaSensorySummary(curObj, 'lightTouch');
           curObj.pinprick = asiaSensorySummary(curObj, 'pinprick');
           curObj.lightTouchSubscore = String(asiaSensoryTotal(curObj, 'lightTouch'));
@@ -2040,7 +2043,7 @@
           fire();
         };
 
-        const tools = el('div', { class: 'asia-tools' }, [
+        const toolButtons = [
           el('button', {
             type: 'button',
             onclick: () => {
@@ -2051,7 +2054,9 @@
               else save();
             },
           }, ['Set all motor 5/5']),
-          el('button', {
+        ];
+        if (useSensoryScoring) {
+          toolButtons.push(el('button', {
             type: 'button',
             onclick: () => {
               ['lightTouch', 'pinprick'].forEach(modality => {
@@ -2060,16 +2065,17 @@
               save();
               if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
             },
-          }, ['Set all sensory 2/2']),
-          el('button', {
+          }, ['Set all sensory 2/2']));
+        }
+        toolButtons.push(el('button', {
             type: 'button',
             onclick: () => {
               delete answers[q.id];
               if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
               else fire();
             },
-          }, ['Clear ASIA chart']),
-        ]);
+          }, [q.clearLabel || 'Clear ASIA chart']));
+        const tools = el('div', { class: 'asia-tools' }, toolButtons);
         wrap.appendChild(tools);
 
         const table = el('table', { class: 'asia-chart-table asia-motor-table' });
@@ -2122,9 +2128,10 @@
         table.appendChild(tbody);
         wrap.appendChild(table);
 
-        const sensoryHeader = el('div', { class: 'asia-sensory-header' }, [
-          el('div', { class: 'asia-subtitle' }, ['Sensory scoring']),
-        ]);
+        const sensoryHeaderKids = useSensoryScoring
+          ? [el('div', { class: 'asia-subtitle' }, ['Sensory scoring'])]
+          : [];
+        const sensoryHeader = el('div', { class: 'asia-sensory-header' }, sensoryHeaderKids);
         const referenceBtn = el('button', {
           type: 'button',
           class: 'asia-reference-toggle' + (curObj.showSensoryReference ? ' is-active' : ''),
@@ -2133,7 +2140,7 @@
             if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
             else save();
           },
-        }, ['ASIA sensory points reference']);
+        }, [referenceLabel]);
         sensoryHeader.appendChild(referenceBtn);
         wrap.appendChild(sensoryHeader);
         const ensureCell = (modality, level, side) => {
@@ -2232,44 +2239,52 @@
           el('span', { class: 'asia-figure-credit' }, ['ASIA/ISCoS worksheet reference']),
         ]);
         if (curObj.showSensoryReference) wrap.appendChild(buildSensoryFigure());
-        const toggleBar = el('div', { class: 'asia-sensory-toggles' });
-        ASIA_SENSORY_GROUPS.forEach(group => {
-          const expanded = !!curObj.sensorySections[group.id];
-          const btn = el('button', {
-            type: 'button',
-            class: expanded ? 'is-active' : '',
-            onclick: () => {
-              curObj.sensorySections[group.id] = !curObj.sensorySections[group.id];
-              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
-              else save();
-            },
-          }, [group.label]);
-          toggleBar.appendChild(btn);
-        });
-        wrap.appendChild(toggleBar);
-        ASIA_SENSORY_GROUPS.forEach(group => {
-          if (!curObj.sensorySections[group.id]) return;
-          const panel = el('section', { class: 'asia-sensory-panel' }, [
-            el('div', { class: 'asia-sensory-panel-title' }, [group.label]),
-            el('div', { class: 'asia-sensory-layout' }, [
-              el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('r', 'Right', group.levels)]),
-              el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('l', 'Left', group.levels)]),
-            ]),
-          ]);
-          wrap.appendChild(panel);
-        });
+        if (useSensoryScoring) {
+          const toggleBar = el('div', { class: 'asia-sensory-toggles' });
+          ASIA_SENSORY_GROUPS.forEach(group => {
+            const expanded = !!curObj.sensorySections[group.id];
+            const btn = el('button', {
+              type: 'button',
+              class: expanded ? 'is-active' : '',
+              onclick: () => {
+                curObj.sensorySections[group.id] = !curObj.sensorySections[group.id];
+                if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+                else save();
+              },
+            }, [group.label]);
+            toggleBar.appendChild(btn);
+          });
+          wrap.appendChild(toggleBar);
+          ASIA_SENSORY_GROUPS.forEach(group => {
+            if (!curObj.sensorySections[group.id]) return;
+            const panel = el('section', { class: 'asia-sensory-panel' }, [
+              el('div', { class: 'asia-sensory-panel-title' }, [group.label]),
+              el('div', { class: 'asia-sensory-layout' }, [
+                el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('r', 'Right', group.levels)]),
+                el('div', { class: 'asia-sensory-side' }, [renderSensorySideTable('l', 'Left', group.levels)]),
+              ]),
+            ]);
+            wrap.appendChild(panel);
+          });
+        }
 
         updateSensoryDerivedFields();
         answers[q.id] = curObj;
         const sensory = el('div', { class: 'asia-sensory-grid' });
-        [
+        const sensoryFields = useSensoryScoring ? [
           ['lightTouch', 'Light touch sensation', 'Auto summary from light touch scoring', true],
           ['pinprick', 'Pinprick sensation', 'Auto summary from pinprick scoring', true],
           ['proprioception', 'Proprioception', 'e.g. intact / impaired'],
           ['lightTouchSubscore', 'Light touch subscore', '/112', true],
           ['pinprickSubscore', 'Pinprick subscore', '/112', true],
           ['others', 'Others', 'c/o'],
-        ].forEach(([key, label, placeholder, readonly]) => {
+        ] : [
+          ['lightTouch', 'Light touch sensation', 'Single line input'],
+          ['pinprick', 'Pinprick sensation', 'Single line input'],
+          ['proprioception', 'Proprioception', 'Single line input'],
+          ['others', 'Others', 'Single line input'],
+        ];
+        sensoryFields.forEach(([key, label, placeholder, readonly]) => {
           const classes = [];
           if (key === 'others') classes.push('asia-wide');
           if (key === 'proprioception') classes.push('asia-subscore');
@@ -2679,17 +2694,21 @@
     }
     if (q.type === 'asia_chart') {
       if (typeof a !== 'object') return true;
+      const useSensoryScoring = q.sensoryScoring !== false;
       const motor = a.motor && typeof a.motor === 'object' ? a.motor : {};
       const hasMotor = Object.values(motor).some(row =>
         row && typeof row === 'object' && (row.r || row.l));
       const sensory = a.sensory && typeof a.sensory === 'object' ? a.sensory : {};
-      const hasSensoryChange = ['lightTouch', 'pinprick'].some(modality =>
+      const hasSensoryChange = useSensoryScoring && ['lightTouch', 'pinprick'].some(modality =>
         ASIA_SENSORY_LEVELS.some(level => ['r', 'l'].some(side => {
           const cell = sensory[modality] && sensory[modality][level] && sensory[modality][level][side];
           return cell && typeof cell === 'object' && cell.grade && cell.grade !== '2';
         })));
+      const ignoredTextKeys = useSensoryScoring
+        ? ['lightTouch', 'pinprick', 'lightTouchSubscore', 'pinprickSubscore']
+        : ['lightTouchSubscore', 'pinprickSubscore'];
       const hasText = ['lightTouch', 'pinprick', 'proprioception', 'lightTouchSubscore', 'pinprickSubscore', 'asia', 'others']
-        .some(key => a[key] !== '' && a[key] !== undefined && a[key] !== null && !['lightTouch', 'pinprick', 'lightTouchSubscore', 'pinprickSubscore'].includes(key));
+        .some(key => a[key] !== '' && a[key] !== undefined && a[key] !== null && !ignoredTextKeys.includes(key));
       return !hasMotor && !hasSensoryChange && !hasText;
     }
     if (q.type === 'composite' || q.type === 'hdrs_table' || q.type === 'fthue_grade') {
@@ -2779,6 +2798,7 @@
       return parts.join(sep);
     }
     if (q.type === 'asia_chart') {
+      const useSensoryScoring = q.sensoryScoring !== false;
       const levels = q.motorLevels || ['C5', 'C6', 'C7', 'C8', 'T1', 'L2', 'L3', 'L4', 'L5', 'S1'];
       const motor = a.motor && typeof a.motor === 'object' ? a.motor : {};
       const motorRows = levels
@@ -2801,8 +2821,8 @@
         });
       }
       const sensory = [];
-      const lightTouchSummary = asiaSensorySummary(a, 'lightTouch');
-      const pinprickSummary = asiaSensorySummary(a, 'pinprick');
+      const lightTouchSummary = useSensoryScoring ? asiaSensorySummary(a, 'lightTouch') : a.lightTouch;
+      const pinprickSummary = useSensoryScoring ? asiaSensorySummary(a, 'pinprick') : a.pinprick;
       if (lightTouchSummary) sensory.push(`Light touch sensation: ${lightTouchSummary}`);
       if (pinprickSummary) sensory.push(`Pinprick sensation: ${pinprickSummary}`);
       if (a.proprioception) sensory.push(`Proprioception: ${a.proprioception}`);
@@ -2810,13 +2830,15 @@
         lines.push('Sensation');
         lines.push(...sensory);
       }
-      const asiaBits = [];
-      const lightTouchTotal = a.lightTouchSubscore || String(asiaSensoryTotal(a, 'lightTouch'));
-      const pinprickTotal = a.pinprickSubscore || String(asiaSensoryTotal(a, 'pinprick'));
-      if (lightTouchTotal) asiaBits.push(`light touch subscore: ${lightTouchTotal}/112`);
-      if (pinprickTotal) asiaBits.push(`pinprick subscore: ${pinprickTotal}/112`);
-      if (a.asia) asiaBits.push(a.asia);
-      if (asiaBits.length) lines.push(`ASIA: ${asiaBits.join('  ')}`);
+      if (useSensoryScoring) {
+        const asiaBits = [];
+        const lightTouchTotal = a.lightTouchSubscore || String(asiaSensoryTotal(a, 'lightTouch'));
+        const pinprickTotal = a.pinprickSubscore || String(asiaSensoryTotal(a, 'pinprick'));
+        if (lightTouchTotal) asiaBits.push(`light touch subscore: ${lightTouchTotal}/112`);
+        if (pinprickTotal) asiaBits.push(`pinprick subscore: ${pinprickTotal}/112`);
+        if (a.asia) asiaBits.push(a.asia);
+        if (asiaBits.length) lines.push(`ASIA: ${asiaBits.join('  ')}`);
+      }
       if (a.others) lines.push(`Others: ${a.others}`);
       return lines.join('\n');
     }
