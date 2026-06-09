@@ -1,0 +1,903 @@
+{
+  "specialty": "Stroke",
+  "title": "Parkinson Clinic Assessment",
+  "description": "Stroke Parkinson clinic assessment.",
+  "schema": {
+    "sections": [
+      {
+        "title": "Social History and Home Environment",
+        "hideReportTitle": true,
+        "questions": [
+          {
+            "id": "attendance_mobility",
+            "label": "Attendance and mobility",
+            "type": "composite",
+            "width": "full",
+            "hideLabel": true,
+            "customReport": "attendance_mobility",
+            "parts": [
+              {
+                "id": "come_with",
+                "label": "Come with",
+                "placeholder": "family / carer / alone",
+                "wide": true
+              },
+              {
+                "id": "walk_with",
+                "label": "Walk with",
+                "placeholder": "stick / rollator / frame",
+                "wide": true,
+                "showIf": {
+                  "itemId": "on_wheelchair",
+                  "notEquals": true
+                }
+              },
+              {
+                "id": "on_wheelchair",
+                "label": "On wheelchair",
+                "inputType": "checkbox"
+              }
+            ]
+          },
+          {
+            "id": "lives_with",
+            "label": "Living arrangement",
+            "type": "checkbox",
+            "width": "full",
+            "reportTitle": "Social History and Home Environment",
+            "options": [
+              {
+                "value": "Live with",
+                "detail": true,
+                "detailPlaceholder": "family / carer"
+              },
+              "Live alone",
+              "Day time alone",
+              "OAHR"
+            ],
+            "allowOther": true,
+            "allowComment": true,
+            "commentLabel": "Main carer / details",
+            "customReport": "social_lives_home"
+          },
+          {
+            "id": "home_access",
+            "label": "Home environment",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Direct lift landing",
+              {
+                "value": "Non-direct lift landing",
+                "detail": true,
+                "detailPlaceholder": "FOS / floor"
+              },
+              {
+                "value": "No lift",
+                "detail": true,
+                "detailPlaceholder": "FOS / floor"
+              }
+            ],
+            "allowComment": true,
+            "commentLabel": "Floor / stairs detail",
+            "hideInReport": true
+          },
+          {
+            "id": "bathing_setup",
+            "label": "Bathing",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Tub",
+              "Shower",
+              "Hot water system"
+            ],
+            "allowOther": true,
+            "customReport": "bathing_combo"
+          },
+          {
+            "id": "bath_method",
+            "label": "Bath by",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "options": [
+              "Stand",
+              "Squat",
+              {
+                "value": "Sit on",
+                "subOptions": [
+                  "Shower chair",
+                  "Bath board",
+                  "Shower stool"
+                ],
+                "subAllowOther": true
+              },
+              "Bedbath"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "assistive_devices",
+            "label": "Assistive device available",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Nil",
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator",
+              "Wheelchair",
+              "Commode",
+              "Shower chair",
+              "Bath board",
+              "Handrail",
+              "Safety alarm"
+            ],
+            "allowOther": true,
+            "reportTemplate": "Assistive device available: {answer}."
+          },
+          {
+            "id": "indoor_walk",
+            "label": "Indoor mobility / Walk",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Supervision",
+              "Assisted",
+              "Dependent"
+            ],
+            "allowComment": true,
+            "commentLabel": "Remark",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail",
+            "customReport": "parkinson_mobility"
+          },
+          {
+            "id": "indoor_aid",
+            "label": "Indoor aid",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "options": [
+              "Unaided",
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator",
+              "Trolley",
+              "Chairbound",
+              "Bedbound"
+            ],
+            "allowOther": true,
+            "otherPlaceholder": "specify",
+            "hideInReport": true
+          },
+          {
+            "id": "outdoor_walk",
+            "label": "Outdoor mobility / Walk",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Supervision",
+              "Assisted",
+              "Dependent"
+            ],
+            "allowComment": true,
+            "commentLabel": "Remark",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail",
+            "hideInReport": true
+          },
+          {
+            "id": "outdoor_aid",
+            "label": "Outdoor aid",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "options": [
+              "Unaided",
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator",
+              "Trolley",
+              "Wheelchair"
+            ],
+            "allowOther": true,
+            "otherPlaceholder": "specify",
+            "hideInReport": true
+          },
+          {
+            "id": "occupation",
+            "label": "Occupation",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Retired"
+            ],
+            "allowOther": true,
+            "otherPlaceholder": "occupation",
+            "reportTemplate": "Occupation: {answer}."
+          },
+          {
+            "id": "dominant_hand",
+            "label": "Dominant hand",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Right",
+              "Left"
+            ],
+            "reportTemplate": "Dominant hand: {answer}."
+          }
+        ],
+        "reportTitle": "Social History and Home Environment"
+      },
+      {
+        "title": "Fall Assessment",
+        "questions": [
+          {
+            "id": "major_complaint",
+            "label": "Major complaint",
+            "type": "long_text",
+            "width": "full",
+            "reportTitle": "Major complain",
+            "reportHideTitle": true,
+            "reportTemplate": "Major complain: {answer}"
+          },
+          {
+            "id": "fall_history_recent",
+            "label": "Fall history in recent 1 year",
+            "type": "multiple_choice",
+            "width": "half",
+            "reportTitle": "Fall Assessment",
+            "options": [
+              "Nil",
+              {
+                "value": "Number of fall",
+                "detail": true,
+                "detailPlaceholder": "number"
+              }
+            ],
+            "reportTemplate": "Fall history in recent 1 year: {answer}."
+          },
+          {
+            "id": "recent_fall_description",
+            "label": "Description of recent fall",
+            "type": "long_text",
+            "width": "full",
+            "reportTemplate": "Description of recent fall: {answer}"
+          },
+          {
+            "id": "frop_com",
+            "label": "FROP-Com Screen",
+            "type": "sub_score",
+            "mode": "options",
+            "totalMax": 9,
+            "width": "full",
+            "hint": "Rate each item using the question below it and the score descriptions provided.",
+            "displayDescriptions": "list",
+            "breakdownPosition": "after",
+            "breakdownItemsPerLine": 1,
+            "customReport": "frop_com_summary",
+            "items": [
+              {
+                "id": "fall_history",
+                "label": "1. Fall History (Number of falls in the past 12 months?)",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "None"
+                  },
+                  {
+                    "value": 1,
+                    "text": "1 fall"
+                  },
+                  {
+                    "value": 2,
+                    "text": "2 falls"
+                  },
+                  {
+                    "value": 3,
+                    "text": "3 or more"
+                  }
+                ]
+              },
+              {
+                "id": "function_adl_status",
+                "label": "2. Function: ADL status (Prior to this fall, how much assistance was the individual requiring for instrumental activities of daily living (e.g. cooking, housework, laundry)? If no fall in last 12 months, rate current function)",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "None (completely independent)"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Supervision"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Some assistance required"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Completely dependent"
+                  }
+                ]
+              },
+              {
+                "id": "balance",
+                "label": "3. Balance (When walking and turning, does the person appear unsteady or at risk of losing their balance? Observe the person standing, walking a few meters, turning and sitting. If the person uses an aid, observe the person with the aid. Do not base on self-report. If level fluctuates, tick the most unsteady rating. If the person is unable to walk due to injury, score as 3.)",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "No unsteadiness observed"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Yes, minimally unsteady"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Yes, moderately unsteady (needs supervision)"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Yes, consistently and severely unsteady (needs constant hands on assistance)"
+                  }
+                ]
+              }
+            ],
+            "reportTemplate": "FROP-Com Screen total risk score: {answer}"
+          },
+          {
+            "type": "heading",
+            "label": "Fall Efficacy Scale (FES)",
+            "headingStyle": "compact"
+          },
+          {
+            "id": "fear_of_falling",
+            "label": "Are you afraid of falling? 你是否驚跌？",
+            "type": "yes_no",
+            "width": "full",
+            "inlineControl": true,
+            "hideInReport": true
+          },
+          {
+            "id": "activity_cut_down",
+            "label": "Cut down activities due to fear of fall? 你會唔會因為驚跌而減少日常活動？",
+            "type": "yes_no",
+            "width": "full",
+            "inlineControl": true,
+            "hideInReport": true
+          },
+          {
+            "id": "fes",
+            "label": "How much confidence you have in doing following activities without falling? 你覺得自己（在下列日常活動中）唔會跌既信心有幾大？",
+            "type": "sub_score",
+            "mode": "max",
+            "totalMax": 100,
+            "width": "full",
+            "hint": "On a scale from 1 to 10, with 1 being not confident and 10 being very confident, how confident are you that you can do the following activities without falling?",
+            "breakdownPosition": "after",
+            "breakdownItemsPerLine": 1,
+            "reportTitle": "Fall Efficacy Scale (FES)",
+            "customReport": "fes_summary",
+            "items": [
+              {
+                "id": "clean_house",
+                "label": "1. Clean house 你覺得自己（清潔屋企）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "dressing",
+                "label": "2. Getting dressed and undressed 你覺得自己（著及除衫褲）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "simple_meal",
+                "label": "3. Prepare simple meal 你覺得自己（整簡單野食）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "bath_shower",
+                "label": "4. Taking a bath or shower 你覺得自己（沖涼）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "shopping",
+                "label": "5. Simple shopping 你覺得自己（出街買野）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "chair_transfer",
+                "label": "6. Getting in and out of chair 你覺得自己（坐底係張椅及起身）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "stairs",
+                "label": "7. Going up and down stair 你覺得自己（上落樓梯）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "neighborhood",
+                "label": "8. Walking around the neighborhood 你覺得自己（去隔離屋）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "reaching",
+                "label": "9. Reaching into cabinet or closet 你覺得自己（係櫃桶攞野）唔會跌倒既信心有幾大？",
+                "max": 10
+              },
+              {
+                "id": "phone",
+                "label": "10. Hurrying to answer the phone 你覺得自己（趕去聽電話）唔會跌倒既信心有幾大？",
+                "max": 10
+              }
+            ]
+          },
+          {
+            "type": "heading",
+            "label": "Functional balance assessment"
+          },
+          {
+            "type": "heading",
+            "label": "Aspire assessment:",
+            "headingStyle": "compact"
+          },
+          {
+            "id": "aspire_overall_fall_risk",
+            "label": "Overall fall risk",
+            "type": "multiple_choice",
+            "width": "full",
+            "inlineControl": true,
+            "inlineControlAlign": "left",
+            "reportTitle": "Functional balance assessment",
+            "headerInputs": [
+              {
+                "id": "aspire_overall_fall_risk_score",
+                "label": "",
+                "placeholder": "score"
+              }
+            ],
+            "options": [
+              "High",
+              "Medium",
+              "Low"
+            ],
+            "customReport": "aspire_assessment_block"
+          },
+          {
+            "id": "aspire_standing_eye_opened",
+            "label": "Standing (eye opened)",
+            "type": "multiple_choice",
+            "width": "full",
+            "inlineControl": true,
+            "inlineControlAlign": "left",
+            "headerInputs": [
+              {
+                "id": "aspire_standing_eye_opened_score",
+                "label": "",
+                "placeholder": "score"
+              }
+            ],
+            "options": [
+              "Satisfactory",
+              "Fair",
+              "Poor",
+              "Failed"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "aspire_standing_eye_closed",
+            "label": "Standing (eye closed)",
+            "type": "multiple_choice",
+            "width": "full",
+            "inlineControl": true,
+            "inlineControlAlign": "left",
+            "headerInputs": [
+              {
+                "id": "aspire_standing_eye_closed_score",
+                "label": "",
+                "placeholder": "score"
+              }
+            ],
+            "options": [
+              "Satisfactory",
+              "Fair",
+              "Poor",
+              "Failed"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "aspire_sit_stand",
+            "label": "Sit-stand",
+            "type": "multiple_choice",
+            "width": "full",
+            "inlineControl": true,
+            "inlineControlAlign": "left",
+            "headerInputs": [
+              {
+                "id": "aspire_sit_stand_score",
+                "label": "",
+                "placeholder": "score"
+              }
+            ],
+            "options": [
+              "Satisfactory",
+              "Fair",
+              "Poor",
+              "Failed"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "aspire_walking",
+            "label": "Walking",
+            "type": "multiple_choice",
+            "width": "full",
+            "inlineControl": true,
+            "inlineControlAlign": "left",
+            "headerInputs": [
+              {
+                "id": "aspire_walking_score",
+                "label": "",
+                "placeholder": "score"
+              }
+            ],
+            "options": [
+              "Satisfactory",
+              "Fair",
+              "Poor",
+              "Failed"
+            ],
+            "hideInReport": true
+          }
+        ],
+        "reportTitle": "Fall Assessment"
+      },
+      {
+        "title": "Functional Assessment",
+        "questions": [
+          {
+            "id": "mbi",
+            "label": "ADL: Modified Barthel Index",
+            "type": "sub_score",
+            "mode": "options",
+            "totalMax": 100,
+            "width": "full",
+            "reportTitle": "Functional Assessment",
+            "pendingPolicy": {
+              "oneOfGroups": [
+                [
+                  "mobility",
+                  "wheelchair"
+                ]
+              ],
+              "pendingText": ", pending further assessment"
+            },
+            "includeNAInBreakdown": true,
+            "breakdownPosition": "after",
+            "breakdownItemsPerLine": 5,
+            "breakdownSep": "   ",
+            "combineItems": [
+              {
+                "ids": [
+                  "mobility",
+                  "wheelchair"
+                ],
+                "label": "Mobility/Wheelchair"
+              }
+            ],
+            "items": [
+              {
+                "id": "bowels",
+                "label": "Bowels",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "bladder",
+                "label": "Bladder",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "grooming",
+                "label": "Grooming",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "toileting",
+                "label": "Toileting",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "feeding",
+                "label": "Feeding",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "dressing",
+                "label": "Dressing",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "bathing",
+                "label": "Bathing",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "transfer",
+                "label": "Transfer",
+                "options": [
+                  0,
+                  3,
+                  8,
+                  12,
+                  15
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "mobility",
+                "label": "Mobility",
+                "options": [
+                  0,
+                  3,
+                  8,
+                  12,
+                  15
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "exclusiveWith": "wheelchair"
+              },
+              {
+                "id": "wheelchair",
+                "label": "Wheelchair",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "exclusiveWith": "mobility"
+              },
+              {
+                "id": "stairs",
+                "label": "Stairs",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              }
+            ],
+            "customReport": "mbi_summary"
+          },
+          {
+            "id": "lawton_iadl",
+            "label": "IADL: Lawton IADL",
+            "type": "sub_score",
+            "mode": "options",
+            "totalMax": 27,
+            "width": "full",
+            "customReport": "lawton_summary",
+            "items": [
+              {
+                "id": "telephone",
+                "label": "Use of telephone",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "transportation",
+                "label": "Transportation",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "shopping",
+                "label": "Shopping",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "meal_preparation",
+                "label": "Meal Preparation",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "housework",
+                "label": "Housework",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "handyman_work",
+                "label": "Handyman Work",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "laundry",
+                "label": "Laundry",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "medication_management",
+                "label": "Medication Management",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "money_management",
+                "label": "Money Management",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ]
+          },
+          {
+            "id": "ot_comment",
+            "label": "OT Comment",
+            "type": "long_text",
+            "width": "full",
+            "reportTitle": "OT Comment",
+            "reportHideTitle": true,
+            "reportTemplate": "OT Comment: {answer}"
+          }
+        ],
+        "reportTitle": "Functional Assessment"
+      },
+      {
+        "title": "Treatment / Plan",
+        "questions": [
+          {
+            "id": "treatment_plan",
+            "label": "Treatment / Plan",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Fall prevention education",
+              "OPD training",
+              "HAGO",
+              "Carer education",
+              "Home visit",
+              "Assistive device prescription",
+              "Community reintegration / OLSR"
+            ],
+            "allowOther": true,
+            "reportTemplate": "{answer}"
+          }
+        ],
+        "reportTitle": "Treatment / Plan"
+      }
+    ]
+  }
+}

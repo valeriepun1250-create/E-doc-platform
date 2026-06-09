@@ -1126,6 +1126,7 @@
     }
     const widthCls = q.width === 'full' ? 'full'
                    : q.width === 'half' ? 'half'
+                   : q.width === 'third' ? 'third'
                    : '';
     const wrap = el('div', { class: 'qfill' + (widthCls ? ' ' + widthCls : '') });
     if (q.id && ctx && ctx.missingRequired && ctx.missingRequired.headerIds && ctx.missingRequired.headerIds.has(q.id)) {
@@ -1145,6 +1146,7 @@
 
     if (q.type === 'heading') {
       wrap.classList.add('full', 'heading');
+      if (q.headingStyle === 'compact') wrap.classList.add('compact-heading');
       wrap.textContent = q.label;
       return wrap;
     }
@@ -1161,7 +1163,7 @@
         const isMissing = ctx.missingRequired && ctx.missingRequired.headerIds &&
           ctx.missingRequired.headerIds.has(hi.id);
         const wrap = el('label', { class: 'header-extra' + (isMissing ? ' is-required-missing' : '') });
-        wrap.appendChild(document.createTextNode((hi.label || '') + ': '));
+        if (hi.label) wrap.appendChild(document.createTextNode(hi.label + ': '));
         if (hi.type === 'select') {
           const sel = el('select', { 'data-header-id': hi.id });
           const populateSelect = select => {
@@ -1342,7 +1344,14 @@
           lab.appendChild(document.createTextNode(v));
           group.appendChild(lab);
         });
-        wrap.appendChild(group);
+        if (q.inlineControl) {
+          wrap.classList.add('inline-control');
+          if (q.inlineControlAlign === 'left') wrap.classList.add('inline-control-left');
+          group.classList.add('inline-control-group');
+          head.appendChild(group);
+        } else {
+          wrap.appendChild(group);
+        }
         break;
       }
       case 'multiple_choice': {
@@ -1471,7 +1480,14 @@
           row.appendChild(txt);
           group.appendChild(row);
         }
-        wrap.appendChild(group);
+        if (q.inlineControl) {
+          wrap.classList.add('inline-control');
+          if (q.inlineControlAlign === 'left') wrap.classList.add('inline-control-left');
+          group.classList.add('inline-control-group');
+          head.appendChild(group);
+        } else {
+          wrap.appendChild(group);
+        }
         break;
       }
       case 'checkbox': {
@@ -1737,6 +1753,7 @@
       }
       case 'sub_score': {
         if (q.id === 'mbi') wrap.classList.add('mbi-score');
+        if (q.id === 'lawton_iadl') wrap.classList.add('lawton-score');
         const mode = q.mode || 'max';
         const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
         answers[q.id] = curObj;
@@ -1760,6 +1777,8 @@
         const table = el('table', {
           class: 'subscore'
             + (q.id === 'mbi' ? ' mbi-subscore' : '')
+            + (q.id === 'lawton_iadl' ? ' lawton-subscore' : '')
+            + (q.id === 'fes' ? ' fes-subscore' : '')
             + (q.id === 'amt' ? ' amt-subscore' : '')
             + (q.id === 'moca' ? ' moca-subscore' : ''),
         });
@@ -2341,23 +2360,48 @@
           const row = el('div', { class: 'composite-row' });
           q.parts.forEach(p => {
             const part = el('div', { class: 'composite-part' });
-            if (p.prefix) part.appendChild(el('span', { class: 'prefix' }, [p.prefix]));
-            if (p.label) part.appendChild(el('span', { class: 'glabel' }, [p.label]));
-            const inp = el('input', {
-              type: p.inputType || 'text',
-              placeholder: p.placeholder || '',
-            });
-            if (p.wide) inp.classList.add('wide');
-            if (p.extraWide) { inp.classList.add('extra-wide'); part.classList.add('extra-wide'); }
-            inp.value = curObj[p.id] != null ? curObj[p.id] : '';
-            inp.oninput = () => {
-              if (inp.value === '') delete curObj[p.id];
-              else curObj[p.id] = inp.value;
-              fire();
+            const applyPartVisibility = () => {
+              if (!p.showIf) return;
+              const visible = evalShowIf({
+                ...p.showIf,
+                questionId: q.id,
+              }, answers);
+              part.style.display = visible ? '' : 'none';
             };
-            part.appendChild(inp);
+            if (p.prefix) part.appendChild(el('span', { class: 'prefix' }, [p.prefix]));
+            if (p.inputType === 'checkbox') {
+              part.classList.add('composite-part-checkbox');
+              const boxLabel = el('label', { class: 'composite-checkbox-label' });
+              const inp = el('input', { type: 'checkbox' });
+              inp.checked = !!curObj[p.id];
+              inp.onchange = () => {
+                if (inp.checked) curObj[p.id] = true;
+                else delete curObj[p.id];
+                fire();
+              };
+              boxLabel.appendChild(inp);
+              if (p.label) boxLabel.appendChild(el('span', { class: 'glabel' }, [p.label]));
+              part.appendChild(boxLabel);
+            } else {
+              if (p.label) part.appendChild(el('span', { class: 'glabel' }, [p.label]));
+              const inp = el('input', {
+                type: p.inputType || 'text',
+                placeholder: p.placeholder || '',
+              });
+              if (p.wide) inp.classList.add('wide');
+              if (p.extraWide) { inp.classList.add('extra-wide'); part.classList.add('extra-wide'); }
+              inp.value = curObj[p.id] != null ? curObj[p.id] : '';
+              inp.oninput = () => {
+                if (inp.value === '') delete curObj[p.id];
+                else curObj[p.id] = inp.value;
+                fire();
+              };
+              part.appendChild(inp);
+            }
             if (p.suffix) part.appendChild(el('span', { class: 'suffix' }, [p.suffix]));
             row.appendChild(part);
+            applyPartVisibility();
+            if (p.showIf && ctx && ctx.onChange) ctx.onChange(applyPartVisibility);
           });
           wrap.appendChild(row);
         }
@@ -3066,8 +3110,155 @@
       `Motor Function: ${fmt(motor)}/8   Sensory Function: ${fmt(sensory)}/6   Bladder Function: ${fmt(bladder)}/3`,
     ];
   };
+  const fropRiskLabel = score => {
+    if (!Number.isFinite(score)) return '';
+    return score <= 3 ? 'Low Risk (0-3)' : 'High Risk (4-9)';
+  };
+  const fropRiskShortLabel = score => {
+    if (!Number.isFinite(score)) return '';
+    return score <= 3 ? 'Low Risk' : 'High Risk';
+  };
+  const aspireRatingParens = rating => {
+    if (!rating) return '';
+    if (rating === 'High' || rating === 'Medium' || rating === 'Low') return rating;
+    return rating;
+  };
 
   const customReportFns = {
+    attendance_mobility(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const bits = [];
+      if (a.come_with) bits.push(`Come with ${a.come_with}`);
+      if (a.on_wheelchair) bits.push('On wheelchair');
+      else if (a.walk_with) bits.push(`Walk with ${a.walk_with}`);
+      return bits.length ? bits.join('; ') + '.' : null;
+    },
+
+    frop_com_summary(q, a) {
+      if (isEmptyAnswer(q, a)) return null;
+      const valueFor = id => a && typeof a[id] === 'number' ? a[id] : null;
+      const total = ['fall_history', 'function_adl_status', 'balance']
+        .map(id => valueFor(id))
+        .filter(v => v !== null)
+        .reduce((sum, v) => sum + v, 0);
+      const lines = [];
+      if (valueFor('fall_history') !== null) lines.push(`Fall History ${valueFor('fall_history')}/3`);
+      if (valueFor('function_adl_status') !== null) lines.push(`Function: ADL Status ${valueFor('function_adl_status')}/3`);
+      if (valueFor('balance') !== null) lines.push(`Balance: ${valueFor('balance')}/3`);
+      return [
+        ...lines,
+        `Total: ${total} (${fropRiskShortLabel(total)})`,
+      ].join('\n');
+    },
+
+    parkinson_mobility(q, a, allQs, answers) {
+      const comments = answers.__comments || {};
+      const segs = [];
+      const inW = !isEmptyAnswer(allQs.indoor_walk, answers.indoor_walk) ? formatAnswer(allQs.indoor_walk, answers.indoor_walk) : '';
+      const inA = !isEmptyAnswer(allQs.indoor_aid, answers.indoor_aid) ? formatAnswer(allQs.indoor_aid, answers.indoor_aid) : '';
+      const inRemark = (comments.indoor_walk || '').trim();
+      if (inW || inA) {
+        let s = 'Indoor mobility:';
+        if (inW) s += ` ${inW}`;
+        if (inRemark) s += `, ${inRemark}`;
+        if (inA) s += ` (${inA})`;
+        segs.push(s);
+      }
+      const outW = !isEmptyAnswer(allQs.outdoor_walk, answers.outdoor_walk) ? formatAnswer(allQs.outdoor_walk, answers.outdoor_walk) : '';
+      const outA = !isEmptyAnswer(allQs.outdoor_aid, answers.outdoor_aid) ? formatAnswer(allQs.outdoor_aid, answers.outdoor_aid) : '';
+      const outRemark = (comments.outdoor_walk || '').trim();
+      if (outW || outA) {
+        let s = 'Outdoor mobility:';
+        if (outW) s += ` ${outW}`;
+        if (outRemark) s += `, ${outRemark}`;
+        if (outA) s += ` (${outA})`;
+        segs.push(s);
+      }
+      return segs.length ? segs.join('  ') : null;
+    },
+
+    fes_summary(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const total = Object.values(a).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+      const ordered = (q.items || []).map(it => typeof a[it.id] === 'number' ? String(a[it.id]) : '—');
+      const lines = [
+        `${total}/${q.totalMax} [ ${ordered.join('/')} ]`,
+      ];
+      const fear = !isEmptyAnswer(allQs.fear_of_falling, answers.fear_of_falling)
+        ? formatAnswer(allQs.fear_of_falling, answers.fear_of_falling)
+        : '—';
+      const reduce = !isEmptyAnswer(allQs.activity_cut_down, answers.activity_cut_down)
+        ? formatAnswer(allQs.activity_cut_down, answers.activity_cut_down)
+        : '—';
+      lines.push(`- Fear of fall: ${fear}`);
+      lines.push(`- Reduce Activities: ${reduce}`);
+      return lines.join('\n');
+    },
+
+    aspire_assessment_line(q, a, allQs, answers) {
+      const rating = !isEmptyAnswer(q, a) ? formatAnswer(q, a) : '';
+      const hi = Array.isArray(q.headerInputs) && q.headerInputs.length ? q.headerInputs[0] : null;
+      const score = hi && answers[hi.id] !== undefined && answers[hi.id] !== '' && answers[hi.id] !== null
+        ? String(answers[hi.id])
+        : '';
+      if (!rating && !score) return null;
+      const bits = [];
+      if (score) bits.push(score);
+      if (rating) bits.push(rating);
+      return `${q.label}: ${bits.join(' ')}.`;
+    },
+
+    aspire_assessment_block(q, a, allQs, answers) {
+      const ids = [
+        'aspire_overall_fall_risk',
+        'aspire_standing_eye_opened',
+        'aspire_standing_eye_closed',
+        'aspire_sit_stand',
+        'aspire_walking',
+      ];
+      const labels = {
+        aspire_overall_fall_risk: 'Overall fall risk',
+        aspire_standing_eye_opened: 'Standing (eye opened)',
+        aspire_standing_eye_closed: 'Standing (eye closed)',
+        aspire_sit_stand: 'Sit-stand',
+        aspire_walking: 'Walking',
+      };
+      const scoreIds = {
+        aspire_overall_fall_risk: 'aspire_overall_fall_risk_score',
+        aspire_standing_eye_opened: 'aspire_standing_eye_opened_score',
+        aspire_standing_eye_closed: 'aspire_standing_eye_closed_score',
+        aspire_sit_stand: 'aspire_sit_stand_score',
+        aspire_walking: 'aspire_walking_score',
+      };
+      const lines = ['Aspire assessment:'];
+      ids.forEach(id => {
+        const rating = !isEmptyAnswer(allQs[id], answers[id]) ? formatAnswer(allQs[id], answers[id]) : '';
+        const score = answers[scoreIds[id]] !== undefined && answers[scoreIds[id]] !== '' ? String(answers[scoreIds[id]]) : '';
+        if (!rating && !score) return;
+        const bits = [];
+        if (score) bits.push(score);
+        if (rating) bits.push(`(${aspireRatingParens(rating)})`);
+        lines.push(`${labels[id]}: ${bits.join(' ')}`);
+      });
+      return lines.length > 1 ? lines.join('\n') : null;
+    },
+
+    lawton_summary(q, a) {
+      if (isEmptyAnswer(q, a)) return null;
+      const total = Object.values(a).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+      const itemMax = 3;
+      const rows = (q.items || []).map(it => {
+        const v = typeof a[it.id] === 'number' ? a[it.id] : 0;
+        return `${it.label}: ${v}/${itemMax}`;
+      });
+      return [
+        '',
+        `IADL: Lawton IADL: ${total}/${q.totalMax}`,
+        rows.slice(0, 4).join('   '),
+        rows.slice(4).join('   '),
+      ].join('\n');
+    },
+
     mbi_summary(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
       const line = buildMbiSummaryLine(allQs, answers);
@@ -3191,8 +3382,12 @@
       if (cmts.home_access) homeParts.push(`Floor / stairs detail: ${cmts.home_access}`);
 
       const lines = [];
-      if (livingParts.length) lines.push(livingParts.join('. ') + '.');
-      if (homeParts.length) lines.push(homeParts.join('. ') + '.');
+      if (livingParts.length || homeParts.length) {
+        const sentenceBits = [];
+        if (livingParts.length) sentenceBits.push(livingParts.join('. ') + '.');
+        if (homeParts.length) sentenceBits.push(homeParts.join('. ') + '.');
+        lines.push(sentenceBits.join(' '));
+      }
       return lines.length ? lines.join('\n') : null;
     },
 
@@ -3494,6 +3689,7 @@
     const suspendedMap = answers.__suspended || {};
     form.schema.sections.forEach((s, si) => {
       let currentReportTitle = s.reportTitle || s.title;
+      let currentHideTitle = !!s.hideReportTitle;
       const sectionLines = [];
       // Section-level hideQuestionsIf: when matched, only the trigger question
       // is rendered in the report — everything else in the section is skipped.
@@ -3539,11 +3735,16 @@
         if (hiddenQ.has(q.id)) continue;
         if (q.showIf && !evalShowIf(q.showIf, answers)) continue;
         if (q.hideInReportIf && evalShowIf(q.hideInReportIf, answers)) continue;
-        // A question-level reportTitle flushes the current block and starts a new one.
-        if (q.reportTitle && sectionLines.length) {
-          blocks.push({ title: currentReportTitle, lines: [...sectionLines] });
-          sectionLines.length = 0;
+        // A question-level reportTitle starts a new report block. If this is
+        // the first rendered question in the section, let it override the
+        // section title before any lines are emitted.
+        if (q.reportTitle) {
+          if (sectionLines.length) {
+            blocks.push({ title: currentReportTitle, lines: [...sectionLines], hideTitle: currentHideTitle });
+            sectionLines.length = 0;
+          }
           currentReportTitle = q.reportTitle;
+          currentHideTitle = !!q.reportHideTitle;
         }
         // Insert the suspend summary just before the configured anchor question.
         if (suspendSummaryBefore && q.id === suspendSummaryBefore) emitSuspendSummary();
@@ -3668,7 +3869,7 @@
       if (sectionLines.length) blocks.push({
         title: currentReportTitle,
         lines: sectionLines,
-        hideTitle: !!s.hideReportTitle,
+        hideTitle: currentHideTitle,
       });
     });
 
