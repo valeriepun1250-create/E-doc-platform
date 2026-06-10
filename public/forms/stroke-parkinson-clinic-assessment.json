@@ -20,11 +20,21 @@
                 "id": "come_with",
                 "label": "Come with",
                 "placeholder": "family / carer / alone",
-                "wide": true
+                "wide": true,
+                "showIf": {
+                  "itemId": "come_alone",
+                  "notEquals": true
+                }
+              },
+              {
+                "id": "come_alone",
+                "label": "Come alone",
+                "inputType": "checkbox",
+                "suffix": ";"
               },
               {
                 "id": "walk_with",
-                "label": "Walk with",
+                "label": "Walk",
                 "placeholder": "stick / rollator / frame",
                 "wide": true,
                 "showIf": {
@@ -279,6 +289,7 @@
             "mode": "options",
             "totalMax": 9,
             "width": "full",
+            "reportTitle": "FROP-Com Screen",
             "hint": "Rate each item using the question below it and the score descriptions provided.",
             "displayDescriptions": "list",
             "breakdownPosition": "after",
@@ -625,7 +636,11 @@
                   10
                 ],
                 "allowNA": true,
-                "defaultNA": true
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "bowels_stoma",
+                  "label": "Stoma"
+                }
               },
               {
                 "id": "bladder",
@@ -638,7 +653,11 @@
                   10
                 ],
                 "allowNA": true,
-                "defaultNA": true
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "bladder_foley",
+                  "label": "Foley"
+                }
               },
               {
                 "id": "grooming",
@@ -677,7 +696,11 @@
                   10
                 ],
                 "allowNA": true,
-                "defaultNA": true
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "feeding_rt",
+                  "label": "R/T"
+                }
               },
               {
                 "id": "dressing",
@@ -763,12 +786,38 @@
             "customReport": "mbi_summary"
           },
           {
+            "id": "mbi_overall",
+            "label": "Overall functional level",
+            "type": "checkbox",
+            "width": "full",
+            "mergeUp": true,
+            "options": [
+              "Independent",
+              "Supervision",
+              "Mild Assistance",
+              "Moderate Assistance",
+              "Maximal Assistance",
+              "Dependent"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "hideInReport": true
+          },
+          {
             "id": "lawton_iadl",
             "label": "IADL: Lawton IADL",
             "type": "sub_score",
             "mode": "options",
             "totalMax": 27,
             "width": "full",
+            "headerInputs": [
+              {
+                "id": "lawton_assist_by",
+                "label": "Assist by",
+                "placeholder": "maid"
+              }
+            ],
             "customReport": "lawton_summary",
             "items": [
               {
@@ -890,7 +939,14 @@
               "Carer education",
               "Home visit",
               "Assistive device prescription",
-              "Community reintegration / OLSR"
+              "Community reintegration",
+              {
+                "value": "OLSR",
+                "detail": true,
+                "detailPlaceholder": "specify",
+                "detailJoiner": " (",
+                "detailSuffix": ")"
+              }
             ],
             "allowOther": true,
             "reportTemplate": "{answer}"

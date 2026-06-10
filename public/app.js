@@ -2357,7 +2357,9 @@
           }
           wrap.appendChild(grid);
         } else {
-          const row = el('div', { class: 'composite-row' });
+          const rowClass = ['composite-row'];
+          if (q.id === 'attendance_mobility') rowClass.push('attendance-mobility-row');
+          const row = el('div', { class: rowClass.join(' ') });
           q.parts.forEach(p => {
             const part = el('div', { class: 'composite-part' });
             const applyPartVisibility = () => {
@@ -3128,9 +3130,10 @@
     attendance_mobility(q, a) {
       if (!a || typeof a !== 'object') return null;
       const bits = [];
-      if (a.come_with) bits.push(`Come with ${a.come_with}`);
+      if (a.come_alone) bits.push('Come alone');
+      else if (a.come_with) bits.push(`Come with ${a.come_with}`);
       if (a.on_wheelchair) bits.push('On wheelchair');
-      else if (a.walk_with) bits.push(`Walk with ${a.walk_with}`);
+      else if (a.walk_with) bits.push(`Walk ${a.walk_with}`);
       return bits.length ? bits.join('; ') + '.' : null;
     },
 
@@ -3243,9 +3246,10 @@
       return lines.length > 1 ? lines.join('\n') : null;
     },
 
-    lawton_summary(q, a) {
+    lawton_summary(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
       const total = Object.values(a).reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+      const assistBy = answers && answers.lawton_assist_by ? String(answers.lawton_assist_by).trim() : '';
       const itemMax = 3;
       const rows = (q.items || []).map(it => {
         const v = typeof a[it.id] === 'number' ? a[it.id] : 0;
@@ -3253,7 +3257,7 @@
       });
       return [
         '',
-        `IADL: Lawton IADL: ${total}/${q.totalMax}`,
+        `IADL: Lawton IADL: ${total}/${q.totalMax}${assistBy ? ` (Assist by ${assistBy})` : ''}`,
         rows.slice(0, 4).join('   '),
         rows.slice(4).join('   '),
       ].join('\n');

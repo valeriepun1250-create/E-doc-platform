@@ -584,17 +584,31 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 
 .home-create-grid {
   display: grid;
-  grid-template-columns: minmax(190px, 1.05fr) minmax(160px, 0.8fr) minmax(260px, 1.25fr) minmax(104px, auto);
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 14px;
   align-items: end;
 }
 
 .home-field {
   margin: 0;
+  display: grid;
+  grid-template-rows: auto minmax(46px, auto);
+  align-content: end;
   font-size: 14px;
   line-height: 1.2;
   font-weight: 700;
   color: #2b3b3b;
+}
+
+.home-field-label,
+.home-date-label {
+  min-height: 18px;
+}
+
+.home-date-wrap {
+  display: grid;
+  grid-template-rows: auto minmax(46px, auto);
+  align-content: end;
 }
 
 .home-date-label {
@@ -963,7 +977,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   }
 
   .home-create-grid {
-    grid-template-columns: minmax(150px, 1fr) minmax(145px, 0.82fr) minmax(220px, 1.25fr) minmax(88px, auto);
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
     gap: 10px;
   }
 
@@ -1041,6 +1055,15 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   .home-history-actions {
     margin-left: auto;
     justify-content: flex-end;
+  }
+
+  .composite-row.attendance-mobility-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .attendance-mobility-row .composite-part:nth-child(3) {
+    justify-self: end;
   }
 }
 
@@ -1977,7 +2000,8 @@ table.subscore.fes-subscore tr:last-child td {
 table.subscore.fes-subscore .si-label {
   width: 66%;
   white-space: nowrap;
-  font-size: 12.5px;
+  font-size: 14px;
+  font-weight: 600;
 }
 table.subscore.fes-subscore .si-val {
   gap: 10px;
@@ -2145,6 +2169,13 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 .composite-row {
   display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
 }
+.composite-row.attendance-mobility-row {
+  display: grid;
+  grid-template-columns: max-content max-content max-content max-content;
+  gap: 8px 6px;
+  align-items: center;
+  justify-content: start;
+}
 .composite-part { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
 .composite-part input {
   width: 78px; padding: 6px 10px; font-size: 13px;
@@ -2157,9 +2188,32 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
 }
 .composite-checkbox-label .glabel {
-  color: var(--fg); font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: var(--fg); font-size: 13.5px; font-weight: 500; letter-spacing: 0; text-transform: none;
 }
 .composite-part input.wide { width: 120px; }
+.attendance-mobility-row .composite-part {
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.attendance-mobility-row .composite-part input.wide {
+  width: auto;
+  min-width: 0;
+}
+.attendance-mobility-row .composite-part .glabel,
+.attendance-mobility-row .composite-checkbox-label .glabel {
+  white-space: nowrap;
+}
+.attendance-mobility-row .composite-part:first-child input.wide {
+  max-width: 140px;
+  width: 140px;
+}
+.attendance-mobility-row .composite-part:nth-child(3) input.wide {
+  max-width: 96px;
+  width: 96px;
+}
+.attendance-mobility-row .composite-part .suffix {
+  margin-left: 0;
+}
 .composite-part.extra-wide { flex: 1 1 280px; }
 .composite-part input.extra-wide { width: 100%; min-width: 280px; }
 .composite-part .suffix, .composite-part .prefix {
@@ -2468,6 +2522,14 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 @media (max-width: 560px) {
   .asia-sensory-grid {
     grid-template-columns: 1fr;
+  }
+
+  .composite-row.attendance-mobility-row {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-mobility-row .composite-part:nth-child(3) {
+    justify-self: start;
   }
 }
 
