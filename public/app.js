@@ -3263,6 +3263,18 @@
       ].join('\n');
     },
 
+    treatment_plan_lines(q, a) {
+      if (isEmptyAnswer(q, a)) return null;
+      if (!Array.isArray(a)) return formatAnswer(q, a);
+      const optionByValue = new Map((q.options || [])
+        .filter(opt => typeof opt === 'object' && opt !== null)
+        .map(opt => [opt.value, opt]));
+      return a.map(it => {
+        const value = (typeof it === 'object' && it !== null) ? it.value : it;
+        return formatCheckEntry(it, !!q.keepOtherLabel, optionByValue.get(value));
+      }).join('\n');
+    },
+
     mbi_summary(q, a, allQs, answers) {
       if (isEmptyAnswer(q, a)) return null;
       const line = buildMbiSummaryLine(allQs, answers);

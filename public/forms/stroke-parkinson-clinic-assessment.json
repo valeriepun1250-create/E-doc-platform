@@ -949,7 +949,7 @@
               }
             ],
             "allowOther": true,
-            "reportTemplate": "{answer}"
+            "customReport": "treatment_plan_lines"
           }
         ],
         "reportTitle": "Treatment / Plan"
