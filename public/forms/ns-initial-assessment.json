@@ -2291,7 +2291,7 @@
                 "label": "Level"
               }
             ],
-            "reportTemplate": "ADL: MBI {q:mbi} ({q:mbi_overall} Level)"
+            "customReport": "ot_adl_summary"
           },
           {
             "id": "ot_cognitive",

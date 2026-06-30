@@ -934,6 +934,11 @@
         history.update(entry.id, entry);
       }, 250);
     };
+    const flashCopied = badge => {
+      if (!badge) return;
+      badge.textContent = 'Copied';
+      badge.classList.add('is-visible');
+    };
     app.querySelector('#btnReportSave').onclick = () => {
       if (entry) {
         clearTimeout(autosaveTimer);
@@ -956,8 +961,12 @@
       let textarea = null;
       let copyBtn = null;
       let editBtn = null;
+      let copiedBadge = null;
       const head = el('div', { class: 'row between' }, [
-        el('h3', { style: 'margin:0' }, [heading]),
+        el('div', { class: 'report-title-row' }, [
+          el('h3', { style: 'margin:0' }, [heading]),
+          copiedBadge = el('span', { class: 'report-copied-badge', 'aria-live': 'polite' }, ['']),
+        ]),
         el('div', { class: 'report-actions' }, [
           editBtn = el('button', {
             class: 'summary-top-btn report-edit-btn',
@@ -974,7 +983,7 @@
             onclick: async () => {
               try {
                 await navigator.clipboard.writeText(textarea ? textarea.value : '');
-                alert(`${heading} copied to clipboard.`);
+                flashCopied(copiedBadge);
               } catch {
                 alert('Copy failed — please select and copy manually.');
               }
@@ -1015,8 +1024,12 @@
       let textarea = null;
       let copyBtn = null;
       let editBtn = null;
+      let copiedBadge = null;
       const head = el('div', { class: 'row between' }, [
-        el('h3', { style: 'margin:0' }, ['Green Box']),
+        el('div', { class: 'report-title-row' }, [
+          el('h3', { style: 'margin:0' }, ['Green Box']),
+          copiedBadge = el('span', { class: 'report-copied-badge', 'aria-live': 'polite' }, ['']),
+        ]),
         el('div', { class: 'report-actions' }, [
           el('span', { class: 'report-char-count' }, ['【0】 / 250 characters']),
           editBtn = el('button', {
@@ -1034,7 +1047,7 @@
             onclick: async () => {
               try {
                 await navigator.clipboard.writeText(textarea ? textarea.value : '');
-                alert('Green Box copied to clipboard.');
+                flashCopied(copiedBadge);
               } catch {
                 alert('Copy failed — please select and copy manually.');
               }
@@ -1112,9 +1125,23 @@
     return true;
   }
 
+  function syncCheckedOptionClasses(root) {
+    if (!root) return;
+    root.querySelectorAll('label').forEach(label => {
+      const input = Array.from(label.children).find(child =>
+        child && child.tagName === 'INPUT' &&
+        (child.type === 'checkbox' || child.type === 'radio'));
+      if (input) label.classList.toggle('is-checked', input.checked);
+    });
+  }
+
   function renderQuestion(q, answers, comments, ctx) {
     if (q.type === 'heading') {
-      const h = el('div', { class: 'qfill heading full' }, [q.label || '']);
+      const h = el('div', { class: 'qfill heading full' });
+      h.appendChild(el('span', { class: 'heading-text' }, [q.label || '']));
+      if (q.reminderText) {
+        h.appendChild(el('span', { class: 'heading-reminder' }, [`* ${q.reminderText}`]));
+      }
       if (q.showIf && ctx && ctx.onChange) {
         const apply = () => {
           h.style.display = evalShowIf(q.showIf, answers) ? '' : 'none';
@@ -1147,7 +1174,10 @@
     if (q.type === 'heading') {
       wrap.classList.add('full', 'heading');
       if (q.headingStyle === 'compact') wrap.classList.add('compact-heading');
-      wrap.textContent = q.label;
+      wrap.appendChild(el('span', { class: 'heading-text' }, [q.label]));
+      if (q.reminderText) {
+        wrap.appendChild(el('span', { class: 'heading-reminder' }, [`* ${q.reminderText}`]));
+      }
       return wrap;
     }
 
@@ -1321,9 +1351,33 @@
         break;
       }
       case 'number': {
-        const inp = el('input', { type: 'number', value: cur ?? '' });
-        inp.oninput = () => set(inp.value === '' ? '' : Number(inp.value));
-        wrap.appendChild(inp);
+        const row = el('div', { class: 'inline-number' });
+        if (q.inputWidthChars !== undefined) {
+          row.style.setProperty('--inline-number-chars', String(q.inputWidthChars));
+        }
+        const inpProps = { type: 'number', value: cur ?? '' };
+        if (q.min !== undefined) inpProps.min = String(q.min);
+        if (q.max !== undefined) inpProps.max = String(q.max);
+        if (q.step !== undefined) inpProps.step = String(q.step);
+        const inp = el('input', inpProps);
+        inp.oninput = () => {
+          if (inp.value === '') {
+            set('');
+            return;
+          }
+          let value = Number(inp.value);
+          if (!Number.isFinite(value)) {
+            set('');
+            return;
+          }
+          if (q.min !== undefined) value = Math.max(Number(q.min), value);
+          if (q.max !== undefined) value = Math.min(Number(q.max), value);
+          if (String(value) !== inp.value) inp.value = String(value);
+          set(value);
+        };
+        row.appendChild(inp);
+        if (q.suffix) row.appendChild(el('span', { class: 'inline-number-suffix' }, [q.suffix]));
+        wrap.appendChild(row);
         break;
       }
       case 'date': {
@@ -1458,13 +1512,19 @@
           group.appendChild(wrapOpt);
         });
 
-        group.addEventListener('change', () => {
+        const syncMultipleChoiceExpansion = () => {
           [...group.querySelectorAll('.opt-block')].forEach(ob => {
             const radio = ob.querySelector('input[type=radio]');
             const sub = ob.querySelector('.sub-options');
-            if (sub) sub.style.display = radio.checked ? '' : 'none';
+            const detail = ob.querySelector('.detail-input');
+            if (sub) sub.style.display = radio && radio.checked ? '' : 'none';
+            if (detail) detail.style.display = radio && radio.checked ? '' : 'none';
           });
+        };
+        group.addEventListener('change', () => {
+          syncMultipleChoiceExpansion();
         });
+        syncMultipleChoiceExpansion();
 
         if (q.allowOther) {
           const id = uid();
@@ -1660,6 +1720,7 @@
             if (detailInp) detailInp.style.display = c.checked ? '' : 'none';
             if (subBox)    subBox.style.display    = c.checked ? '' : 'none';
             rebuild();
+            syncCheckboxExpansion();
           };
           if (detailInp) detailInp.oninput = () => { c.checked = true; rebuild(); };
 
@@ -1669,6 +1730,16 @@
           if (subBox) wrapOpt.appendChild(subBox);
           group.appendChild(wrapOpt);
         });
+        const syncCheckboxExpansion = () => {
+          [...group.querySelectorAll('.opt-block')].forEach(ob => {
+            const main = ob.querySelector('label input[type=checkbox]');
+            const detail = ob.querySelector('.check-detail');
+            const sub = ob.querySelector('.sub-checks');
+            if (detail) detail.style.display = main && main.checked ? '' : 'none';
+            if (sub) sub.style.display = main && main.checked ? '' : 'none';
+          });
+        };
+        syncCheckboxExpansion();
         if (q.allowOther) {
           const id = uid();
           const existingOther = curArr.find(v => typeof v === 'string' && v.startsWith('Other: '));
@@ -2625,6 +2696,527 @@
         recompute();
         break;
       }
+      case 'bilateral_hand_function': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        answers[q.id] = curObj;
+
+        const table = el('table', { class: 'assessment-table bilateral-hand-table' });
+        table.appendChild(el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, ['Item']),
+            el('th', {}, ['Right']),
+            el('th', {}, ['Left']),
+          ]),
+        ]));
+        const tbody = el('tbody');
+
+        (q.rows || []).forEach(rowDef => {
+          const rowState = (curObj[rowDef.id] && typeof curObj[rowDef.id] === 'object')
+            ? { ...curObj[rowDef.id] }
+            : {};
+          curObj[rowDef.id] = rowState;
+          const tr = el('tr');
+          tr.appendChild(el('td', { class: 'assessment-table-label' }, [rowDef.label]));
+
+          ['right', 'left'].forEach(side => {
+            const td = el('td');
+            const cell = el('div', { class: 'bilateral-hand-cell' });
+            const inputs = Array.isArray(rowDef.inputs) && rowDef.inputs.length
+              ? rowDef.inputs
+              : [{ id: 'value', label: '' }];
+
+            inputs.forEach(inputDef => {
+              const field = el('label', { class: 'bilateral-hand-input' });
+              const nextForSide = () => (rowState[side] && typeof rowState[side] === 'object')
+                ? { ...rowState[side] }
+                : {};
+              const persistSide = (next, opts = {}) => {
+                if (Object.keys(next).length) rowState[side] = next;
+                else delete rowState[side];
+                if (opts.rerender && ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+                else fire();
+              };
+              const applyVisibility = () => {
+                if (!inputDef.hideIfChecked) return;
+                const checked = !!(rowState[side] && rowState[side][inputDef.hideIfChecked]);
+                field.style.display = checked ? 'none' : '';
+              };
+              if (inputDef.type === 'checkbox') {
+                field.classList.add('bilateral-hand-check');
+                const inp = el('input', { type: 'checkbox' });
+                inp.checked = !!(rowState[side] && rowState[side][inputDef.id]);
+                inp.onchange = () => {
+                  const next = nextForSide();
+                  if (inp.checked) {
+                    next[inputDef.id] = true;
+                    if (inputDef.id === 'full' && next.status) delete next.status;
+                  } else delete next[inputDef.id];
+                  persistSide(next, { rerender: true });
+                };
+                field.appendChild(inp);
+                if (inputDef.label) field.appendChild(el('span', { class: 'inline-label' }, [inputDef.label]));
+              } else if (inputDef.type === 'option') {
+                field.classList.add('bilateral-hand-option');
+                const btn = el('button', {
+                  type: 'button',
+                  class: 'bilateral-hand-option-btn' + (rowState[side] && rowState[side][inputDef.id] ? ' sel' : ''),
+                  onclick: () => {
+                    const next = nextForSide();
+                    if (next[inputDef.id]) delete next[inputDef.id];
+                    else {
+                      next[inputDef.id] = true;
+                      if (inputDef.id === 'full' && next.status) delete next.status;
+                    }
+                    persistSide(next, { rerender: true });
+                  },
+                }, [inputDef.label || '']);
+                field.appendChild(btn);
+              } else {
+                if (inputDef.label) field.appendChild(el('span', { class: 'inline-label' }, [inputDef.label]));
+                const inp = el('input', {
+                  type: inputDef.type || 'text',
+                  inputmode: inputDef.type === 'number' ? 'decimal' : undefined,
+                  placeholder: inputDef.placeholder || '',
+                  value: rowState[side] && rowState[side][inputDef.id] != null ? rowState[side][inputDef.id] : '',
+                });
+                inp.oninput = () => {
+                  const next = nextForSide();
+                  if (inp.value === '') delete next[inputDef.id];
+                  else next[inputDef.id] = inp.value;
+                  persistSide(next);
+                };
+                field.appendChild(inp);
+              }
+              applyVisibility();
+              cell.appendChild(field);
+            });
+
+            td.appendChild(cell);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        break;
+      }
+      case 'jebsen_table': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        curObj.meta = (curObj.meta && typeof curObj.meta === 'object') ? { ...curObj.meta } : {};
+        curObj.rows = (curObj.rows && typeof curObj.rows === 'object') ? { ...curObj.rows } : {};
+        answers[q.id] = curObj;
+
+        const metaRow = el('div', { class: 'jebsen-meta-row' });
+        (q.meta || []).forEach(meta => {
+          const field = el('div', { class: 'jebsen-meta-field' });
+          field.appendChild(el('span', { class: 'glabel' }, [meta.label]));
+          if (meta.type === 'multiple_choice') {
+            const group = el('div', { class: 'jebsen-inline-options' });
+            (meta.options || []).forEach(opt => {
+              const btn = el('button', {
+                type: 'button',
+                class: curObj.meta[meta.id] === opt ? 'sel' : '',
+                onclick: () => {
+                  curObj.meta[meta.id] = opt;
+                  if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+                  else fire();
+                },
+              }, [opt]);
+              group.appendChild(btn);
+            });
+            field.appendChild(group);
+          } else {
+            const inp = el('input', {
+              type: meta.type || 'text',
+              inputmode: meta.type === 'number' ? 'numeric' : undefined,
+              placeholder: meta.placeholder || '',
+              value: curObj.meta[meta.id] != null ? curObj.meta[meta.id] : '',
+            });
+            inp.oninput = () => {
+              if (inp.value === '') delete curObj.meta[meta.id];
+              else curObj.meta[meta.id] = inp.value;
+              fire();
+            };
+            field.appendChild(inp);
+          }
+          metaRow.appendChild(field);
+        });
+        wrap.appendChild(metaRow);
+
+        const table = el('table', { class: 'assessment-table jebsen-table' });
+        table.appendChild(el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, ['Item']),
+            el('th', {}, ['Dominant Hand']),
+            el('th', {}, ['Non-Dominant Hand']),
+          ]),
+          el('tr', { class: 'subhead-row' }, [
+            el('th', {}, ['']),
+            el('th', {}, ['Actual Time']),
+            el('th', {}, ['Actual Time']),
+          ]),
+        ]));
+
+        const tbody = el('tbody');
+        (q.rows || []).forEach(rowDef => {
+          const rowState = (curObj.rows[rowDef.id] && typeof curObj.rows[rowDef.id] === 'object')
+            ? { ...curObj.rows[rowDef.id] }
+            : {};
+          curObj.rows[rowDef.id] = rowState;
+          const tr = el('tr');
+          tr.appendChild(el('td', { class: 'assessment-table-label' }, [rowDef.label]));
+          ['dominant', 'nonDominant'].forEach(side => {
+            const td = el('td');
+            const inp = el('input', {
+              type: 'text',
+              inputmode: 'decimal',
+              placeholder: 'seconds',
+              value: rowState[side] != null ? rowState[side] : '',
+            });
+            inp.oninput = () => {
+              if (inp.value === '') delete rowState[side];
+              else rowState[side] = inp.value;
+              fire();
+            };
+            td.appendChild(inp);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        break;
+      }
+      case 'dass21_table': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        answers[q.id] = curObj;
+
+        const scoreDefs = [
+          ['D', 'D'],
+          ['A', 'A'],
+          ['S', 'S'],
+          ['T', 'T'],
+        ];
+        const scoreRefs = {};
+        const computeScores = () => {
+          const sums = { D: 0, A: 0, S: 0, T: 0 };
+          (q.rows || []).forEach(rowDef => {
+            const value = typeof curObj[rowDef.id] === 'number' ? curObj[rowDef.id] : 0;
+            if (rowDef.domain && sums[rowDef.domain] != null) sums[rowDef.domain] += value;
+            sums.T += value;
+          });
+          Object.entries(scoreRefs).forEach(([key, node]) => {
+            node.textContent = String(sums[key] || 0);
+          });
+        };
+
+        if (q.instructions) wrap.appendChild(el('div', { class: 'dass21-note' }, [q.instructions]));
+        if (q.scaleGuide) wrap.appendChild(el('div', { class: 'dass21-scale' }, [q.scaleGuide]));
+
+        const table = el('table', { class: 'assessment-table dass21-table' });
+        table.appendChild(el('thead', {}, [
+          el('tr', {}, [
+            el('th', { class: 'dass21-col-no' }, ['#']),
+            el('th', {}, [q.label || 'DASS-21']),
+            el('th', { class: 'dass21-score-col' }, ['0']),
+            el('th', { class: 'dass21-score-col' }, ['1']),
+            el('th', { class: 'dass21-score-col' }, ['2']),
+            el('th', { class: 'dass21-score-col' }, ['3']),
+            el('th', { class: 'dass21-col-domain' }, ['Class']),
+          ]),
+        ]));
+        const tbody = el('tbody');
+
+        (q.rows || []).forEach(rowDef => {
+          const tr = el('tr');
+          tr.appendChild(el('td', { class: 'dass21-no' }, [String(rowDef.number || '')]));
+          tr.appendChild(el('td', { class: 'dass21-item' }, [rowDef.label]));
+          for (let value = 0; value <= 3; value++) {
+            const td = el('td', { class: 'dass21-choice' });
+            const btn = el('button', {
+              type: 'button',
+              class: 'dass21-choice-btn' + (curObj[rowDef.id] === value ? ' sel' : ''),
+              onclick: () => {
+                if (curObj[rowDef.id] === value) delete curObj[rowDef.id];
+                else curObj[rowDef.id] = value;
+                if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+                else fire();
+              },
+            }, [String(value)]);
+            td.appendChild(btn);
+            tr.appendChild(td);
+          }
+          tr.appendChild(el('td', { class: 'dass21-domain' }, [rowDef.domain || '']));
+          tbody.appendChild(tr);
+        });
+
+        const footer = el('tr', { class: 'dass21-total-row' });
+        footer.appendChild(el('td', { colspan: '2', class: 'dass21-total-spacer' }, ['']));
+        scoreDefs.forEach(([key, label]) => {
+          const td = el('td', { class: 'dass21-total-cell' });
+          td.appendChild(el('span', { class: 'dass21-total-label' }, [`${label} = `]));
+          const val = el('span', { class: 'dass21-total-value' }, ['0']);
+          scoreRefs[key] = val;
+          td.appendChild(val);
+          footer.appendChild(td);
+        });
+        footer.appendChild(el('td', { class: 'dass21-total-spacer' }, ['']));
+        tbody.appendChild(footer);
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+
+        if (q.scoreNote) wrap.appendChild(el('div', { class: 'dass21-footnote' }, [`(${q.scoreNote})`]));
+        computeScores();
+        break;
+      }
+      case 'quest_vas': {
+        const row = el('div', { class: 'quest-vas' });
+        const prompt = el('div', { class: 'quest-vas-prompt' }, [q.prompt || q.label || '']);
+        if (q.scaleHint) prompt.appendChild(el('span', { class: 'quest-vas-hint' }, [` (${q.scaleHint})`]));
+        row.appendChild(prompt);
+        const control = el('div', { class: 'quest-vas-control' });
+        const scaleWrap = el('div', { class: 'quest-vas-scale' });
+        const range = el('input', {
+          type: 'range',
+          min: '0',
+          max: '100',
+          step: '5',
+          value: cur != null && cur !== '' ? String(cur) : '50',
+        });
+        const num = el('input', {
+          type: 'number',
+          min: '0',
+          max: '100',
+          step: '5',
+          value: cur != null && cur !== '' ? String(cur) : '',
+        });
+        const ticks = el('div', { class: 'quest-vas-ticks' });
+        for (let i = 0; i <= 100; i += 5) {
+          ticks.appendChild(el('span', {}, [String(i)]));
+        }
+        const sync = value => {
+          if (value === '' || value == null) {
+            delete answers[q.id];
+            num.value = '';
+          } else {
+            const bounded = Math.max(0, Math.min(100, Number(value)));
+            const snapped = Math.round(bounded / 5) * 5;
+            answers[q.id] = snapped;
+            range.value = String(snapped);
+            num.value = String(snapped);
+          }
+          fire();
+        };
+        range.oninput = () => sync(range.value);
+        num.oninput = () => sync(num.value);
+        scaleWrap.appendChild(range);
+        scaleWrap.appendChild(ticks);
+        control.appendChild(scaleWrap);
+        control.appendChild(num);
+        row.appendChild(control);
+        wrap.appendChild(row);
+        break;
+      }
+      case 'hour_scale': {
+        const curVal = typeof cur === 'number' ? cur : null;
+        const container = el('div', { class: 'hour-scale' });
+        for (let i = 0; i <= 24; i++) {
+          const btn = el('button', {
+            type: 'button',
+            class: 'hour-scale-btn' + (curVal === i ? ' sel' : ''),
+            onclick: () => {
+              if (answers[q.id] === i) delete answers[q.id];
+              else answers[q.id] = i;
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+              else fire();
+            },
+          }, [String(i)]);
+          container.appendChild(btn);
+        }
+        wrap.appendChild(container);
+        break;
+      }
+      case 'tremor_severity_table': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        answers[q.id] = curObj;
+        const levels = [
+          ['none', '無'],
+          ['mild', '輕度'],
+          ['moderate', '中度'],
+          ['marked', '顯著'],
+          ['severe', '嚴重'],
+        ];
+
+        if (Array.isArray(q.legend) && q.legend.length) {
+          const legend = el('div', { class: 'tremor-severity-legend' });
+          q.legend.forEach(line => legend.appendChild(el('div', {}, [line])));
+          wrap.appendChild(legend);
+        }
+
+        const table = el('table', { class: 'assessment-table tremor-severity-table' });
+        table.appendChild(el('thead', {}, [
+          el('tr', {}, [
+            el('th', {}, ['身體部位']),
+            ...levels.map(([, label]) => el('th', {}, [label])),
+          ]),
+        ]));
+        const tbody = el('tbody');
+        (q.rows || []).forEach((rowLabel, idx) => {
+          const rowId = `row_${idx + 1}`;
+          const tr = el('tr');
+          tr.appendChild(el('td', { class: 'assessment-table-label' }, [`${idx + 1}. ${rowLabel}`]));
+          levels.forEach(([value]) => {
+            const td = el('td', { class: 'tremor-severity-choice' });
+            const btn = el('button', {
+              type: 'button',
+              class: 'tremor-severity-btn' + (curObj[rowId] === value ? ' sel' : ''),
+              onclick: () => {
+                if (curObj[rowId] === value) delete curObj[rowId];
+                else curObj[rowId] = value;
+                if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+                else fire();
+              },
+            }, [curObj[rowId] === value ? '✓' : '']);
+            td.appendChild(btn);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        break;
+      }
+      case 'quest_table': {
+        const curObj = (cur && typeof cur === 'object') ? { ...cur } : {};
+        answers[q.id] = curObj;
+        const optionValues = [0, 1, 2, 3, 4];
+        const domains = q.domains || [];
+        const rows = q.rows || [];
+        const rowspans = {};
+        const firstRowIndexByDomain = {};
+        rows.forEach((rowDef, idx) => {
+          if (!rowDef.domain) return;
+          rowspans[rowDef.domain] = (rowspans[rowDef.domain] || 0) + 1;
+          if (firstRowIndexByDomain[rowDef.domain] == null) firstRowIndexByDomain[rowDef.domain] = idx;
+        });
+
+        const domainRefs = {};
+        const computeDomainScores = () => {
+          const scoreMap = {};
+          domains.forEach(domain => {
+            scoreMap[domain.id] = { numerator: 0, denominator: 0, percent: null };
+          });
+          rows.forEach(rowDef => {
+            if (!rowDef.domain || !scoreMap[rowDef.domain]) return;
+            const value = curObj[rowDef.id];
+            if (rowDef.excludeFromScore) return;
+            if (value === 'NA') return;
+            if (typeof value === 'number') scoreMap[rowDef.domain].numerator += value;
+            scoreMap[rowDef.domain].denominator += 4;
+          });
+          domains.forEach(domain => {
+            const target = scoreMap[domain.id];
+            if (!target) return;
+            if (domain.percentDenominator) {
+              target.denominator = domain.percentDenominator;
+            }
+            target.percent = target.denominator > 0
+              ? Math.round((target.numerator / target.denominator) * 100)
+              : null;
+          });
+          Object.entries(domainRefs).forEach(([domainId, refs]) => {
+            const info = scoreMap[domainId];
+            if (!info) return;
+            refs.numerator.textContent = `${info.numerator}/${info.denominator}`;
+            refs.percent.textContent = info.percent == null ? '__%' : `(${info.percent}%)`;
+          });
+        };
+
+        const table = el('table', { class: 'assessment-table quest-table' });
+        table.appendChild(el('thead', {}, [
+          el('tr', {}, [
+            el('th', { class: 'quest-table-col-item' }, [q.label || 'Item']),
+            ...optionValues.map(v => {
+              const scoreLabel = q.scoreLabels && q.scoreLabels[String(v)] ? q.scoreLabels[String(v)] : '';
+              return el('th', { class: 'quest-table-col-score' }, [
+                el('div', { class: 'quest-score-head' }, [String(v)]),
+                scoreLabel ? el('div', { class: 'quest-score-subhead' }, [scoreLabel]) : null,
+              ].filter(Boolean));
+            }),
+            el('th', { class: 'quest-table-col-subscore' }, ['Sub-Score']),
+          ]),
+        ]));
+        const tbody = el('tbody');
+
+        rows.forEach((rowDef, idx) => {
+          const tr = el('tr');
+          const itemCell = el('td', { class: 'quest-item-cell' }, [`${rowDef.number}. ${rowDef.label}`]);
+          if (rowDef.allowNA) {
+            const naLabel = el('label', { class: 'quest-inline-na' });
+            const naBox = el('input', { type: 'checkbox' });
+            naBox.checked = curObj[rowDef.id] === 'NA';
+            naBox.onchange = () => {
+              if (naBox.checked) curObj[rowDef.id] = 'NA';
+              else if (curObj[rowDef.id] === 'NA') delete curObj[rowDef.id];
+              if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+              else fire();
+            };
+            naLabel.appendChild(naBox);
+            naLabel.appendChild(document.createTextNode('不適用'));
+            itemCell.appendChild(naLabel);
+          }
+          tr.appendChild(itemCell);
+          const allowedValues = Array.isArray(rowDef.options) ? rowDef.options : optionValues;
+          const onlyExtremeOptions = allowedValues.length === 2 && allowedValues.includes(0) && allowedValues.includes(4);
+          optionValues.forEach(v => {
+            const isAllowed = allowedValues.includes(v);
+            const td = el('td', {
+              class: 'quest-choice-cell'
+                + (isAllowed ? '' : (onlyExtremeOptions ? ' is-empty' : ' is-blocked')),
+            });
+            if (isAllowed) {
+              const btn = el('button', {
+                type: 'button',
+                class: 'quest-choice-btn' + (curObj[rowDef.id] === v ? ' sel' : ''),
+                onclick: () => {
+                  if (curObj[rowDef.id] === v) delete curObj[rowDef.id];
+                  else curObj[rowDef.id] = v;
+                  if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
+                  else fire();
+                },
+              }, [curObj[rowDef.id] === v ? '✓' : '']);
+              td.appendChild(btn);
+            }
+            tr.appendChild(td);
+          });
+
+          if (rowDef.domain && firstRowIndexByDomain[rowDef.domain] === idx) {
+            const domain = domains.find(d => d.id === rowDef.domain);
+            const td = el('td', {
+              class: 'quest-domain-cell',
+              rowspan: String(rowspans[rowDef.domain] || 1),
+            });
+            const title = el('div', { class: 'quest-domain-title' }, [domain ? domain.label : rowDef.domain]);
+            const numerator = el('div', { class: 'quest-domain-numerator' }, [
+              domain && domain.numeratorLabel ? `__/` + String(domain.numeratorLabel).replace(/^\//, '') : '__/__',
+            ]);
+            const percent = el('div', { class: 'quest-domain-percent' }, ['(__%)']);
+            domainRefs[rowDef.domain] = { numerator, percent };
+            td.appendChild(title);
+            td.appendChild(numerator);
+            td.appendChild(percent);
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        computeDomainScores();
+        break;
+      }
     }
 
     if (q.allowComment) {
@@ -2728,6 +3320,10 @@
       }
     }
 
+    syncCheckedOptionClasses(wrap);
+    wrap.addEventListener('change', () => syncCheckedOptionClasses(wrap));
+    wrap.addEventListener('input', () => requestAnimationFrame(() => syncCheckedOptionClasses(wrap)));
+
     return wrap;
   }
 
@@ -2778,7 +3374,7 @@
   function formatCheckEntry(it, keepOtherLabel = false, optionDef = null) {
     if (typeof it !== 'object' || it === null) {
       const s = String(it);
-      return (!keepOtherLabel && s.startsWith('Other: ')) ? s.slice(7) : s;
+      return s.startsWith('Other: ') ? s.slice(7) : s;
     }
     let s = it.value;
     if (it.detail) {
@@ -2796,7 +3392,7 @@
     }
     if (Array.isArray(it.sub) && it.sub.length) s += ' (' + it.sub.map(formatSubEntry).join(', ') + ')';
     if (it.other) {
-      const otherText = keepOtherLabel ? 'Other: ' + it.other : it.other;
+      const otherText = it.other;
       s += (it.sub && it.sub.length ? '; ' : ' (') + otherText + (it.sub && it.sub.length ? '' : ')');
     }
     return s;
@@ -2909,20 +3505,24 @@
       return `${total}/${totalMax}`;
     }
     if (q.type === 'multiple_choice' && typeof a === 'object' && !Array.isArray(a)) {
+      if (q.id === 'tremor_medication') {
+        if (a.value === 'Yes' && a.detail) return String(a.detail);
+        return String(a.value || '');
+      }
       // Inline detail (radio with `detail: true`) reads as "Value: detail".
       if (a.detail && !Array.isArray(a.sub) && !a.other) {
         return `${a.value} ${a.detail}`;
       }
       const parts = [];
       if (Array.isArray(a.sub) && a.sub.length) parts.push(a.sub.join(', '));
-      if (a.other) parts.push(q.keepOtherLabel ? 'Other: ' + a.other : a.other);
+      if (a.other) parts.push(a.other);
       if (a.detail) parts.push(a.detail);
       return parts.length ? `${a.value} (${parts.join('; ')})` : String(a.value || '');
     }
     // multiple_choice plain-string "other" value: add prefix only when keepOtherLabel
     if (q.type === 'multiple_choice' && q.keepOtherLabel && q.allowOther && typeof a === 'string') {
       const knownVals = new Set((q.options || []).map(o => typeof o === 'string' ? o : o.value));
-      if (!knownVals.has(a)) return 'Other: ' + a;
+      if (!knownVals.has(a)) return a;
     }
     return String(a);
   }
@@ -3125,6 +3725,141 @@
     if (rating === 'High' || rating === 'Medium' || rating === 'Low') return rating;
     return rating;
   };
+  const JEBSEN_TAYLOR_NORMS = {
+    M: {
+      nonDominant: {
+        '20-59': {
+          writing: { mean: 32.3, sd: 11.3 },
+          simulated_page_turning: { mean: 4.5, sd: 0.9 },
+          lifting_small_common_objects: { mean: 6.2, sd: 0.9 },
+          simulated_feeding: { mean: 7.9, sd: 1.3 },
+          stacking_checkers: { mean: 3.8, sd: 0.6 },
+          lifting_large_light_objects: { mean: 3.2, sd: 0.6 },
+          lifting_large_heavy_objects: { mean: 3.1, sd: 0.4 },
+        },
+        '60-94': {
+          writing: { mean: 43.2, sd: 19.1 },
+          simulated_page_turning: { mean: 6.1, sd: 2.2 },
+          lifting_small_common_objects: { mean: 7.9, sd: 1.9 },
+          simulated_feeding: { mean: 8.6, sd: 1.5 },
+          stacking_checkers: { mean: 4.6, sd: 1.0 },
+          lifting_large_light_objects: { mean: 3.9, sd: 0.7 },
+          lifting_large_heavy_objects: { mean: 3.8, sd: 0.7 },
+        },
+      },
+      dominant: {
+        '20-59': {
+          writing: { mean: 12.2, sd: 3.5 },
+          simulated_page_turning: { mean: 4.0, sd: 0.9 },
+          lifting_small_common_objects: { mean: 5.9, sd: 1.0 },
+          simulated_feeding: { mean: 6.4, sd: 0.9 },
+          stacking_checkers: { mean: 3.3, sd: 0.7 },
+          lifting_large_light_objects: { mean: 3.0, sd: 0.4 },
+          lifting_large_heavy_objects: { mean: 3.0, sd: 0.6 },
+        },
+        '60-94': {
+          writing: { mean: 19.5, sd: 7.5 },
+          simulated_page_turning: { mean: 5.3, sd: 1.6 },
+          lifting_small_common_objects: { mean: 6.3, sd: 1.2 },
+          simulated_feeding: { mean: 6.9, sd: 0.9 },
+          stacking_checkers: { mean: 3.9, sd: 0.7 },
+          lifting_large_light_objects: { mean: 3.6, sd: 0.7 },
+          lifting_large_heavy_objects: { mean: 3.5, sd: 0.7 },
+        },
+      },
+    },
+    F: {
+      nonDominant: {
+        '20-59': {
+          writing: { mean: 30.2, sd: 3.6 },
+          simulated_page_turning: { mean: 4.3, sd: 1.1 },
+          lifting_small_common_objects: { mean: 6.0, sd: 1.0 },
+          simulated_feeding: { mean: 8.0, sd: 1.6 },
+          stacking_checkers: { mean: 3.8, sd: 0.7 },
+          lifting_large_light_objects: { mean: 3.3, sd: 0.6 },
+          lifting_large_heavy_objects: { mean: 3.3, sd: 0.5 },
+        },
+        '60-94': {
+          writing: { mean: 38.9, sd: 14.9 },
+          simulated_page_turning: { mean: 5.5, sd: 1.1 },
+          lifting_small_common_objects: { mean: 6.6, sd: 0.8 },
+          simulated_feeding: { mean: 8.7, sd: 2.0 },
+          stacking_checkers: { mean: 4.4, sd: 1.0 },
+          lifting_large_light_objects: { mean: 3.4, sd: 0.6 },
+          lifting_large_heavy_objects: { mean: 3.7, sd: 0.7 },
+        },
+      },
+      dominant: {
+        '20-59': {
+          writing: { mean: 11.7, sd: 2.1 },
+          simulated_page_turning: { mean: 4.3, sd: 1.4 },
+          lifting_small_common_objects: { mean: 5.5, sd: 0.8 },
+          simulated_feeding: { mean: 6.7, sd: 1.1 },
+          stacking_checkers: { mean: 3.3, sd: 0.6 },
+          lifting_large_light_objects: { mean: 3.1, sd: 0.5 },
+          lifting_large_heavy_objects: { mean: 3.2, sd: 0.5 },
+        },
+        '60-94': {
+          writing: { mean: 15.7, sd: 4.7 },
+          simulated_page_turning: { mean: 4.9, sd: 1.2 },
+          lifting_small_common_objects: { mean: 6.6, sd: 1.3 },
+          simulated_feeding: { mean: 6.8, sd: 1.1 },
+          stacking_checkers: { mean: 3.6, sd: 0.6 },
+          lifting_large_light_objects: { mean: 3.5, sd: 0.6 },
+          lifting_large_heavy_objects: { mean: 3.5, sd: 0.6 },
+        },
+      },
+    },
+  };
+  const jebsenAgeBand = age => {
+    const n = Number(age);
+    if (!Number.isFinite(n)) return null;
+    if (n >= 20 && n <= 59) return '20-59';
+    if (n >= 60 && n <= 94) return '60-94';
+    return null;
+  };
+  const jebsenNormFor = (gender, age, handKey, rowId) => {
+    const band = jebsenAgeBand(age);
+    if (!band || !gender || !handKey || !rowId) return null;
+    const normGroup = JEBSEN_TAYLOR_NORMS[gender] && JEBSEN_TAYLOR_NORMS[gender][handKey];
+    return normGroup && normGroup[band] ? normGroup[band][rowId] || null : null;
+  };
+  const jebsenPerfLabel = z => {
+    if (!Number.isFinite(z)) return '';
+    if (z < -2) return 'Above average';
+    if (z > 2) return 'Below average';
+    return 'Normal';
+  };
+  const dassSeverity = (domain, score) => {
+    if (!Number.isFinite(score)) return '';
+    if (domain === 'D') {
+      if (score <= 9) return 'Normal';
+      if (score <= 13) return 'Mild';
+      if (score <= 20) return 'Moderate';
+      if (score <= 27) return 'Severe';
+      return 'Extremely Severe';
+    }
+    if (domain === 'A') {
+      if (score <= 7) return 'Normal';
+      if (score <= 9) return 'Mild';
+      if (score <= 14) return 'Moderate';
+      if (score <= 19) return 'Severe';
+      return 'Extremely Severe';
+    }
+    if (domain === 'S') {
+      if (score <= 14) return 'Normal';
+      if (score <= 18) return 'Mild';
+      if (score <= 25) return 'Moderate';
+      if (score <= 33) return 'Severe';
+      return 'Extremely Severe';
+    }
+    return '';
+  };
+  const formatSeconds = value => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    return /s$/i.test(raw) ? raw : `${raw}s`;
+  };
 
   const customReportFns = {
     attendance_mobility(q, a) {
@@ -3263,6 +3998,17 @@
       ].join('\n');
     },
 
+    ot_adl_summary(q, a, allQs, answers) {
+      const mbiQ = allQs.mbi;
+      if (!mbiQ || isEmptyAnswer(mbiQ, answers.mbi)) return null;
+      let line = `ADL: MBI ${formatAnswer(mbiQ, answers.mbi)}`;
+      const overallQ = allQs.mbi_overall;
+      if (overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)) {
+        line += ` (${formatAnswer(overallQ, answers.mbi_overall)} Level)`;
+      }
+      return line;
+    },
+
     treatment_plan_lines(q, a) {
       if (isEmptyAnswer(q, a)) return null;
       if (!Array.isArray(a)) return formatAnswer(q, a);
@@ -3365,6 +4111,313 @@
       if (l2.length) lines.push(l2.join('  '));
       return lines.length ? ['Premorbid ADL:', ...lines].join('\n') : null;
     },
+
+    essential_tremor_premorbid(q, a, allQs, answers) {
+      const comments = answers.__comments || {};
+      const v = id => {
+        const oq = allQs[id];
+        if (!oq || isEmptyAnswer(oq, answers[id])) return null;
+        return formatAnswer(oq, answers[id]);
+      };
+      const withDetail = (id, text) => {
+        const detail = String(comments[id] || '').trim();
+        return detail ? `${text}, ${detail}` : text;
+      };
+      const lines = [];
+      const badl = v('badl');
+      if (badl) lines.push(withDetail('badl', `BADL: ${badl}`));
+
+      const mobility = v('functional_mobility');
+      const mobilityAid = v('functional_mobility_aid');
+      if (mobility || mobilityAid) {
+        let line = 'Functional Mobility:';
+        if (mobility) line += ` ${mobility}`;
+        if (mobilityAid) line += ` (Aids: ${mobilityAid})`;
+        lines.push(line);
+      }
+
+      const outdoor = v('outdoor_function');
+      if (outdoor) lines.push(withDetail('outdoor_function', `Outdoor: ${outdoor}`));
+      const iadl = v('iadl');
+      if (iadl) lines.push(withDetail('iadl', `IADL: ${iadl}`));
+      const lifeRole = v('life_role');
+      if (lifeRole) lines.push(`Life Role: ${lifeRole}`);
+      const dominant = v('dominant_hand');
+      if (dominant) lines.push(`Dominant hand: ${dominant}`);
+      const fallHistory = v('fall_history_recent');
+      if (fallHistory) lines.push(withDetail('fall_history_recent', `History of Fall in recent year: ${fallHistory}`));
+      const leisure = v('leisure');
+      if (leisure) lines.push(`Leisure: ${leisure}`);
+      return lines.length ? lines.join('\n') : null;
+    },
+
+    essential_tremor_mental(q, a, allQs, answers) {
+      const parts = [];
+      const msQ = allQs.mental_state;
+      if (msQ && !isEmptyAnswer(msQ, answers.mental_state)) {
+        parts.push(formatAnswer(msQ, answers.mental_state));
+      }
+      const qualityQ = allQs.follow_cmd_quality;
+      const quality = qualityQ && !isEmptyAnswer(qualityQ, answers.follow_cmd_quality)
+        ? formatAnswer(qualityQ, answers.follow_cmd_quality)
+        : '';
+      const stepsQ = allQs.follow_cmd_steps;
+      const steps = stepsQ && !isEmptyAnswer(stepsQ, answers.follow_cmd_steps)
+        ? formatAnswer(stepsQ, answers.follow_cmd_steps)
+        : '';
+      if (quality || steps) {
+        const bits = [];
+        if (quality) bits.push(quality);
+        if (steps) bits.push(`${steps} command`);
+        parts.push(`Follow command: ${bits.join(', ')}`);
+      }
+      return parts.length ? ['[Mental and Cognitive Function]', parts.join('. ') + '.'].join('\n') : null;
+    },
+
+    essential_tremor_moca(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const lines = ['Cognitive assessment:', `HK-Montreal Cognitive Assessment (MoCA): ${formatAnswer(q, a)}`];
+      const bandQ = allQs.moca_band;
+      if (bandQ && !isEmptyAnswer(bandQ, answers.moca_band)) {
+        lines[1] += ` (${formatAnswer(bandQ, answers.moca_band)})`;
+      }
+      const breakdown = subScoreBreakdownLines(q, a, undefined, answers);
+      if (breakdown.length) lines.push(...breakdown);
+      return lines.join('\n');
+    },
+
+    essential_tremor_power(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const rul = a.rul !== undefined && a.rul !== null ? String(a.rul) : '';
+      const lul = a.lul !== undefined && a.lul !== null ? String(a.lul) : '';
+      const rll = a.rll !== undefined && a.rll !== null ? String(a.rll) : '';
+      const lll = a.lll !== undefined && a.lll !== null ? String(a.lll) : '';
+      if (!rul && !lul && !rll && !lll) return null;
+      return ['','[Physical Assessment]', `Power:\n${rul} | ${lul}\n${rll} | ${lll}`].join('\n');
+    },
+
+    essential_tremor_balance(q, a, allQs, answers) {
+      const v = id => {
+        const oq = allQs[id];
+        if (!oq || isEmptyAnswer(oq, answers[id])) return '';
+        return formatAnswer(oq, answers[id]);
+      };
+      const sitStatic = v('balance_sitting_static');
+      const sitDynamic = v('balance_sitting_dynamic');
+      const standStatic = v('balance_standing_static');
+      const standDynamic = v('balance_standing_dynamic');
+      const lines = [];
+      if (sitStatic || sitDynamic) {
+        const bits = [];
+        if (sitStatic) bits.push(`${sitStatic} for static`);
+        if (sitDynamic) bits.push(`${sitDynamic} for dynamic`);
+        lines.push(`Balance: Sitting: ${bits.join('; ')}`);
+      }
+      if (standStatic || standDynamic) {
+        const bits = [];
+        if (standStatic) bits.push(`${standStatic} for static`);
+        if (standDynamic) bits.push(`${standDynamic} for dynamic`);
+        lines.push(`Standing: ${bits.join('; ')}`);
+      }
+      return lines.length ? lines.join('\n') : null;
+    },
+
+    essential_tremor_mbi_summary(q, a, allQs, answers) {
+      if (isEmptyAnswer(q, a)) return null;
+      const line = buildMbiSummaryLine(allQs, answers);
+      const breakdown = q.showBreakdown === false ? [] : subScoreBreakdownLines(q, a, undefined, answers);
+      return ['', '[Functional Assessment]', line, ...breakdown].join('\n');
+    },
+
+    essential_tremor_upper_limb_report(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const readSide = sideState => {
+        if (!sideState || typeof sideState !== 'object') return '';
+        if (sideState.full) return 'Full';
+        if (sideState.status !== undefined && sideState.status !== null && String(sideState.status).trim()) {
+          return String(sideState.status).trim();
+        }
+        if (sideState.value !== undefined && sideState.value !== null && String(sideState.value).trim()) {
+          return String(sideState.value).trim();
+        }
+        const fallback = Object.entries(sideState)
+          .find(([key, value]) => key !== 'full' && value !== undefined && value !== null && String(value).trim());
+        return fallback ? String(fallback[1]).trim() : '';
+      };
+
+      const rows = (q.rows || []).map(rowDef => {
+        const rowState = a[rowDef.id] && typeof a[rowDef.id] === 'object' ? a[rowDef.id] : {};
+        return {
+          label: `- ${rowDef.label}${/[.)]$/.test(rowDef.label) ? '' : '.'}`,
+          right: readSide(rowState.right),
+          left: readSide(rowState.left),
+        };
+      }).filter(row => row.right || row.left);
+
+      if (!rows.length) return null;
+
+      const labelWidth = Math.max(...rows.map(row => row.label.length), 24) + 2;
+      const colWidth = 14;
+      const pad = (text, width) => String(text || '').padEnd(width, ' ');
+      const lines = [
+        '[Upper Limb and Hand Function]',
+        `${pad('', labelWidth)}${pad('Right', colWidth)}Left`,
+        ...rows.map(row => `${pad(row.label, labelWidth)}${pad(row.right, colWidth)}${row.left}`.trimEnd()),
+      ];
+      return lines.join('\n');
+    },
+
+    essential_tremor_crst_summary(q, a, allQs, answers) {
+      const rawA = answers.crst_part_a;
+      const rawB = answers.crst_part_b;
+      const rawC = answers.crst_part_c;
+      const hasA = rawA !== undefined && rawA !== null && rawA !== '';
+      const hasB = rawB !== undefined && rawB !== null && rawB !== '';
+      const hasC = rawC && typeof rawC === 'object' && Object.keys(rawC).length;
+      if (!hasA && !hasB && !hasC) return null;
+
+      const partA = hasA ? Number(rawA) || 0 : 0;
+      const partB = hasB ? Number(rawB) || 0 : 0;
+      const partC = hasC
+        ? (allQs.crst_part_c.items || []).reduce((sum, item) => sum + (typeof rawC[item.id] === 'number' ? rawC[item.id] : 0), 0)
+        : 0;
+      const total = partA + partB + partC;
+      const maxTotal = 156;
+      const percent = total > 0 ? ((total / maxTotal) * 100) : 0;
+      const percentText = `${percent.toFixed(1)}%`;
+      const severity = percent === 0
+        ? 'No functional disability'
+        : percent <= 24
+          ? 'Mild disability'
+          : percent <= 49
+            ? 'Moderate disability'
+            : percent <= 74
+              ? 'Marked disability'
+              : 'Severe disability';
+
+      return [
+        '[Clinical Rating Scale for Tremor (CRST)]',
+        `Part A: ${partA}/88`,
+        `Part B: ${partB}/36`,
+        `Part C: ${partC}/32`,
+        `Total: ${total}/${maxTotal} ( Severity: ${percentText}, ${severity} )`,
+      ].join('\n');
+    },
+
+    jebsen_taylor_report(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const meta = a.meta && typeof a.meta === 'object' ? a.meta : {};
+      const rows = a.rows && typeof a.rows === 'object' ? a.rows : {};
+      const gender = meta.gender || '';
+      const age = meta.age;
+      const subtests = q.rows || [];
+
+      const handRoleForSide = side => side === 'dominant' ? 'dominant' : 'nonDominant';
+      const cellFor = (rowDef, side) => {
+        const raw = rows[rowDef.id] && rows[rowDef.id][side];
+        if (raw === undefined || raw === null || raw === '') return '';
+        const numeric = Number(raw);
+        const norm = Number.isFinite(numeric)
+          ? jebsenNormFor(gender, age, handRoleForSide(side), rowDef.id)
+          : null;
+        if (!norm) return `${formatSeconds(raw)}`;
+        const z = (numeric - norm.mean) / norm.sd;
+        return `${formatSeconds(raw)} (${jebsenPerfLabel(z)})`;
+      };
+
+      const tableRows = subtests.map(rowDef => ({
+        label: rowDef.label
+          .replace('Simulated page Turning', 'Simulated page turning')
+          .replace('Lifting Small, Common Objects', 'Lift small objects')
+          .replace('Simulated Feeding', 'Simulated feeding')
+          .replace('Stacking Checkers', 'Stacking checkers')
+          .replace('Lifting Large, Light Objects', 'Lift large light object')
+          .replace('Lifting Large, Heavy Objects', 'Lift large heavy object'),
+        dominant: cellFor(rowDef, 'dominant'),
+        nonDominant: cellFor(rowDef, 'nonDominant'),
+      })).filter(row => row.dominant || row.nonDominant);
+
+      if (!tableRows.length) return null;
+
+      const labelWidth = Math.max(...tableRows.map(row => row.label.length), 24) + 2;
+      const domWidth = Math.max(...tableRows.map(row => row.dominant.length), 'Time of Dominant hand'.length) + 4;
+      const pad = (text, width) => String(text || '').padEnd(width, ' ');
+      const lines = [
+        'Jebsen Hand Function Test',
+        `${pad('', labelWidth)}${pad('Time of Dominant hand', domWidth)}Time of Non-dominant hand`,
+        ...tableRows.map(row =>
+          `${pad(row.label, labelWidth)}${pad(row.dominant, domWidth)}${row.nonDominant}`.trimEnd()
+        ),
+      ];
+      if (gender && jebsenAgeBand(age)) {
+        lines.push('Remarks: Normal: 2SD to -2SD');
+      }
+      return lines.join('\n');
+    },
+
+    dass21_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const rawSumFor = domain => (q.rows || [])
+        .filter(row => row.domain === domain)
+        .reduce((sum, row) => sum + (typeof a[row.id] === 'number' ? a[row.id] : 0), 0);
+      const depression = rawSumFor('D');
+      const anxiety = rawSumFor('A');
+      const stress = rawSumFor('S');
+      const total = depression + anxiety + stress;
+      return [
+        `DASS-21: ${total}/63`,
+        `Depression: ${depression}/21 (${dassSeverity('D', depression * 2)})`,
+        `Anxiety: ${anxiety}/21 (${dassSeverity('A', anxiety * 2)})`,
+        `Stress: ${stress}/21 (${dassSeverity('S', stress * 2)})`,
+      ].join('\n');
+    },
+
+    essential_tremor_quest_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const domains = q.domains || [];
+      const rows = q.rows || [];
+      const domainScores = new Map();
+      domains.forEach(domain => {
+        let denominator = domain.percentDenominator || 0;
+        if (domain.id === 'work_finances') denominator = 36;
+        if (domain.id === 'physical') denominator = 36;
+        if (domain.id === 'psychosocial') denominator = 36;
+        domainScores.set(domain.id, { label: domain.label, numerator: 0, denominator, percent: 0 });
+      });
+
+      rows.forEach(row => {
+        const bucket = domainScores.get(row.domain);
+        if (!bucket) return;
+        if (row.excludeFromScore) return;
+        const value = a[row.id];
+        if (value === 'NA' || value === undefined || value === null || value === '') return;
+        if (typeof value === 'number') bucket.numerator += value;
+      });
+
+      const formatPercent = value => {
+        const rounded1 = Math.round(value * 10) / 10;
+        return Number.isInteger(rounded1) ? String(rounded1) : rounded1.toFixed(1);
+      };
+
+      const total = Array.from(domainScores.values()).reduce((sum, item) => sum + item.numerator, 0);
+      const lines = [
+        '',
+        `QUEST: ${total}/120`,
+      ];
+      domains.forEach(domain => {
+        const item = domainScores.get(domain.id);
+        if (!item) return;
+        const percent = item.denominator > 0 ? (item.numerator / item.denominator) * 100 : 0;
+        lines.push(`${item.label}: ${item.numerator}/${item.denominator} (${formatPercent(percent)}%)`);
+      });
+      return lines.join('\n');
+    },
+
+    essential_tremor_major_complaint(q, a) {
+      if (a === undefined || a === null || String(a).trim() === '') return null;
+      return ['', `Major complaint: ${String(a).trim()}`].join('\n');
+    },
+
     // Lives with + Home access on one line. "Live alone" / "OAHR" emit
     // bare (no "Lives with" prefix). "Hostel" emits as "Live in Hostel".
     // Everything else groups under "Lives with <a, b, c>".
@@ -3628,10 +4681,18 @@
     problems_factors(q, a) {
       if (!Array.isArray(a) || !a.length) return null;
       return a.map(item => {
+        if (typeof item === 'string' && item.startsWith('Other: ')) {
+          return item;
+        }
         if (!item || typeof item !== 'object' || !Array.isArray(item.sub) || !item.sub.length) {
+          if (item && typeof item === 'object' && item.other) {
+            return `${item.value}: ${item.other}`;
+          }
           return formatCheckEntry(item);
         }
-        const subText = item.sub.map(formatSubEntry).join(', ');
+        const subParts = item.sub.map(formatSubEntry);
+        if (item.other) subParts.push(item.other);
+        const subText = subParts.join(', ');
         return `${item.value}: ${subText}`;
       }).join('\n');
     },
@@ -3897,10 +4958,25 @@
     const isProblem = b => /problem\s*identification/i.test(b.title || '');
     const isRecommend = b => /recommendation/i.test(b.title || '');
     const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
-    const linesWithTargetedSpacing = lines => lines.flatMap((line, index) =>
-      index > 0 && /^Vital signs:/.test(lines[index - 1] || '') && /^Premorbid ADL:/.test(line || '')
-        ? ['', line]
-        : [line]);
+    const linesWithTargetedSpacing = lines => lines.flatMap((line, index) => {
+      const prev = lines[index - 1] || '';
+      if (index > 0 && /^Vital signs:/.test(prev) && /^Premorbid ADL:/.test(line || '')) {
+        return ['', line];
+      }
+      if (index > 0 && /^Speech:/.test(prev) && /^Cognitive assessment:/.test(line || '')) {
+        return ['', line];
+      }
+      if (
+        index > 0 &&
+        prev.trim() &&
+        !/^Cognitive assessment:/.test(prev) &&
+        (/^Clock Drawing Test \(CDT\):/.test(line || '') ||
+          /^HK-Montreal Cognitive Assessment \(MoCA\):/.test(line || ''))
+      ) {
+        return ['', line];
+      }
+      return [line];
+    });
 
     const compose = (blockList, includeHeader) => {
       const out = [];
