@@ -610,6 +610,7 @@
         onChange,
         fireChange,
         formQuestions,
+        formId: form.id,
         missingRequired,
         rerenderSection: rerenderOpts => renderSection(currentIdx, rerenderOpts),
       };
@@ -844,6 +845,57 @@
       return result;
     }
 
+    function collectQuestMissing() {
+      const result = {
+        sectionIdx: sectionIndexForQuestion('quest_functional'),
+        headerIds: new Set(),
+        itemIdsByQuestion: new Map(),
+        hasMissing: false,
+      };
+
+      const questQ = formQuestions.quest_functional;
+      const questAnswers = answers.quest_functional && typeof answers.quest_functional === 'object'
+        ? answers.quest_functional
+        : {};
+      const missingRows = questQ && Array.isArray(questQ.rows)
+        ? questQ.rows.filter(row => {
+          const value = questAnswers[row.id];
+          return typeof value !== 'number' && value !== 'NA';
+        })
+        : [];
+
+      if (missingRows.length) {
+        result.itemIdsByQuestion.set('quest_functional', new Set(missingRows.map(row => row.id)));
+        result.hasMissing = true;
+      }
+      return result;
+    }
+
+    function mergeMissingResults(...results) {
+      const merged = {
+        sectionIdx: -1,
+        headerIds: new Set(),
+        itemIdsByQuestion: new Map(),
+        hasMissing: false,
+      };
+
+      results.forEach(result => {
+        if (!result) return;
+        if (merged.sectionIdx < 0 && result.hasMissing && result.sectionIdx >= 0) {
+          merged.sectionIdx = result.sectionIdx;
+        }
+        (result.headerIds || []).forEach(id => merged.headerIds.add(id));
+        (result.itemIdsByQuestion || new Map()).forEach((ids, questionId) => {
+          const bucket = merged.itemIdsByQuestion.get(questionId) || new Set();
+          ids.forEach(id => bucket.add(id));
+          merged.itemIdsByQuestion.set(questionId, bucket);
+        });
+        if (result.hasMissing) merged.hasMissing = true;
+      });
+
+      return merged;
+    }
+
     function applyMissingHighlights(missing, targetIdx = currentIdx) {
       missingRequired = {
         headerIds: new Set(missing.headerIds || []),
@@ -857,7 +909,10 @@
     }
 
     function validateBeforeGenerate() {
-      const missing = collectCognitiveMissing();
+      const missing = mergeMissingResults(
+        collectCognitiveMissing(),
+        collectQuestMissing(),
+      );
       if (!missing.hasMissing) return true;
       const targetIdx = missing.sectionIdx >= 0 ? missing.sectionIdx : currentIdx;
       applyMissingHighlights(missing, targetIdx);
@@ -1298,6 +1353,25 @@
     const fire = ctx && ctx.fireChange ? ctx.fireChange : () => {};
     const set = v => { answers[q.id] = v; fire(); };
     const cur = answers[q.id];
+    const useMultilineOther = !!(q.allowOther && ctx && ctx.formId === 'ns-initial-assessment.json' && q.multilineOther !== false);
+    const makeOtherTextControl = (value, placeholder, onInput) => {
+      if (!useMultilineOther) {
+        const input = el('input', { type: 'text', placeholder, class: 'inline-text' });
+        input.value = value || '';
+        input.oninput = onInput;
+        return input;
+      }
+      const ta = el('textarea', {
+        rows: 1,
+        class: 'inline-text auto-grow other-inline-text',
+        placeholder,
+      });
+      ta.value = value || '';
+      const growTa = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+      ta.oninput = () => { onInput(); growTa(); };
+      setTimeout(growTa, 0);
+      return ta;
+    };
 
     if (q.showIf && ctx && ctx.onChange) {
       // Hide the widget visually when the showIf condition isn't met. We do
@@ -1494,10 +1568,11 @@
               if (subOtherText) c.checked = true;
               sr.appendChild(c);
               sr.appendChild(document.createTextNode('Other: '));
-              subOtherInp = el('input', { type: 'text', class: 'inline-text', placeholder: 'please specify' });
-              subOtherInp.value = subOtherText;
+              subOtherInp = makeOtherTextControl(subOtherText, 'please specify', () => {
+                c.checked = !!subOtherInp.value;
+                update();
+              });
               c.onchange = () => { if (!c.checked) subOtherInp.value = ''; update(); };
-              subOtherInp.oninput = () => { c.checked = !!subOtherInp.value; update(); };
               sr.appendChild(subOtherInp);
               subBox.appendChild(sr);
             }
@@ -1533,9 +1608,10 @@
           if (otherActive) r.checked = true;
           row.appendChild(r);
           row.appendChild(document.createTextNode('Other: '));
-          const txt = el('input', { type: 'text', placeholder: q.otherPlaceholder || 'please specify', class: 'inline-text' });
-          if (otherActive) txt.value = cur;
-          txt.oninput = () => { r.checked = true; set(txt.value); };
+          const txt = makeOtherTextControl(otherActive ? cur : '', q.otherPlaceholder ?? 'please specify', () => {
+            r.checked = true;
+            set(txt.value);
+          });
           r.onchange = () => { if (r.checked) set(txt.value || ''); };
           row.appendChild(txt);
           group.appendChild(row);
@@ -1663,10 +1739,12 @@
               if (startOther) sc.checked = true;
               sr.appendChild(sc);
               sr.appendChild(document.createTextNode('Other: '));
-              subOtherInp = el('input', { type: 'text', class: 'inline-text', placeholder: 'please specify' });
-              subOtherInp.value = startOther;
+              subOtherInp = makeOtherTextControl(startOther, 'please specify', () => {
+                sc.checked = !!subOtherInp.value;
+                c.checked = true;
+                rebuild();
+              });
               sc.onchange = () => { if (!sc.checked) subOtherInp.value = ''; rebuild(); };
-              subOtherInp.oninput = () => { sc.checked = !!subOtherInp.value; c.checked = true; rebuild(); };
               sr.appendChild(subOtherInp);
               subBox.appendChild(sr);
             }
@@ -1748,8 +1826,11 @@
           if (existingOther) c.checked = true;
           row.appendChild(c);
           row.appendChild(document.createTextNode('Other: '));
-          const txt = el('input', { type: 'text', placeholder: q.otherPlaceholder || 'please specify', class: 'inline-text' });
-          if (existingOther) txt.value = existingOther.replace(/^Other:\s*/, '');
+          const txt = makeOtherTextControl(
+            existingOther ? existingOther.replace(/^Other:\s*/, '') : '',
+            q.otherPlaceholder ?? 'please specify',
+            () => { c.checked = true; syncOther(); }
+          );
           const syncOther = () => {
             for (let i = curArr.length - 1; i >= 0; i--) {
               if (typeof curArr[i] === 'string' && (curArr[i] === 'Other' || curArr[i].startsWith('Other:'))) {
@@ -1760,7 +1841,6 @@
             fire();
           };
           c.onchange = syncOther;
-          txt.oninput = () => { c.checked = true; syncOther(); };
           row.appendChild(txt);
           group.appendChild(row);
         }
@@ -1807,15 +1887,10 @@
         if (q.allowOther) {
           // Inline "Other: ___" input — typing it overrides the numeric chip.
           const lbl = el('span', { class: 'rating-other' }, ['Other: ']);
-          otherInp = el('input', {
-            type: 'text', class: 'inline-text',
-            placeholder: q.otherPlaceholder || 'specify',
-          });
-          if (typeof cur === 'string') otherInp.value = cur;
-          otherInp.oninput = () => {
+          otherInp = makeOtherTextControl(typeof cur === 'string' ? cur : '', q.otherPlaceholder ?? 'specify', () => {
             buttons.forEach(c => c.classList.remove('sel'));
             set(otherInp.value);
-          };
+          });
           group.appendChild(lbl);
           group.appendChild(otherInp);
         }
@@ -2430,6 +2505,7 @@
         } else {
           const rowClass = ['composite-row'];
           if (q.id === 'attendance_mobility') rowClass.push('attendance-mobility-row');
+          if (q.id === 'carer_interview') rowClass.push('carer-interview-row');
           const row = el('div', { class: rowClass.join(' ') });
           q.parts.forEach(p => {
             const part = el('div', { class: 'composite-part' });
@@ -2457,19 +2533,33 @@
               part.appendChild(boxLabel);
             } else {
               if (p.label) part.appendChild(el('span', { class: 'glabel' }, [p.label]));
-              const inp = el('input', {
-                type: p.inputType || 'text',
-                placeholder: p.placeholder || '',
-              });
+              const isTextarea = p.inputType === 'textarea';
+              const inp = isTextarea
+                ? el('textarea', {
+                    rows: 1,
+                    class: 'auto-grow',
+                    placeholder: p.placeholder || '',
+                  })
+                : el('input', {
+                    type: p.inputType || 'text',
+                    placeholder: p.placeholder || '',
+                  });
               if (p.wide) inp.classList.add('wide');
               if (p.extraWide) { inp.classList.add('extra-wide'); part.classList.add('extra-wide'); }
               inp.value = curObj[p.id] != null ? curObj[p.id] : '';
+              const growTa = () => {
+                if (!isTextarea) return;
+                inp.style.height = 'auto';
+                inp.style.height = inp.scrollHeight + 'px';
+              };
               inp.oninput = () => {
                 if (inp.value === '') delete curObj[p.id];
                 else curObj[p.id] = inp.value;
                 fire();
+                growTa();
               };
               part.appendChild(inp);
+              if (isTextarea) setTimeout(growTa, 0);
             }
             if (p.suffix) part.appendChild(el('span', { class: 'suffix' }, [p.suffix]));
             row.appendChild(part);
@@ -3104,30 +3194,9 @@
 
         const domainRefs = {};
         const computeDomainScores = () => {
-          const scoreMap = {};
-          domains.forEach(domain => {
-            scoreMap[domain.id] = { numerator: 0, denominator: 0, percent: null };
-          });
-          rows.forEach(rowDef => {
-            if (!rowDef.domain || !scoreMap[rowDef.domain]) return;
-            const value = curObj[rowDef.id];
-            if (rowDef.excludeFromScore) return;
-            if (value === 'NA') return;
-            if (typeof value === 'number') scoreMap[rowDef.domain].numerator += value;
-            scoreMap[rowDef.domain].denominator += 4;
-          });
-          domains.forEach(domain => {
-            const target = scoreMap[domain.id];
-            if (!target) return;
-            if (domain.percentDenominator) {
-              target.denominator = domain.percentDenominator;
-            }
-            target.percent = target.denominator > 0
-              ? Math.round((target.numerator / target.denominator) * 100)
-              : null;
-          });
+          const scoreMap = computeQuestDomainScores(q, curObj);
           Object.entries(domainRefs).forEach(([domainId, refs]) => {
-            const info = scoreMap[domainId];
+            const info = scoreMap.get(domainId);
             if (!info) return;
             refs.numerator.textContent = `${info.numerator}/${info.denominator}`;
             refs.percent.textContent = info.percent == null ? '__%' : `(${info.percent}%)`;
@@ -3151,7 +3220,12 @@
         const tbody = el('tbody');
 
         rows.forEach((rowDef, idx) => {
-          const tr = el('tr');
+          const missingRows = ctx.missingRequired && ctx.missingRequired.itemIdsByQuestion
+            ? ctx.missingRequired.itemIdsByQuestion.get(q.id)
+            : null;
+          const tr = el('tr', {
+            class: missingRows && missingRows.has(rowDef.id) ? 'is-required-missing' : '',
+          });
           const itemCell = el('td', { class: 'quest-item-cell' }, [`${rowDef.number}. ${rowDef.label}`]);
           if (rowDef.allowNA) {
             const naLabel = el('label', { class: 'quest-inline-na' });
@@ -3525,6 +3599,45 @@
       if (!knownVals.has(a)) return a;
     }
     return String(a);
+  }
+
+  function computeQuestDomainScores(q, a) {
+    const domains = q.domains || [];
+    const rows = q.rows || [];
+    const domainScores = new Map();
+
+    domains.forEach(domain => {
+      const scorableRows = rows.filter(row => row.domain === domain.id && !row.excludeFromScore);
+      const baseDenominator = typeof domain.percentDenominator === 'number'
+        ? domain.percentDenominator
+        : scorableRows.length * 4;
+      domainScores.set(domain.id, {
+        label: domain.label,
+        numerator: 0,
+        denominator: baseDenominator,
+        naCount: 0,
+      });
+    });
+
+    rows.forEach(row => {
+      const bucket = domainScores.get(row.domain);
+      if (!bucket || row.excludeFromScore) return;
+      const value = a && typeof a === 'object' ? a[row.id] : undefined;
+      if (value === 'NA') {
+        bucket.naCount += 1;
+        bucket.denominator = Math.max(0, bucket.denominator - 4);
+        return;
+      }
+      if (typeof value === 'number') bucket.numerator += value;
+    });
+
+    domainScores.forEach(bucket => {
+      bucket.percent = bucket.denominator > 0
+        ? Math.round((bucket.numerator / bucket.denominator) * 100)
+        : null;
+    });
+
+    return domainScores;
   }
 
   // Shared incomplete-check for sub_score pendingPolicy. Honours both
@@ -4375,24 +4488,7 @@
     essential_tremor_quest_summary(q, a) {
       if (!a || typeof a !== 'object') return null;
       const domains = q.domains || [];
-      const rows = q.rows || [];
-      const domainScores = new Map();
-      domains.forEach(domain => {
-        let denominator = domain.percentDenominator || 0;
-        if (domain.id === 'work_finances') denominator = 36;
-        if (domain.id === 'physical') denominator = 36;
-        if (domain.id === 'psychosocial') denominator = 36;
-        domainScores.set(domain.id, { label: domain.label, numerator: 0, denominator, percent: 0 });
-      });
-
-      rows.forEach(row => {
-        const bucket = domainScores.get(row.domain);
-        if (!bucket) return;
-        if (row.excludeFromScore) return;
-        const value = a[row.id];
-        if (value === 'NA' || value === undefined || value === null || value === '') return;
-        if (typeof value === 'number') bucket.numerator += value;
-      });
+      const domainScores = computeQuestDomainScores(q, a);
 
       const formatPercent = value => {
         const rounded1 = Math.round(value * 10) / 10;
@@ -4400,9 +4496,11 @@
       };
 
       const total = Array.from(domainScores.values()).reduce((sum, item) => sum + item.numerator, 0);
+      const naCount = Array.from(domainScores.values()).reduce((sum, item) => sum + item.naCount, 0);
+      const totalDenominator = Math.max(0, 120 - naCount * 4);
       const lines = [
         '',
-        `QUEST: ${total}/120`,
+        `QUEST: ${total}/${totalDenominator}`,
       ];
       domains.forEach(domain => {
         const item = domainScores.get(domain.id);

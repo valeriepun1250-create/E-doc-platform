@@ -1736,6 +1736,11 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   text-align: left;
 }
 .other-row .inline-text { flex: 1; padding: 6px 10px; font-size: 13px; min-width: 140px; }
+.other-row .other-inline-text,
+.rating .other-inline-text {
+  min-height: 34px;
+  resize: vertical;
+}
 
 /* Inline option detail text (next to checked checkbox) */
 .detail-input {
@@ -2227,10 +2232,22 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   align-items: center;
   justify-content: start;
 }
+.composite-row.carer-interview-row .composite-part {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.composite-row.carer-interview-row .composite-part .glabel {
+  white-space: nowrap;
+}
 .composite-part { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
-.composite-part input {
+.composite-part input,
+.composite-part textarea {
   width: 78px; padding: 6px 10px; font-size: 13px;
   border: 1px solid var(--border); border-radius: var(--radius-sm); background: white;
+}
+.composite-part textarea {
+  min-height: 34px;
+  resize: vertical;
 }
 .composite-part-checkbox input {
   width: 16px; height: 16px; padding: 0; border: 0;
@@ -2241,7 +2258,8 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 .composite-checkbox-label .glabel {
   color: var(--fg); font-size: 13.5px; font-weight: 500; letter-spacing: 0; text-transform: none;
 }
-.composite-part input.wide { width: 86px; }
+.composite-part input.wide,
+.composite-part textarea.wide { width: 86px; }
 .attendance-mobility-row .composite-part {
   min-width: 0;
   flex-wrap: nowrap;
@@ -2266,7 +2284,8 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
   margin-left: 0;
 }
 .composite-part.extra-wide { flex: 1 1 280px; }
-.composite-part input.extra-wide { width: 100%; min-width: 280px; }
+.composite-part input.extra-wide,
+.composite-part textarea.extra-wide { width: 100%; min-width: 280px; }
 .composite-part .suffix, .composite-part .prefix {
   color: var(--muted); font-size: 12px;
 }
@@ -3231,6 +3250,20 @@ body.is-home #version-badge {
 .quest-table .quest-table-col-subscore {
   width: 180px;
   min-width: 180px;
+}
+.quest-table tr.is-required-missing td {
+  background: rgba(202, 84, 84, 0.10);
+  border-bottom-color: rgba(202, 84, 84, 0.24);
+}
+.quest-table tr.is-required-missing:hover td {
+  background: rgba(202, 84, 84, 0.14);
+}
+.quest-table tr.is-required-missing .quest-item-cell,
+.quest-table tr.is-required-missing .quest-inline-na,
+.quest-table tr.is-required-missing .quest-domain-title,
+.quest-table tr.is-required-missing .quest-domain-numerator,
+.quest-table tr.is-required-missing .quest-domain-percent {
+  color: #8f3e3e;
 }
 .quest-choice-btn {
   width: 36px;
