@@ -415,6 +415,8 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 .fill-view #fillForm {
   width: min(1240px, calc(100vw - 28px));
   margin: 0 auto;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .report-view {
@@ -928,9 +930,12 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   .fill-view #fillForm,
   .summary-shell {
     width: min(100vw - 20px, 100%);
+    max-width: 100%;
+    min-width: 0;
   }
 
   .tabs {
+    margin: 0 0 18px;
     padding: 8px 10px;
   }
 
@@ -1096,6 +1101,138 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   }
 }
 
+@media (max-width: 950px) {
+  .tabs {
+    width: calc(100% - 16px);
+    margin: 0 auto 18px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .fill-view .tabs {
+    width: calc(100% - 16px);
+  }
+
+  .work-topbar,
+  .summary-topbar,
+  .work-bottom-bar,
+  .summary-bottom-bar {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .fill-view #fillForm,
+  .summary-shell {
+    width: calc(100% - 16px);
+  }
+
+  .work-topbar,
+  .summary-topbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .work-top-actions,
+  .summary-top-actions {
+    justify-self: stretch;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .work-top-btn,
+  .summary-top-btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 13px;
+    border-radius: 7px;
+  }
+
+  .work-case-meta h2,
+  .summary-case-meta h2 {
+    font-size: 16px;
+    line-height: 1.04;
+  }
+
+  .work-case-meta .muted,
+  .summary-case-meta .muted {
+    display: none;
+  }
+
+  .fill-view .section-block {
+    padding: 14px 14px 18px;
+  }
+
+  .qfill {
+    padding: 14px;
+  }
+
+  .checks > label,
+  .checks .opt-block > label {
+    min-width: 0;
+    max-width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    min-height: 38px;
+  }
+
+  .pill {
+    padding: 8px 12px;
+    min-height: 38px;
+    font-size: 13px;
+  }
+
+  .rating button {
+    min-width: 38px;
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .qfill.full > .checks.aligned-option-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .composite-row {
+    gap: 8px 10px;
+  }
+
+  .composite-part {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .composite-part input.wide,
+  .composite-part textarea.wide,
+  .composite-part input.extra-wide,
+  .composite-part textarea.extra-wide {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .other-row .inline-text,
+  .rating .inline-text {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .checks > label.other-row,
+  .sub-options > label.other-row,
+  .sub-checks > label.other-row,
+  .other-row {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+  }
+}
+
 /* ----- Cards (history list, etc) ----- */
 .card-list { display: grid; gap: 12px; margin-top: 14px; }
 .card {
@@ -1144,6 +1281,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   margin: 12px 0;
   background: var(--card);
   box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 
 .fill-view .section-block {
@@ -1308,6 +1446,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border-radius: var(--radius);
   background: white;
   transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+  min-width: 0;
 }
 .qfill:focus-within {
   border-color: var(--primary-tint);
@@ -1767,6 +1906,13 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   scrollbar-width: thin;
   scroll-snap-type: x proximity;
 }
+.fill-view .tabs {
+  width: min(1240px, calc(100vw - 28px));
+  max-width: 100%;
+  margin: 0 auto 18px;
+  padding: 10px 0;
+  box-sizing: border-box;
+}
 .tabs::-webkit-scrollbar { height: 6px; }
 .tabs::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
 
@@ -1823,6 +1969,11 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 @media (pointer: coarse), (max-width: 1024px) {
   .tabs {
     padding: 8px 10px;
+  }
+
+  .fill-view .tabs {
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .tab {
@@ -2286,6 +2437,9 @@ table.hdrs-table .hdrs-comp-level .hdrs-comp-name {
 .composite-part.extra-wide { flex: 1 1 280px; }
 .composite-part input.extra-wide,
 .composite-part textarea.extra-wide { width: 100%; min-width: 280px; }
+.composite-part input.extra-wide {
+  min-width: 360px;
+}
 .composite-part .suffix, .composite-part .prefix {
   color: var(--muted); font-size: 12px;
 }
