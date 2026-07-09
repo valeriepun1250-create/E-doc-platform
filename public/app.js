@@ -353,6 +353,18 @@
     },
   };
 
+  function hasMeaningfulAnswerSet(form, answers) {
+    if (!form || !answers) return false;
+    const comments = answers.__comments || {};
+    return form.schema.sections.some(section =>
+      section.questions.some(q => {
+        if (!q || !q.id || q.type === 'heading') return false;
+        if (q.showIf && !evalShowIf(q.showIf, answers)) return false;
+        if (!isEmptyAnswer(q, answers[q.id])) return true;
+        return !!comments[q.id];
+      }));
+  }
+
   // ---------- nav ----------
   nav.addEventListener('click', e => {
     const b = e.target.closest('button[data-view]');
@@ -451,7 +463,6 @@
   async function renderFill(idOrHistoryEntry) {
     app.innerHTML = '';
     app.appendChild(tpl('tpl-fill'));
-    app.querySelector('.back').onclick = () => setView('browse');
 
     let form, initialAnswers = {}, historyId = null;
     let caseInfo = null; // { caseId, assessmentDate }
@@ -743,6 +754,15 @@
       else { history.add(entry); historyId = entry.id; }
       return entry;
     }
+
+    const autosaveAndBrowse = () => {
+      if (hasMeaningfulAnswerSet(form, answers)) {
+        persistEntry(true);
+      }
+      setView('browse');
+    };
+
+    app.querySelector('.back').onclick = autosaveAndBrowse;
 
     app.querySelector('#btnSaveDraft').onclick = () => {
       persistEntry(true);
@@ -3316,12 +3336,40 @@
     // listing the deduplicated reasons. Stored at answers.__suspended[q.id].
     if (q.allowSuspend) {
       const susp = answers.__suspended = answers.__suspended || {};
+      const autoSusp = answers.__autoSuspended = answers.__autoSuspended || {};
       const row = el('div', { class: 'suspend-row' });
       const cb = el('input', { type: 'checkbox' });
       const reason = el('input', {
         type: 'text', class: 'inline-text',
         placeholder: 'reason (e.g. dizziness, pain, refused)',
       });
+      const syncDerivedSuspensions = () => {
+        const hasTransferLieSit = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit');
+        const hasTransferSitStand = Object.prototype.hasOwnProperty.call(susp, 'transfer_sit_stand');
+        const shouldSuspendAmbulation = hasTransferLieSit || hasTransferSitStand;
+        const hasAmbulation = Object.prototype.hasOwnProperty.call(susp, 'ambulation');
+        let changed = false;
+
+        if (shouldSuspendAmbulation) {
+          if (!hasAmbulation) {
+            susp.ambulation = '';
+            autoSusp.ambulation = true;
+            changed = true;
+          }
+        } else if (autoSusp.ambulation) {
+          delete autoSusp.ambulation;
+          if (Object.prototype.hasOwnProperty.call(susp, 'ambulation')) {
+            delete susp.ambulation;
+            changed = true;
+          }
+        }
+
+        if (!Object.keys(autoSusp).length) delete answers.__autoSuspended;
+        return changed;
+      };
+      if (q.id === 'transfer_lie_sit' || q.id === 'transfer_sit_stand' || q.id === 'ambulation') {
+        syncDerivedSuspensions();
+      }
       const initial = susp[q.id];
       if (initial !== undefined) { cb.checked = true; reason.value = initial; }
       const setFrozen = frozen => {
@@ -3373,12 +3421,18 @@
           }
           clearAnswer();
           susp[q.id] = reason.value;
+          if (q.id === 'ambulation' && reason.value.trim()) delete autoSusp.ambulation;
         } else {
           delete susp[q.id];
+          if (q.id === 'ambulation') delete autoSusp.ambulation;
         }
+        const derivedChanged = syncDerivedSuspensions();
         setFrozen(cb.checked);
         wrap.classList.toggle('suspended', cb.checked);
         if (ctx && ctx.fireChange) ctx.fireChange();
+        if (derivedChanged && ctx && ctx.rerenderSection) {
+          ctx.rerenderSection({ preserveScroll: true });
+        }
       };
       cb.onchange = sync;
       reason.oninput = () => { cb.checked = true; sync(); };
@@ -4516,6 +4570,20 @@
       return ['', `Major complaint: ${String(a).trim()}`].join('\n');
     },
 
+    vitals_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const bp = a.bp != null ? String(a.bp).trim() : '';
+      const pulse = a.p != null ? String(a.p).trim() : '';
+      const spo2 = a.spo2 != null ? String(a.spo2).trim() : '';
+      const other = a.other != null ? String(a.other).trim() : '';
+      const bits = [];
+      if (bp) bits.push(`BP ${bp} mmHg`);
+      if (pulse) bits.push(`Pulse ${pulse}/minute`);
+      if (spo2) bits.push(`SpO2 ${spo2}%`);
+      if (other) bits.push(other);
+      return bits.length ? `Vital signs: ${bits.join(', ')}.` : null;
+    },
+
     // Lives with + Home access on one line. "Live alone" / "OAHR" emit
     // bare (no "Lives with" prefix). "Hostel" emits as "Live in Hostel".
     // Everything else groups under "Lives with <a, b, c>".
@@ -4665,9 +4733,11 @@
       const susp = answers.__suspended || {};
       const sitQ = allQs.balance_sit, sit = answers.balance_sit;
       const stdQ = allQs.balance_stand, std = answers.balance_stand;
+      const sitSuspended = Object.prototype.hasOwnProperty.call(susp, 'balance_sit');
+      const standSuspended = Object.prototype.hasOwnProperty.call(susp, 'balance_stand');
       const parts = [];
       if (sitQ) {
-        if ('balance_sit' in susp) {
+        if (sitSuspended) {
           const reason = String(susp.balance_sit || '').trim();
           parts.push(reason ? `Sitting: Not test due to ${reason}` : 'Sitting: Not test');
         } else if (!isEmptyAnswer(sitQ, sit)) {
@@ -4675,7 +4745,9 @@
         }
       }
       if (stdQ) {
-        if ('balance_stand' in susp) {
+        if (sitSuspended && !standSuspended) {
+          parts.push('Standing: Not test');
+        } else if (standSuspended) {
           const reason = String(susp.balance_stand || '').trim();
           parts.push(reason ? `Standing: Not test due to ${reason}` : 'Standing: Not test');
         } else if (!isEmptyAnswer(stdQ, std)) {
@@ -4690,9 +4762,11 @@
       const susp = answers.__suspended || {};
       const lsQ = allQs.transfer_lie_sit, ls = answers.transfer_lie_sit;
       const ssQ = allQs.transfer_sit_stand, ss = answers.transfer_sit_stand;
+      const lieSitSuspended = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit');
+      const sitStandSuspended = Object.prototype.hasOwnProperty.call(susp, 'transfer_sit_stand');
       const parts = [];
       if (lsQ) {
-        if ('transfer_lie_sit' in susp) {
+        if (lieSitSuspended) {
           const reason = String(susp.transfer_lie_sit || '').trim();
           parts.push(reason ? `Lie to sit: Not test due to ${reason}` : 'Lie to sit: Not test');
         } else if (!isEmptyAnswer(lsQ, ls)) {
@@ -4700,7 +4774,9 @@
         }
       }
       if (ssQ) {
-        if ('transfer_sit_stand' in susp) {
+        if (lieSitSuspended && !sitStandSuspended) {
+          parts.push('Sit to stand: Not test');
+        } else if (sitStandSuspended) {
           const reason = String(susp.transfer_sit_stand || '').trim();
           parts.push(reason ? `Sit to stand: Not test due to ${reason}` : 'Sit to stand: Not test');
         } else if (!isEmptyAnswer(ssQ, ss)) {
@@ -4715,7 +4791,11 @@
       const susp = answers.__suspended || {};
       const aidQ = allQs.ambulation_aid, aid = answers.ambulation_aid;
       const aidStr = aidQ && !isEmptyAnswer(aidQ, aid) ? formatAnswer(aidQ, aid) : null;
-      const ambSuspended = 'ambulation' in susp;
+      const ambSuspended = Object.prototype.hasOwnProperty.call(susp, 'ambulation');
+      const blockedByTransfer = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit');
+      if (blockedByTransfer && !ambSuspended) {
+        return 'Ambulation: Not test';
+      }
       if (ambSuspended || isEmptyAnswer(q, a)) {
         if (ambSuspended) {
           const reason = String(susp.ambulation || '').trim();
@@ -5108,7 +5188,7 @@
       const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
         ? `(${formatAnswer(overallQ, answers.mbi_overall)})`
         : '';
-      add(`MBI ${formatAnswer(mbiQ, answers.mbi)}${overall}`);
+      add(`ADL: MBI ${formatAnswer(mbiQ, answers.mbi)}${overall}`);
     }
 
     const spinalParts = [];
