@@ -235,6 +235,16 @@
     return e;
   };
   const normalizeReportSymbols = text => String(text || '').replace(/≥/g, '>=').replace(/≤/g, '<=');
+  const attachDecimalOnlyInput = inp => {
+    const invalidKeys = new Set(['e', 'E', '+', '-']);
+    inp.addEventListener('keydown', e => {
+      if (invalidKeys.has(e.key)) e.preventDefault();
+    });
+    inp.addEventListener('paste', e => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!/^\d*\.?\d*$/.test(text)) e.preventDefault();
+    });
+  };
   const mocaEducationBucket = (ageCluster, educationValue) => {
     if (educationValue === undefined || educationValue === null || educationValue === '') return null;
     const s = String(educationValue).trim();
@@ -1134,18 +1144,18 @@
       textarea = el('textarea', {
         class: 'report report-editable ot-comment-extract-input',
         rows: '4',
-        maxlength: String(limit),
         readonly: 'readonly',
         placeholder: 'MBI, cognitive assessment score, and suggestion will be extracted here.',
       });
       const counter = head.querySelector('.report-char-count');
       const setValue = value => {
-        textarea.value = String(value || '').slice(0, limit);
+        textarea.value = String(value || '');
       };
       const updateCount = () => {
         const count = textarea.value.length;
         counter.textContent = `【${count}】 / ${limit} characters`;
-        counter.classList.toggle('is-near-limit', count >= limit * 0.9);
+        counter.classList.toggle('is-near-limit', count >= limit * 0.9 && count < limit);
+        counter.classList.toggle('is-over-limit', count >= limit);
       };
       textarea.addEventListener('input', () => {
         if (textarea.value.length > limit) setValue(textarea.value);
@@ -1534,20 +1544,43 @@
           // assess due to: ___"). Stored as { value, detail }.
           let detailInp = null;
           if (opt.detail) {
-            detailInp = el('input', {
-              type: 'text', class: 'inline-text detail-input',
-              placeholder: opt.detailPlaceholder || 'specify',
-            });
+            const useTextareaDetail = q.id === 'tremor_medication';
+            detailInp = useTextareaDetail
+              ? el('textarea', {
+                  rows: 1,
+                  class: 'inline-text detail-input auto-grow tremor-medication-detail',
+                  placeholder: opt.detailPlaceholder || 'specify',
+                })
+              : el('input', {
+                  type: 'text', class: 'inline-text detail-input',
+                  placeholder: opt.detailPlaceholder || 'specify',
+                });
             const startDetail = (cur && typeof cur === 'object' && cur.value === opt.value && cur.detail) ? cur.detail : '';
             detailInp.value = startDetail;
             detailInp.style.display = (curVal === opt.value) ? '' : 'none';
+            const growDetail = useTextareaDetail
+              ? () => {
+                  const styles = window.getComputedStyle(detailInp);
+                  const lineHeight = parseFloat(styles.lineHeight) || 20;
+                  const paddingTop = parseFloat(styles.paddingTop) || 0;
+                  const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+                  const borderTop = parseFloat(styles.borderTopWidth) || 0;
+                  const borderBottom = parseFloat(styles.borderBottomWidth) || 0;
+                  const baseHeight = lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
+                  detailInp.style.height = 'auto';
+                  detailInp.style.height = `${Math.max(detailInp.scrollHeight, Math.ceil(baseHeight))}px`;
+                }
+              : null;
             detailInp.oninput = () => {
               r.checked = true;
               set({ value: opt.value, detail: detailInp.value });
+              if (growDetail) growDetail();
             };
             r.addEventListener('change', () => {
               detailInp.style.display = r.checked ? '' : 'none';
+              if (r.checked && growDetail) requestAnimationFrame(growDetail);
             });
+            if (growDetail) requestAnimationFrame(growDetail);
             wrapOpt.appendChild(detailInp);
           }
 
@@ -1953,6 +1986,7 @@
         const totalSuffix = el('span', { class: 'si-pending' }, ['']);
         // Track each row's chip-row so we can re-paint after exclusiveWith flips.
         const rowRefs = {};
+        const supportsFullScore = q.id === 'mbi' || q.id === 'lawton_iadl';
 
         const dynamicTotalMax = () => {
           if (q.totalMaxMode === 'completed_items') {
@@ -1987,6 +2021,53 @@
           ref.btnByVal.forEach((btn, val) => btn.classList.toggle('sel', val === v));
           if (ref.naBtn) ref.naBtn.classList.toggle('sel', v === 'NA');
           if (ref.numInp) ref.numInp.value = (typeof v === 'number') ? v : '';
+        }
+
+        const fullScoreValueFor = it => {
+          if (mode === 'options') {
+            const numericOptions = itemOptionValues(it)
+              .map(value => Number(value))
+              .filter(value => Number.isFinite(value));
+            if (!numericOptions.length) return null;
+            return Math.max(...numericOptions);
+          }
+          return Number(it.max || 0);
+        };
+
+        const applyFullScore = () => {
+          q.items.forEach(it => {
+            const fullValue = fullScoreValueFor(it);
+            if (fullValue === null) return;
+
+            if (q.id === 'mbi' && it.id === 'wheelchair') {
+              if (it.allowNA) curObj[it.id] = 'NA';
+              else delete curObj[it.id];
+            } else {
+              curObj[it.id] = fullValue;
+            }
+
+            if (it.qualifier && answers[it.qualifier.id]) delete answers[it.qualifier.id];
+          });
+
+          if (q.id === 'mbi') {
+            const mobilityItem = q.items.find(it => it.id === 'mobility');
+            if (mobilityItem) curObj.mobility = fullScoreValueFor(mobilityItem);
+          }
+
+          q.items.forEach(it => repaintRow(it.id));
+          refreshTotal();
+          fire();
+        };
+
+        if (supportsFullScore) {
+          const toolbar = el('div', { class: 'subscore-toolbar' }, [
+            el('button', {
+              type: 'button',
+              class: 'subscore-quickfill-btn',
+              onclick: applyFullScore,
+            }, ['Set Full Score']),
+          ]);
+          wrap.appendChild(toolbar);
         }
 
         const renderDescriptionChoices = (it, btnByVal, setVal) => {
@@ -2882,10 +2963,12 @@
                 }, [inputDef.label || '']);
                 field.appendChild(btn);
               } else {
+                const isDecimalMeasure = ['grip', 'pinch', 'nine_hole_peg'].includes(rowDef.id);
                 if (inputDef.label) field.appendChild(el('span', { class: 'inline-label' }, [inputDef.label]));
                 const inp = el('input', {
-                  type: inputDef.type || 'text',
-                  inputmode: inputDef.type === 'number' ? 'decimal' : undefined,
+                  type: isDecimalMeasure ? 'number' : (inputDef.type || 'text'),
+                  inputmode: (isDecimalMeasure || inputDef.type === 'number') ? 'decimal' : undefined,
+                  step: (isDecimalMeasure || inputDef.type === 'number') ? 'any' : undefined,
                   placeholder: inputDef.placeholder || '',
                   value: rowState[side] && rowState[side][inputDef.id] != null ? rowState[side][inputDef.id] : '',
                 });
@@ -2895,6 +2978,7 @@
                   else next[inputDef.id] = inp.value;
                   persistSide(next);
                 };
+                if (isDecimalMeasure) attachDecimalOnlyInput(inp);
                 field.appendChild(inp);
               }
               applyVisibility();
@@ -2917,6 +3001,24 @@
         curObj.meta = (curObj.meta && typeof curObj.meta === 'object') ? { ...curObj.meta } : {};
         curObj.rows = (curObj.rows && typeof curObj.rows === 'object') ? { ...curObj.rows } : {};
         answers[q.id] = curObj;
+        const handRoleForSide = side => side === 'dominant' ? 'dominant' : 'nonDominant';
+        const sdRefs = [];
+        const jebsenSdText = (rowId, side, raw) => {
+          if (raw === undefined || raw === null || raw === '') return '';
+          const numeric = Number(raw);
+          if (!Number.isFinite(numeric)) return '';
+          const gender = curObj.meta.gender || '';
+          const age = curObj.meta.age;
+          const norm = jebsenNormFor(gender, age, handRoleForSide(side), rowId);
+          if (!norm || !Number.isFinite(norm.sd) || norm.sd === 0) return '';
+          const z = (numeric - norm.mean) / norm.sd;
+          return `${z >= 0 ? '+' : ''}${z.toFixed(1)} SD`;
+        };
+        const refreshJebsenSd = () => {
+          sdRefs.forEach(ref => {
+            ref.badge.textContent = jebsenSdText(ref.rowId, ref.side, ref.getValue());
+          });
+        };
 
         const metaRow = el('div', { class: 'jebsen-meta-row' });
         (q.meta || []).forEach(meta => {
@@ -2930,8 +3032,11 @@
                 class: curObj.meta[meta.id] === opt ? 'sel' : '',
                 onclick: () => {
                   curObj.meta[meta.id] = opt;
-                  if (ctx && ctx.rerenderSection) ctx.rerenderSection({ preserveScroll: true });
-                  else fire();
+                  [...group.querySelectorAll('button')].forEach(node => {
+                    node.classList.toggle('sel', node === btn);
+                  });
+                  refreshJebsenSd();
+                  fire();
                 },
               }, [opt]);
               group.appendChild(btn);
@@ -2947,6 +3052,7 @@
             inp.oninput = () => {
               if (inp.value === '') delete curObj.meta[meta.id];
               else curObj.meta[meta.id] = inp.value;
+              refreshJebsenSd();
               fire();
             };
             field.appendChild(inp);
@@ -2979,24 +3085,40 @@
           tr.appendChild(el('td', { class: 'assessment-table-label' }, [rowDef.label]));
           ['dominant', 'nonDominant'].forEach(side => {
             const td = el('td');
+            const cell = el('div', { class: 'jebsen-input-cell' });
             const inp = el('input', {
-              type: 'text',
+              type: 'number',
               inputmode: 'decimal',
+              step: 'any',
               placeholder: 'seconds',
               value: rowState[side] != null ? rowState[side] : '',
             });
+            const badge = el('span', { class: 'jebsen-sd-badge' }, [
+              jebsenSdText(rowDef.id, side, rowState[side]),
+            ]);
             inp.oninput = () => {
               if (inp.value === '') delete rowState[side];
               else rowState[side] = inp.value;
+              badge.textContent = jebsenSdText(rowDef.id, side, inp.value);
               fire();
             };
-            td.appendChild(inp);
+            attachDecimalOnlyInput(inp);
+            cell.appendChild(inp);
+            cell.appendChild(badge);
+            td.appendChild(cell);
+            sdRefs.push({
+              rowId: rowDef.id,
+              side,
+              badge,
+              getValue: () => rowState[side],
+            });
             tr.appendChild(td);
           });
           tbody.appendChild(tr);
         });
         table.appendChild(tbody);
         wrap.appendChild(table);
+        refreshJebsenSd();
         break;
       }
       case 'dass21_table': {
@@ -3219,7 +3341,7 @@
             const info = scoreMap.get(domainId);
             if (!info) return;
             refs.numerator.textContent = `${info.numerator}/${info.denominator}`;
-            refs.percent.textContent = info.percent == null ? '__%' : `(${info.percent}%)`;
+            refs.percent.textContent = info.percent == null ? '(__._%)' : `(${formatQuestPercent(info.percent)}%)`;
           });
         };
 
@@ -3246,7 +3368,10 @@
           const tr = el('tr', {
             class: missingRows && missingRows.has(rowDef.id) ? 'is-required-missing' : '',
           });
-          const itemCell = el('td', { class: 'quest-item-cell' }, [`${rowDef.number}. ${rowDef.label}`]);
+          const itemCell = el('td', { class: 'quest-item-cell' });
+          const itemInner = el('div', { class: 'quest-item-inner' }, [
+            el('span', { class: 'quest-item-text' }, [`${rowDef.number}. ${rowDef.label}`]),
+          ]);
           if (rowDef.allowNA) {
             const naLabel = el('label', { class: 'quest-inline-na' });
             const naBox = el('input', { type: 'checkbox' });
@@ -3259,8 +3384,9 @@
             };
             naLabel.appendChild(naBox);
             naLabel.appendChild(document.createTextNode('不適用'));
-            itemCell.appendChild(naLabel);
+            itemInner.appendChild(naLabel);
           }
+          itemCell.appendChild(itemInner);
           tr.appendChild(itemCell);
           const allowedValues = Array.isArray(rowDef.options) ? rowDef.options : optionValues;
           const onlyExtremeOptions = allowedValues.length === 2 && allowedValues.includes(0) && allowedValues.includes(4);
@@ -3296,7 +3422,7 @@
             const numerator = el('div', { class: 'quest-domain-numerator' }, [
               domain && domain.numeratorLabel ? `__/` + String(domain.numeratorLabel).replace(/^\//, '') : '__/__',
             ]);
-            const percent = el('div', { class: 'quest-domain-percent' }, ['(__%)']);
+            const percent = el('div', { class: 'quest-domain-percent' }, ['(__._%)']);
             domainRefs[rowDef.domain] = { numerator, percent };
             td.appendChild(title);
             td.appendChild(numerator);
@@ -3687,11 +3813,16 @@
 
     domainScores.forEach(bucket => {
       bucket.percent = bucket.denominator > 0
-        ? Math.round((bucket.numerator / bucket.denominator) * 100)
+        ? (bucket.numerator / bucket.denominator) * 100
         : null;
     });
 
     return domainScores;
+  }
+
+  function formatQuestPercent(value) {
+    if (!Number.isFinite(value)) return '';
+    return value.toFixed(1);
   }
 
   // Shared incomplete-check for sub_score pendingPolicy. Honours both
@@ -4544,11 +4675,6 @@
       const domains = q.domains || [];
       const domainScores = computeQuestDomainScores(q, a);
 
-      const formatPercent = value => {
-        const rounded1 = Math.round(value * 10) / 10;
-        return Number.isInteger(rounded1) ? String(rounded1) : rounded1.toFixed(1);
-      };
-
       const total = Array.from(domainScores.values()).reduce((sum, item) => sum + item.numerator, 0);
       const naCount = Array.from(domainScores.values()).reduce((sum, item) => sum + item.naCount, 0);
       const totalDenominator = Math.max(0, 120 - naCount * 4);
@@ -4560,7 +4686,7 @@
         const item = domainScores.get(domain.id);
         if (!item) return;
         const percent = item.denominator > 0 ? (item.numerator / item.denominator) * 100 : 0;
-        lines.push(`${item.label}: ${item.numerator}/${item.denominator} (${formatPercent(percent)}%)`);
+        lines.push(`${item.label}: ${item.numerator}/${item.denominator} (${formatQuestPercent(percent)}%)`);
       });
       return lines.join('\n');
     },
@@ -4924,7 +5050,7 @@
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
       const impText = (impQ && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
       const tail = [
-        parts.length ? `${opts.brief ? 'Cognitive Function' : 'Cognitive'}: ${parts.join('; ')}.` : '',
+        parts.length ? `${opts.brief ? 'Cognition' : 'Cognitive'}: ${parts.join('; ')}.` : '',
         impText ? `Impression: ${impText}.` : '',
       ].filter(Boolean).join(' ');
       return tail || null;
@@ -5177,18 +5303,121 @@
   function buildOtCommentExtract(form, answers) {
     const allQs = flattenQuestions(form);
     const parts = [];
+    const isEssentialTremorForm = form && form.id === 'stroke-essential-tremor-clinic.json';
+    const isParkinsonForm = form && form.id === 'stroke-parkinson-clinic-assessment.json';
     const add = value => {
       const text = String(value || '').replace(/\s+/g, ' ').trim();
       if (text) parts.push(text);
     };
 
-    const mbiQ = allQs.mbi;
-    if (mbiQ && !isEmptyAnswer(mbiQ, answers.mbi)) {
-      const overallQ = allQs.mbi_overall;
-      const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
-        ? `(${formatAnswer(overallQ, answers.mbi_overall)})`
+    const mbiQ = allQs.mbi, mbiA = answers.mbi;
+    if (mbiQ && !isEmptyAnswer(mbiQ, mbiA)) {
+      if (isEssentialTremorForm || isParkinsonForm) {
+        add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}`);
+      } else {
+        const overallQ = allQs.mbi_overall;
+        const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
+          ? `(${formatAnswer(overallQ, answers.mbi_overall)})`
+          : '';
+        add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}${overall}`);
+      }
+    }
+
+    if (isParkinsonForm) {
+      const lawtonQ = allQs.lawton_iadl, lawtonA = answers.lawton_iadl;
+      if (lawtonQ && lawtonA && typeof lawtonA === 'object' && !isEmptyAnswer(lawtonQ, lawtonA)) {
+        const total = Object.values(lawtonA).reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
+        add(`IADL: ${total}/${lawtonQ.totalMax}`);
+      }
+
+      const fropQ = allQs.frop_com, fropA = answers.frop_com;
+      if (fropQ && fropA && typeof fropA === 'object' && !isEmptyAnswer(fropQ, fropA)) {
+        const total = ['fall_history', 'function_adl_status', 'balance']
+          .map(id => (typeof fropA[id] === 'number' ? fropA[id] : null))
+          .filter(value => value !== null)
+          .reduce((sum, value) => sum + value, 0);
+        add(`FROP-Com: ${total} (${fropRiskShortLabel(total)})`);
+      }
+
+      const fesQ = allQs.fes, fesA = answers.fes;
+      if (fesQ && fesA && typeof fesA === 'object' && !isEmptyAnswer(fesQ, fesA)) {
+        const total = Object.values(fesA).reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
+        add(`FES: ${total}/${fesQ.totalMax}`);
+      }
+
+      const aspireRatingQ = allQs.aspire_overall_fall_risk;
+      const aspireRating = aspireRatingQ && !isEmptyAnswer(aspireRatingQ, answers.aspire_overall_fall_risk)
+        ? formatAnswer(aspireRatingQ, answers.aspire_overall_fall_risk)
         : '';
-      add(`ADL: MBI ${formatAnswer(mbiQ, answers.mbi)}${overall}`);
+      const aspireScore = answers.aspire_overall_fall_risk_score !== undefined
+        && answers.aspire_overall_fall_risk_score !== null
+        && answers.aspire_overall_fall_risk_score !== ''
+        ? String(answers.aspire_overall_fall_risk_score).trim()
+        : '';
+      if (aspireScore || aspireRating) {
+        const bits = [];
+        if (aspireScore) bits.push(aspireScore);
+        if (aspireRating) bits.push(`(${aspireRating})`);
+        add(`Aspire: ${bits.join(' ')}`);
+      }
+
+      const mocaQ = allQs.moca, mocaA = answers.moca;
+      if (mocaQ && !isEmptyAnswer(mocaQ, mocaA)) {
+        add(`MoCA: ${formatAnswer(mocaQ, mocaA)}`);
+      }
+
+      const dassQ = allQs.dass21, dassA = answers.dass21;
+      if (dassQ && dassA && typeof dassA === 'object') {
+        const hasDassScore = (dassQ.rows || []).some(row => typeof dassA[row.id] === 'number');
+        const sumFor = domain => (dassQ.rows || [])
+          .filter(row => row.domain === domain)
+          .reduce((sum, row) => sum + (typeof dassA[row.id] === 'number' ? dassA[row.id] : 0), 0);
+        const depression = sumFor('D');
+        const anxiety = sumFor('A');
+        const stress = sumFor('S');
+        const total = depression + anxiety + stress;
+        if (hasDassScore) {
+          add(`DASS: ${total} (D:${depression * 2}, A:${anxiety * 2}, S:${stress * 2})`);
+        }
+      }
+    }
+
+    if (isEssentialTremorForm) {
+      const lawtonQ = allQs.lawton_iadl, lawtonA = answers.lawton_iadl;
+      if (lawtonQ && lawtonA && typeof lawtonA === 'object' && !isEmptyAnswer(lawtonQ, lawtonA)) {
+        const total = Object.values(lawtonA).reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
+        add(`IADL: ${total}/${lawtonQ.totalMax}`);
+      }
+
+      const mocaQ = allQs.moca, mocaA = answers.moca;
+      if (mocaQ && !isEmptyAnswer(mocaQ, mocaA)) {
+        add(`MoCA: ${formatAnswer(mocaQ, mocaA)}`);
+      }
+
+      const dassQ = allQs.dass21, dassA = answers.dass21;
+      if (dassQ && dassA && typeof dassA === 'object') {
+        const sumFor = domain => (dassQ.rows || [])
+          .filter(row => row.domain === domain)
+          .reduce((sum, row) => sum + (typeof dassA[row.id] === 'number' ? dassA[row.id] : 0), 0);
+        const depression = sumFor('D');
+        const anxiety = sumFor('A');
+        const stress = sumFor('S');
+        const total = depression + anxiety + stress;
+        if (total || Object.keys(dassA).length) {
+          add(`DASS: ${total}/63 (D:${depression} A:${anxiety} S:${stress})`);
+        }
+      }
+
+      const questQ = allQs.quest_functional, questA = answers.quest_functional;
+      if (questQ && questA && typeof questA === 'object') {
+        const domainScores = computeQuestDomainScores(questQ, questA);
+        const total = Array.from(domainScores.values()).reduce((sum, item) => sum + item.numerator, 0);
+        const naCount = Array.from(domainScores.values()).reduce((sum, item) => sum + item.naCount, 0);
+        const totalDenominator = Math.max(0, 120 - naCount * 4);
+        if (total || Object.keys(questA).length) {
+          add(`QUEST: Total: ${total}/${totalDenominator}`);
+        }
+      }
     }
 
     const spinalParts = [];
@@ -5214,14 +5443,16 @@
     }
     if (spinalParts.length) add(spinalParts.join('; '));
 
-    const cognitiveLine = customReportFns.cognitive(
-      allQs.ot_cognitive || { id: 'ot_cognitive' },
-      answers.ot_cognitive,
-      allQs,
-      answers,
-      { brief: true },
-    );
-    add(cognitiveLine);
+    if (!isEssentialTremorForm && !isParkinsonForm) {
+      const cognitiveLine = customReportFns.cognitive(
+        allQs.ot_cognitive || { id: 'ot_cognitive' },
+        answers.ot_cognitive,
+        allQs,
+        answers,
+        { brief: true },
+      );
+      add(cognitiveLine);
+    }
 
     const recommendationText = buildReportParts(form, answers).recommendation;
     const recommendationLines = recommendationText
@@ -5236,7 +5467,7 @@
       if (suggestion) add(`Suggestion: ${suggestion}`);
     }
 
-    return normalizeReportSymbols(parts.join('\n'));
+    return normalizeReportSymbols(parts.join('; '));
   }
 
   function buildReport(form, answers) {
@@ -5289,7 +5520,7 @@
         el('span', { class: 'history-date' }, [dateLabel]),
       ]);
       const detailRow = el('div', { class: 'history-detail' }, [
-        el('span', { class: 'badge ' + h.specialty }, [h.specialty || 'Case']),
+        el('span', { class: 'badge ' + (h.specialty || 'Case') }, [h.specialty || 'Case']),
         summary,
         el('span', { class: formChipClass }, [h.formTitle]),
         h.draft ? el('span', { class: 'badge draft-badge' }, ['Draft']) : null,

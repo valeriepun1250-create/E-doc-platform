@@ -19,15 +19,9 @@
             "width": "full",
             "parts": [
               {
-                "id": "bp_sys",
+                "id": "bp",
                 "label": "BP",
-                "placeholder": "120",
-                "suffix": "/"
-              },
-              {
-                "id": "bp_dia",
-                "label": "",
-                "placeholder": "80",
+                "placeholder": "120/80",
                 "suffix": " mmHg"
               },
               {
@@ -47,10 +41,16 @@
                 "label": "",
                 "placeholder": "Room Air / L O2",
                 "wide": true
+              },
+              {
+                "id": "other",
+                "label": "Other",
+                "extraWide": true,
+                "placeholder": ""
               }
             ],
             "joinWith": "  ",
-            "reportTemplate": "Vital signs: BP {bp_sys}/{bp_dia} mmHg, Pulse {p}/minute, SpO2 {spo2}%."
+            "customReport": "vitals_summary"
           },
           {
             "type": "heading",

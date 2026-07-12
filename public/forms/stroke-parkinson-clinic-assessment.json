@@ -925,6 +925,241 @@
         "reportTitle": "Functional Assessment"
       },
       {
+        "title": "Cognitive Assessment",
+        "questions": [
+          {
+            "id": "moca",
+            "label": "HK-Montreal Cognitive Assessment (MoCA)",
+            "type": "sub_score",
+            "mode": "max",
+            "totalMax": 30,
+            "width": "full",
+            "breakdownItemsPerLine": 4,
+            "breakdownSep": "   ",
+            "customReport": "moca_full",
+            "headerInputs": [
+              {
+                "id": "moca_age_cluster",
+                "label": "Age",
+                "type": "select",
+                "placeholder": "Select age",
+                "options": [
+                  "65-69",
+                  "70-79",
+                  "≥80"
+                ]
+              },
+              {
+                "id": "moca_education",
+                "label": "Education",
+                "type": "number",
+                "inputType": "number",
+                "placeholder": "Years",
+                "min": 0,
+                "step": 1
+              }
+            ],
+            "items": [
+              {
+                "id": "executive_function",
+                "label": "Executive Function",
+                "max": 5
+              },
+              {
+                "id": "naming",
+                "label": "Naming",
+                "max": 3
+              },
+              {
+                "id": "attention",
+                "label": "Attention",
+                "max": 6
+              },
+              {
+                "id": "language",
+                "label": "Language",
+                "max": 3
+              },
+              {
+                "id": "abstraction",
+                "label": "Abstraction",
+                "max": 2
+              },
+              {
+                "id": "delayed_recall",
+                "label": "Delayed Recall",
+                "max": 5
+              },
+              {
+                "id": "orientation",
+                "label": "Orientation",
+                "max": 6
+              }
+            ]
+          },
+          {
+            "id": "moca_band",
+            "label": "MoCA percentile",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "hideInForm": true,
+            "options": [
+              ">16th percentile",
+              "<=16th percentile: DSM-5 minor NCD",
+              "<=7th percentile: Petersen MCI",
+              "<=2nd percentile: DSM-5 major NCD"
+            ],
+            "hideInReport": true
+          }
+        ],
+        "reportTitle": "Cognitive Assessment"
+      },
+      {
+        "title": "Mood Assessment",
+        "questions": [
+          {
+            "id": "dass21",
+            "label": "DASS-21",
+            "type": "dass21_table",
+            "width": "full",
+            "customReport": "dass21_summary",
+            "instructions": "填表說明：請小心閱讀以下每一個句子，並在其右方圈上一數字，表示「過往一個星期」如何適用於你。答案並無對錯之分。請不要花太多時間在某一句子上。",
+            "scaleGuide": "評估量表：0 = 不適用  1 = 頗適用，或間中適用  2 = 很適用，或經常適用  3 = 最適用，或常常適用",
+            "scoreNote": "Severity matched according to DASS severity ratings",
+            "rows": [
+              {
+                "id": "q1",
+                "number": 1,
+                "label": "我覺得很難讓自己安靜下來",
+                "domain": "S"
+              },
+              {
+                "id": "q2",
+                "number": 2,
+                "label": "我感到口乾",
+                "domain": "A"
+              },
+              {
+                "id": "q3",
+                "number": 3,
+                "label": "我好像不能再有任何愉快、舒暢的感覺",
+                "domain": "D"
+              },
+              {
+                "id": "q4",
+                "number": 4,
+                "label": "我感到呼吸困難（例如不是做運動時也感到氣促或透不過氣來）",
+                "domain": "A"
+              },
+              {
+                "id": "q5",
+                "number": 5,
+                "label": "我感到很難自動去開始工作",
+                "domain": "D"
+              },
+              {
+                "id": "q6",
+                "number": 6,
+                "label": "我對事情往往作出過敏反應",
+                "domain": "S"
+              },
+              {
+                "id": "q7",
+                "number": 7,
+                "label": "我感到頭抖（例如手震）",
+                "domain": "A"
+              },
+              {
+                "id": "q8",
+                "number": 8,
+                "label": "我覺得自己消耗很多精神",
+                "domain": "S"
+              },
+              {
+                "id": "q9",
+                "number": 9,
+                "label": "我憂慮一些令自己恐慌或出醜的場合",
+                "domain": "A"
+              },
+              {
+                "id": "q10",
+                "number": 10,
+                "label": "我覺得自己對將來沒有甚麼可盼望",
+                "domain": "D"
+              },
+              {
+                "id": "q11",
+                "number": 11,
+                "label": "我感到忐忑不安",
+                "domain": "S"
+              },
+              {
+                "id": "q12",
+                "number": 12,
+                "label": "我感到很難放鬆自己",
+                "domain": "S"
+              },
+              {
+                "id": "q13",
+                "number": 13,
+                "label": "我感到憂鬱沮喪",
+                "domain": "D"
+              },
+              {
+                "id": "q14",
+                "number": 14,
+                "label": "我無法容忍任何阻礙我繼續工作的事情",
+                "domain": "S"
+              },
+              {
+                "id": "q15",
+                "number": 15,
+                "label": "我感到快要恐慌了",
+                "domain": "A"
+              },
+              {
+                "id": "q16",
+                "number": 16,
+                "label": "我對任何事也不能熱衷",
+                "domain": "D"
+              },
+              {
+                "id": "q17",
+                "number": 17,
+                "label": "我覺得自己不怎麼配做人",
+                "domain": "D"
+              },
+              {
+                "id": "q18",
+                "number": 18,
+                "label": "我發覺自己很容易被觸怒",
+                "domain": "S"
+              },
+              {
+                "id": "q19",
+                "number": 19,
+                "label": "我察覺自己在沒有明顯的體力勞動時，也感到心律不正常",
+                "domain": "A"
+              },
+              {
+                "id": "q20",
+                "number": 20,
+                "label": "我無緣無故地感到害怕",
+                "domain": "A"
+              },
+              {
+                "id": "q21",
+                "number": 21,
+                "label": "我感到生命毫無意義",
+                "domain": "D"
+              }
+            ]
+          }
+        ],
+        "reportTitle": "Mood Assessment"
+      },
+      {
         "title": "Treatment / Plan",
         "questions": [
           {

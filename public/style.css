@@ -760,6 +760,16 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border-color: #b7dec7;
   color: #2c5b45;
 }
+.history-form-chip.form-stroke-parkinson-clinic-assessment-json {
+  background: #f5ecff;
+  border-color: #dcc8fb;
+  color: #6d28d9;
+}
+.history-form-chip.form-stroke-essential-tremor-clinic-json {
+  background: #ecfdf3;
+  border-color: #b9e8d0;
+  color: #0f766e;
+}
 
 .home-history-card .badge {
   min-height: 25px;
@@ -1267,7 +1277,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 }
 .badge.NS     { background: #e0e7ff; color: #3730a3; }
 .badge.General { background: #e8f7ef; color: #0f5f43; border: 1px solid #24895f; }
-.badge.Stroke { background: #fdebec; color: #b7222d; }
+.badge.Stroke { background: #e7f0ff; color: #1d4ed8; }
 .badge.draft-badge {
   background: #fff8c5; color: #735c0f; border: 1px solid #d4a72c;
   font-weight: 700;
@@ -1385,10 +1395,16 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   color: #0f5f43;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .report-char-count.is-near-limit {
   color: #b45309;
+}
+
+.report-char-count.is-over-limit {
+  color: #b91c1c;
 }
 
 .report-actions {
@@ -1803,6 +1819,16 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   font-size: 14px; color: var(--fg);
 }
 
+.checks .opt-block > .tremor-medication-detail {
+  min-height: 0;
+  width: min(100%, 620px);
+  max-width: 100%;
+  line-height: 1.3;
+  overflow: hidden;
+  resize: none;
+  white-space: pre-wrap;
+}
+
 /* "Other: __" row keeps the text field visible */
 .checks > label.other-row,
 .sub-options > label.other-row,
@@ -2024,6 +2050,25 @@ table.subscore .total-row td {
 }
 table.subscore .total-row td:first-child { color: var(--primary); letter-spacing: 0.02em; }
 table.subscore .rating button { min-width: 34px; padding: 4px 10px; font-size: 12.5px; }
+.subscore-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 6px;
+}
+.subscore-quickfill-btn {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #9bb8ae;
+  border-radius: 8px;
+  background: #f5faf7;
+  color: #11654c;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.subscore-quickfill-btn:hover {
+  background: #eaf5ef;
+  border-color: #7ea693;
+}
 .subscore-desc {
   margin-top: 6px;
   color: var(--muted-strong);
@@ -3128,6 +3173,20 @@ body.is-home #version-badge {
   width: 72px;
   min-width: 72px;
 }
+.jebsen-input-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.jebsen-sd-badge {
+  min-width: 88px;
+  text-align: left;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.2;
+}
 .jebsen-table td {
   text-align: center;
 }
@@ -3395,6 +3454,17 @@ body.is-home #version-badge {
   white-space: normal;
   line-height: 1.45;
 }
+.quest-item-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.quest-item-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .quest-table .quest-table-col-score,
 .quest-table .quest-choice-cell {
   width: 54px;
@@ -3437,7 +3507,8 @@ body.is-home #version-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: 6px;
+  margin-left: auto;
+  flex: 0 0 auto;
   color: var(--fg);
   font-size: 13px;
   font-weight: 500;

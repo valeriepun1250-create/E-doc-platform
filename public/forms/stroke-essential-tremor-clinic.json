@@ -527,6 +527,13 @@
             "hideInReport": true
           },
           {
+            "id": "major_complaint",
+            "label": "Major complaint",
+            "type": "short_text",
+            "width": "full",
+            "customReport": "essential_tremor_major_complaint"
+          },
+          {
             "type": "heading",
             "label": "Physical Assessment"
           },
@@ -1517,8 +1524,8 @@
               { "id": "communication", "label": "Communication", "numeratorLabel": "/12", "percentDenominator": 12 },
               { "id": "work_finances", "label": "Work and Finances" },
               { "id": "hobbies", "label": "Hobbies and Leisure", "numeratorLabel": "/12", "percentDenominator": 12 },
-              { "id": "physical", "label": "Physical", "numeratorLabel": "/32", "percentDenominator": 32 },
-              { "id": "psychosocial", "label": "Psychosocial", "numeratorLabel": "/36", "percentDenominator": 36 }
+              { "id": "physical", "label": "Physical", "numeratorLabel": "/36", "percentDenominator": 36 },
+              { "id": "psychosocial", "label": "Psychosocial", "numeratorLabel": "/32", "percentDenominator": 32 }
             ],
             "rows": [
               { "id": "qq1", "number": 1, "label": "我的頭抖影響了我與他人溝通的能力。", "domain": "communication" },
@@ -1541,7 +1548,7 @@
               { "id": "qq18", "number": 18, "label": "我的震顫會影響刷牙或使用牙線。", "domain": "physical" },
               { "id": "qq19", "number": 19, "label": "我的震顫會影響進食（例如，將食物放入口，會流出來）。", "domain": "physical" },
               { "id": "qq20", "number": 20, "label": "我的震顫會影響我飲用液體（例如，將水杯帶到嘴邊，容易倒瀉）。", "domain": "physical" },
-              { "id": "qq21", "number": 21, "label": "我的震顫影響了閱讀或拿著閱讀材料。", "domain": "psychosocial" },
+              { "id": "qq21", "number": 21, "label": "我的震顫影響了閱讀或拿著閱讀材料。", "domain": "physical" },
               { "id": "qq22", "number": 22, "label": "我的震顫影響了我與他人的關係（例如，我的家人、朋友、同事）。", "domain": "psychosocial" },
               { "id": "qq23", "number": 23, "label": "我的頭抖讓我對自己感到消極。", "domain": "psychosocial" },
               { "id": "qq24", "number": 24, "label": "我為自己的頭抖感到尷尬。", "domain": "psychosocial" },
@@ -1552,13 +1559,6 @@
               { "id": "qq29", "number": 29, "label": "由於頭抖，我飲酒的頻率比我預計的高。", "domain": "psychosocial", "excludeFromScore": true },
               { "id": "qq30", "number": 30, "label": "由於頭抖，我很難集中精神。", "domain": "psychosocial" }
             ]
-          },
-          {
-            "id": "major_complaint",
-            "label": "Major complaint",
-            "type": "short_text",
-            "width": "full",
-            "customReport": "essential_tremor_major_complaint"
           }
         ],
         "reportTitle": "[ Mood and Quality of Life Assessment ]"
