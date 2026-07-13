@@ -235,6 +235,38 @@
     return e;
   };
   const normalizeReportSymbols = text => String(text || '').replace(/≥/g, '>=').replace(/≤/g, '<=');
+  const normalizeClipboardText = text => normalizeReportSymbols(String(text || ''))
+    .normalize('NFC')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const copyPlainText = async text => {
+    const normalized = normalizeClipboardText(text);
+    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+      const item = new ClipboardItem({
+        'text/plain': new Blob([normalized], { type: 'text/plain' }),
+      });
+      await navigator.clipboard.write([item]);
+      return;
+    }
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(normalized);
+      return;
+    }
+    const helper = el('textarea', {
+      readonly: 'readonly',
+      'aria-hidden': 'true',
+      style: 'position:fixed;top:-9999px;left:-9999px;opacity:0;',
+    });
+    helper.value = normalized;
+    document.body.appendChild(helper);
+    helper.focus();
+    helper.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(helper);
+    if (!ok) throw new Error('copy failed');
+  };
   const attachDecimalOnlyInput = inp => {
     const invalidKeys = new Set(['e', 'E', '+', '-']);
     inp.addEventListener('keydown', e => {
@@ -1067,7 +1099,7 @@
             class: 'summary-top-btn report-copy-btn',
             onclick: async () => {
               try {
-                await navigator.clipboard.writeText(textarea ? textarea.value : '');
+                await copyPlainText(textarea ? textarea.value : '');
                 flashCopied(copiedBadge);
               } catch {
                 alert('Copy failed — please select and copy manually.');
@@ -1084,7 +1116,7 @@
         readonly: 'readonly',
         placeholder: hint || '(empty — nothing was filled in this section.)',
       });
-      textarea.value = currentText || '';
+      textarea.value = normalizeClipboardText(currentText || '');
       const grow = () => {
         textarea.style.height = 'auto';
         textarea.style.height = Math.max(120, textarea.scrollHeight + 8) + 'px';
@@ -1131,7 +1163,7 @@
             class: 'summary-top-btn report-copy-btn',
             onclick: async () => {
               try {
-                await navigator.clipboard.writeText(textarea ? textarea.value : '');
+                await copyPlainText(textarea ? textarea.value : '');
                 flashCopied(copiedBadge);
               } catch {
                 alert('Copy failed — please select and copy manually.');
@@ -1149,7 +1181,7 @@
       });
       const counter = head.querySelector('.report-char-count');
       const setValue = value => {
-        textarea.value = String(value || '');
+        textarea.value = normalizeClipboardText(value || '');
       };
       const updateCount = () => {
         const count = textarea.value.length;
