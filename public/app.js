@@ -6,7 +6,7 @@
   const state = { view: 'browse', currentForm: null };
   const HISTORY_KEY = 'edoc_history_v1';
   const ACTIVE_SESSION_KEY = 'edoc_active_session_v1';
-  const FORMS_DIR = 'forms/';
+  const FORMS_DIR = window.EDOC_FORMS_DIR || 'forms/';
   const MOCA_NORM_ROWS = {
     '65-69': {
       '0-3': { p16: 17, p7: 14, p2: 9 },
@@ -5592,6 +5592,16 @@
 
   // ---------- boot ----------
   async function boot() {
+    const params = new URLSearchParams(window.location.search);
+    const historyId = params.get('history');
+    if (historyId) {
+      const entry = history.load().find(item => item.id === historyId);
+      if (entry) {
+        activeSession.clear();
+        setView('fill', entry);
+        return;
+      }
+    }
     const session = activeSession.load();
     if (session && session.view === 'fill' && session.formId && session.answers) {
       setView('fill', session);

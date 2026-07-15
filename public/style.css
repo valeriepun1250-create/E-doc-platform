@@ -129,6 +129,25 @@ nav button.active {
   border-color: var(--primary);
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
 }
+nav .nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--muted-strong);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+nav .nav-link:hover {
+  background: var(--surface-tint);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
 
 main { max-width: 1240px; margin: 0 auto; padding: 28px 28px 64px; }
 body.is-home main { max-width: 1240px; margin: 0 auto; padding: 18px 18px 44px; }
@@ -556,6 +575,35 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   padding: 34px 42px;
 }
 
+.home-hero {
+  position: relative;
+}
+
+.home-main-link {
+  position: absolute;
+  top: 26px;
+  right: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  min-width: 150px;
+  padding: 8px 18px;
+  border: 3px solid #9bb8ae;
+  border-radius: 14px;
+  background: #f7f8f7;
+  color: #11654c;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.home-main-link:hover {
+  background: #edf5f1;
+  color: #0f5f48;
+}
+
 .home-hospital {
   margin: 0;
   font-size: clamp(16px, 1.7vw, 20px);
@@ -844,6 +892,148 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border-color: #c97f83;
 }
 
+/* ----- Main shared home dashboard ----- */
+.main-home {
+  display: grid;
+  gap: 18px;
+}
+
+.main-home-hero {
+  position: relative;
+  background: #f4f6f5;
+  border: 2px solid #becdc8;
+  border-radius: 16px;
+  padding: 34px 42px;
+}
+
+.main-home-hero-link {
+  position: absolute;
+  top: 26px;
+  right: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  min-width: 150px;
+  padding: 8px 18px;
+  border: 3px solid #9bb8ae;
+  border-radius: 14px;
+  background: #f7f8f7;
+  color: #0f5f43;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.main-home-hero-link:hover {
+  background: #edf5f1;
+  border-color: #79aa9a;
+  color: #0f5f43;
+}
+
+.home-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.home-section-title-row .home-heading {
+  margin: 0;
+}
+
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.platform-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 132px;
+  padding: 18px;
+  border: 2px solid #becdc8;
+  border-radius: 14px;
+  background: #f7f8f7;
+  color: #233132;
+  text-decoration: none;
+}
+
+.platform-card strong {
+  font-size: 18px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.platform-card span:last-child {
+  color: #596567;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.platform-card-active:hover {
+  border-color: #79aa9a;
+  background: #f1f7f4;
+}
+
+.platform-card-disabled {
+  opacity: 0.72;
+}
+
+.platform-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 25px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 2px solid #b4d8e7;
+  background: #e3f4fb;
+  color: #244a61;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.platform-tag-medical {
+  border-color: #b7dec7;
+  background: #e8f7ef;
+  color: #0f5f43;
+}
+
+.platform-tag-ortho {
+  border-color: #dcc8fb;
+  background: #f5ecff;
+  color: #6d28d9;
+}
+
+.home-refresh-btn {
+  min-height: 36px;
+  border: 2px solid #9bb8ae;
+  border-radius: 10px;
+  background: #f7f8f7;
+  color: #11654c;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 6px 12px;
+}
+
+.home-refresh-btn:hover {
+  background: #edf5f1;
+  color: #0f5f48;
+}
+
+.home-open-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 /* ----- Create-new-case panel ----- */
 .new-case {
   background: linear-gradient(135deg, #f3f8ff 0%, #ffffff 100%);
@@ -977,6 +1167,17 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
     border-radius: 12px;
   }
 
+  .home-main-link {
+    top: 16px;
+    right: 16px;
+    min-height: 38px;
+    min-width: 118px;
+    padding: 7px 12px;
+    border-width: 2px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
   .home-hospital {
     font-size: clamp(15px, 1.9vw, 18px);
   }
@@ -989,6 +1190,36 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   .home-heading {
     font-size: 22px;
     margin-bottom: 14px;
+  }
+
+  .main-home-hero {
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  .main-home-hero-link {
+    top: 16px;
+    right: 16px;
+    min-height: 38px;
+    min-width: 118px;
+    padding: 7px 12px;
+    border-width: 2px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .home-section-title-row {
+    margin-bottom: 14px;
+  }
+
+  .platform-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .platform-card {
+    min-height: 124px;
+    padding: 14px;
   }
 
   .home-create-grid {
@@ -1083,6 +1314,50 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 }
 
 @media (max-width: 720px) {
+  header {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .brand h1 {
+    font-size: 16px;
+  }
+
+  nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  nav button,
+  nav .nav-link {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-card {
+    min-height: 0;
+  }
+
+  .main-home-hero-link {
+    position: static;
+    margin-bottom: 14px;
+  }
+
+  .home-main-link {
+    position: static;
+    margin-bottom: 14px;
+  }
+
+  .home-section-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .home-create-grid {
     grid-template-columns: 1fr;
   }
