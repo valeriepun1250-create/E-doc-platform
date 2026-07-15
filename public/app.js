@@ -7,6 +7,7 @@
   const HISTORY_KEY = 'edoc_history_v1';
   const ACTIVE_SESSION_KEY = 'edoc_active_session_v1';
   const FORMS_DIR = window.EDOC_FORMS_DIR || 'forms/';
+  const MAIN_HOME_URL = window.EDOC_MAIN_HOME_URL || '';
   const MOCA_NORM_ROWS = {
     '65-69': {
       '0-3': { p16: 17, p7: 14, p2: 9 },
@@ -507,6 +508,7 @@
     app.appendChild(tpl('tpl-fill'));
 
     let form, initialAnswers = {}, historyId = null;
+    let shouldCreateInitialDraft = false;
     let caseInfo = null; // { caseId, assessmentDate }
     if (typeof idOrHistoryEntry === 'object' && idOrHistoryEntry !== null) {
       if (idOrHistoryEntry.answers) {
@@ -518,6 +520,7 @@
       } else if (idOrHistoryEntry.formId) {
         // New-case start: { formId, caseId, assessmentDate }.
         form = await loadForm(idOrHistoryEntry.formId);
+        shouldCreateInitialDraft = true;
         caseInfo = {
           caseId: idOrHistoryEntry.caseId || '',
           assessmentDate: idOrHistoryEntry.assessmentDate || '',
@@ -558,6 +561,9 @@
 
     // Global change listeners so showIf-dependent questions can refresh.
     const changeListeners = new Set();
+    let draftAutosaveTimer = null;
+    let draftAutosaveReady = false;
+    let draftAutosaveDirty = false;
     let currentIdx = Number.isInteger(idOrHistoryEntry && idOrHistoryEntry.currentIdx) ? idOrHistoryEntry.currentIdx : 0;
     let currentPrevIdx = undefined;
     let currentNextIdx = undefined;
@@ -578,14 +584,23 @@
     const onChange = fn => { changeListeners.add(fn); return () => changeListeners.delete(fn); };
     const fireChange = () => {
       persistActiveSession();
+      if (draftAutosaveReady) scheduleDraftAutosave();
+      changeListeners.forEach(fn => fn());
+    };
+    const refreshChangeListeners = () => {
+      persistActiveSession();
       changeListeners.forEach(fn => fn());
     };
     // Flat lookup for prefillFromQuestions / cross references during fill.
     const formQuestions = flattenQuestions(form);
     let missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
-    window.addEventListener('pagehide', persistActiveSession, { once: true });
+    const persistBeforeLeaving = () => {
+      persistActiveSession();
+      flushDraftAutosave();
+    };
+    window.addEventListener('pagehide', persistBeforeLeaving, { once: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') persistActiveSession();
+      if (document.visibilityState === 'hidden') persistBeforeLeaving();
     });
 
     // Section tabs — avoids one long scroll.
@@ -765,7 +780,7 @@
       } else {
         sectionHost.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      fireChange();
+      refreshChangeListeners();
     }
 
     renderSection(currentIdx, restoredScrollY !== null ? { restoreScrollY: restoredScrollY } : {});
@@ -797,19 +812,47 @@
       return entry;
     }
 
-    const autosaveAndBrowse = () => {
-      if (hasMeaningfulAnswerSet(form, answers)) {
+    function scheduleDraftAutosave() {
+      draftAutosaveDirty = true;
+      clearTimeout(draftAutosaveTimer);
+      draftAutosaveTimer = setTimeout(() => {
+        if (!draftAutosaveDirty) return;
         persistEntry(true);
-      }
-      setView('browse');
+        draftAutosaveDirty = false;
+        persistActiveSession();
+      }, 350);
+    }
+
+    function flushDraftAutosave() {
+      clearTimeout(draftAutosaveTimer);
+      draftAutosaveTimer = null;
+      if (!draftAutosaveDirty) return;
+      persistEntry(true);
+      draftAutosaveDirty = false;
+      persistActiveSession();
+    }
+
+    const autosaveAndBrowse = () => {
+      flushDraftAutosave();
+      if (MAIN_HOME_URL) window.location.href = MAIN_HOME_URL;
+      else setView('browse');
     };
 
     app.querySelector('.back').onclick = autosaveAndBrowse;
 
     app.querySelector('#btnSaveDraft').onclick = () => {
+      clearTimeout(draftAutosaveTimer);
+      draftAutosaveDirty = false;
       persistEntry(true);
+      persistActiveSession();
       alert('Saved as draft. Continue from the History tab any time.');
     };
+
+    if (shouldCreateInitialDraft) {
+      persistEntry(true);
+      persistActiveSession();
+    }
+    draftAutosaveReady = true;
 
     function subScoreMissingItems(q, value) {
       if (!q || !Array.isArray(q.items)) return [];
@@ -994,6 +1037,8 @@
 
     app.querySelector('#btnSaveGenerate').onclick = () => {
       if (!validateBeforeGenerate()) return;
+      clearTimeout(draftAutosaveTimer);
+      draftAutosaveDirty = false;
       const entry = persistEntry(false);
       const returnToFill = {
         ...(entry || {}),
@@ -1039,7 +1084,7 @@
       else if (entry) setView('fill', entry);
       else setView('browse');
     };
-    app.querySelector('#btnReportHome').onclick = () => setView('browse');
+    const reportHomeBtn = app.querySelector('#btnReportHome');
     const host = app.querySelector('#rParts');
     const editedParts = { ...(entry && entry.editedParts ? entry.editedParts : {}) };
     let autosaveTimer = null;
@@ -1064,6 +1109,17 @@
         alert('Saved locally.');
       }
     };
+    if (reportHomeBtn) {
+      reportHomeBtn.onclick = () => {
+        if (entry) {
+          clearTimeout(autosaveTimer);
+          entry.editedParts = { ...editedParts };
+          history.update(entry.id, entry);
+        }
+        if (MAIN_HOME_URL) window.location.href = MAIN_HOME_URL;
+        else setView('browse');
+      };
+    }
 
     const c = (answers.__case) || {};
     app.querySelector('#rTitle').textContent = `Generated Summary${c.caseId ? ' • ' + c.caseId : ''}`;
@@ -5590,6 +5646,35 @@
     }
   }
 
+  async function saveActiveSessionAsDraft(session) {
+    if (!session || session.view !== 'fill' || !session.formId || !session.answers) return;
+    let form;
+    try {
+      form = await loadForm(session.formId);
+    } catch (error) {
+      console.warn('Unable to save active session before opening NS home', error);
+      return;
+    }
+    if (!hasMeaningfulAnswerSet(form, session.answers)) return;
+
+    const savedAt = new Date().toISOString();
+    const existing = session.id ? history.load().find(item => item.id === session.id) : null;
+    const entry = {
+      id: session.id || 'h_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      formId: form.id,
+      formTitle: form.title,
+      specialty: form.specialty,
+      answers: session.answers,
+      report: buildReport(form, session.answers),
+      editedParts: existing && existing.editedParts ? existing.editedParts : undefined,
+      draft: true,
+      savedAt,
+      expiresAt: expiryFromSavedAt(savedAt),
+    };
+    if (existing) history.update(existing.id, entry);
+    else history.add(entry);
+  }
+
   // ---------- boot ----------
   async function boot() {
     const params = new URLSearchParams(window.location.search);
@@ -5603,11 +5688,12 @@
       }
     }
     const session = activeSession.load();
-    if (session && session.view === 'fill' && session.formId && session.answers) {
+    const shouldResumeSession = params.get('resume') === '1';
+    if (shouldResumeSession && session && session.view === 'fill' && session.formId && session.answers) {
       setView('fill', session);
       return;
     }
-    if (session && session.view === 'report' && session.formId && session.answers) {
+    if (shouldResumeSession && session && session.view === 'report' && session.formId && session.answers) {
       const form = await loadForm(session.formId);
       setView('report', {
         form,
@@ -5618,6 +5704,8 @@
       });
       return;
     }
+    await saveActiveSessionAsDraft(session);
+    activeSession.clear();
     setView('browse');
   }
 

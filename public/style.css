@@ -835,6 +835,12 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border: 2px solid #b4d8e7;
 }
 
+.home-history-card .badge.Medical {
+  background: #e8f7ef;
+  color: #0f5f43;
+  border: 2px solid #b7dec7;
+}
+
 .home-history-card .badge.General {
   background: #e8f7ef;
   color: #0f5f43;
