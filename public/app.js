@@ -7,6 +7,7 @@
   const HISTORY_KEY = 'edoc_history_v1';
   const ACTIVE_SESSION_KEY = 'edoc_active_session_v1';
   const FORMS_DIR = window.EDOC_FORMS_DIR || 'forms/';
+  const ASSETS_DIR = window.EDOC_ASSETS_DIR || 'images/';
   const MAIN_HOME_URL = window.EDOC_MAIN_HOME_URL || '';
   const MOCA_NORM_ROWS = {
     '65-69': {
@@ -2587,7 +2588,7 @@
           class: 'asia-figure',
         }, [
           el('img', {
-            src: 'images/asia-sensory-points.png',
+            src: `${ASSETS_DIR}asia-sensory-points.png`,
             alt: 'ASIA key sensory points reference',
             loading: 'lazy',
           }),
