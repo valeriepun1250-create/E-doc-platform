@@ -245,15 +245,15 @@
     .replace(/[\u200B-\u200D\uFEFF]/g, '');
   const copyPlainText = async text => {
     const normalized = normalizeClipboardText(text);
-    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
-      const item = new ClipboardItem({
-        'text/plain': new Blob([normalized], { type: 'text/plain' }),
-      });
-      await navigator.clipboard.write([item]);
-      return;
-    }
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
       await navigator.clipboard.writeText(normalized);
+      return;
+    }
+    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+      const item = new ClipboardItem({
+        'text/plain': new Blob([normalized], { type: 'text/plain;charset=utf-8' }),
+      });
+      await navigator.clipboard.write([item]);
       return;
     }
     const helper = el('textarea', {
