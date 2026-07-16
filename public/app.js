@@ -2588,7 +2588,7 @@
           class: 'asia-figure',
         }, [
           el('img', {
-            src: `${ASSETS_DIR}asia-sensory-points.png`,
+            src: `${ASSETS_DIR}asia-sensory-points.png?v=20260717-1`,
             alt: 'ASIA key sensory points reference',
             loading: 'lazy',
           }),
