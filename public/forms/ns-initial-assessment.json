@@ -2332,8 +2332,6 @@
             "width": "full",
             "customReport": "problems_factors",
             "options": [
-              "Nil if medically stable",
-              "Nil",
               {
                 "value": "Patient Factor",
                 "subOptions": [
