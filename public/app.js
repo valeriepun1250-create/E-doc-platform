@@ -237,7 +237,18 @@
     return e;
   };
   const normalizeReportSymbols = text => String(text || '').replace(/≥/g, '>=').replace(/≤/g, '<=');
-  const normalizeClipboardText = text => normalizeReportSymbols(String(text || ''))
+  const decodeClipboardText = text => {
+    if (typeof text !== 'string') return '';
+    const trimmed = text.trim();
+    if (!trimmed.includes('%')) return text;
+    try {
+      const decoded = decodeURIComponent(trimmed);
+      return decoded;
+    } catch {
+      return text;
+    }
+  };
+  const normalizeClipboardText = text => normalizeReportSymbols(decodeClipboardText(String(text || '')))
     .normalize('NFC')
     .replace(/\r\n?/g, '\n')
     .replace(/[\u2028\u2029]/g, '\n')
