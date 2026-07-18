@@ -254,8 +254,38 @@
     .replace(/[\u2028\u2029]/g, '\n')
     .replace(/\u00A0/g, ' ')
     .replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const isAppleTouchDevice = () => /iPad|iPhone|iPod/.test(navigator.userAgent || '')
+    || ((navigator.platform || '') === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const copyWithTextareaSelection = text => {
+    const helper = el('textarea', {
+      'aria-hidden': 'true',
+      style: [
+        'position:fixed',
+        'top:0',
+        'left:0',
+        'width:1px',
+        'height:1px',
+        'padding:0',
+        'border:0',
+        'opacity:0',
+        'font-size:16px',
+      ].join(';'),
+    });
+    helper.value = text;
+    document.body.appendChild(helper);
+    try { helper.focus({ preventScroll: true }); }
+    catch { helper.focus(); }
+    helper.setSelectionRange(0, helper.value.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(helper);
+    if (!ok) throw new Error('copy failed');
+  };
   const copyPlainText = async text => {
     const normalized = normalizeClipboardText(text);
+    if (isAppleTouchDevice()) {
+      copyWithTextareaSelection(normalized);
+      return;
+    }
     if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
       await navigator.clipboard.writeText(normalized);
       return;
@@ -267,18 +297,7 @@
       await navigator.clipboard.write([item]);
       return;
     }
-    const helper = el('textarea', {
-      readonly: 'readonly',
-      'aria-hidden': 'true',
-      style: 'position:fixed;top:-9999px;left:-9999px;opacity:0;',
-    });
-    helper.value = normalized;
-    document.body.appendChild(helper);
-    helper.focus();
-    helper.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(helper);
-    if (!ok) throw new Error('copy failed');
+    copyWithTextareaSelection(normalized);
   };
   const attachDecimalOnlyInput = inp => {
     const invalidKeys = new Set(['e', 'E', '+', '-']);
