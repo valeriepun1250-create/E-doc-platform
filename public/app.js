@@ -1417,7 +1417,7 @@
 
     const head = el('div', { class: 'qhead' });
     if (!q.hideLabel) {
-      head.appendChild(el('div', { class: 'label' }, [q.label]));
+      head.appendChild(el('div', { class: 'label' }, [q.label || '']));
     } else {
       head.appendChild(el('div', { class: 'label' }, ['']));
     }
@@ -1600,7 +1600,87 @@
         const growTa = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
         ta.oninput = () => { set(ta.value); growTa(); };
         setTimeout(growTa, 0);
-        wrap.appendChild(ta);
+        if (q.tedStockingControl) {
+          const tedId = q.tedStockingQuestionId || 'ted_stocking';
+          const ted = (answers[tedId] && typeof answers[tedId] === 'object' && !Array.isArray(answers[tedId]))
+            ? answers[tedId]
+            : {};
+          const tedHasValue = () => {
+            const state = (answers[tedId] && typeof answers[tedId] === 'object' && !Array.isArray(answers[tedId]))
+              ? answers[tedId]
+              : {};
+            return !!(state.right || state.left || state.size);
+          };
+          const cleanDecimal = value => {
+            const text = String(value || '').replace(/[^\d.]/g, '');
+            const parts = text.split('.');
+            return parts.length <= 1 ? text : `${parts[0]}.${parts.slice(1).join('')}`;
+          };
+          const row = el('div', { class: 'ted-stocking-row' });
+          const btn = el('button', { type: 'button', class: 'ted-stocking-toggle' }, ['TED stocking']);
+          const panel = el('div', { class: 'ted-stocking-panel' });
+          const tedExpanded = ted.expanded !== undefined ? !!ted.expanded : tedHasValue();
+          panel.hidden = !tedExpanded;
+          if (tedHasValue()) btn.classList.add('sel');
+
+          const rightInp = el('input', { type: 'text', inputmode: 'decimal', class: 'ted-calf-input', placeholder: '' });
+          const leftInp = el('input', { type: 'text', inputmode: 'decimal', class: 'ted-calf-input', placeholder: '' });
+          const sizeInp = el('input', { type: 'text', class: 'ted-size-input', placeholder: '' });
+          rightInp.value = ted.right || '';
+          leftInp.value = ted.left || '';
+          sizeInp.value = ted.size || '';
+          const commitTed = () => {
+            answers[tedId] = {
+              expanded: true,
+              right: rightInp.value,
+              left: leftInp.value,
+              size: sizeInp.value,
+            };
+            btn.classList.toggle('sel', tedHasValue());
+            if (ctx && ctx.fireChange) ctx.fireChange();
+          };
+          [rightInp, leftInp].forEach(input => {
+            input.oninput = () => {
+              const clean = cleanDecimal(input.value);
+              if (clean !== input.value) input.value = clean;
+              commitTed();
+            };
+          });
+          sizeInp.oninput = commitTed;
+          btn.onclick = () => {
+            const shouldShow = !panel.hidden;
+            panel.hidden = shouldShow;
+            if (!shouldShow) {
+              answers[tedId] = {
+                expanded: true,
+                right: rightInp.value,
+                left: leftInp.value,
+                size: sizeInp.value,
+              };
+              if (tedHasValue()) btn.classList.add('sel');
+            } else {
+              answers[tedId] = {
+                expanded: false,
+                right: rightInp.value,
+                left: leftInp.value,
+                size: sizeInp.value,
+              };
+            }
+            if (ctx && ctx.fireChange) ctx.fireChange();
+          };
+          head.appendChild(btn);
+          row.appendChild(ta);
+          panel.appendChild(el('span', { class: 'ted-stock-text' }, ['Bilateral calf circumference: Right ']));
+          panel.appendChild(rightInp);
+          panel.appendChild(el('span', { class: 'ted-stock-text' }, [' cm; Left ']));
+          panel.appendChild(leftInp);
+          panel.appendChild(el('span', { class: 'ted-stock-text' }, [' cm. TED size: ']));
+          panel.appendChild(sizeInp);
+          wrap.appendChild(row);
+          wrap.appendChild(panel);
+        } else {
+          wrap.appendChild(ta);
+        }
         break;
       }
       case 'number': {
@@ -4084,6 +4164,19 @@
 
   // Named custom report composers — invoked when a question has `customReport: "<name>"`.
   // Return null/undefined to skip the line; otherwise the returned string is pushed.
+  const tedStockingState = answers => {
+    const state = answers && answers.ted_stocking;
+    return state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+  };
+
+  const assessmentDateDmy = answers => {
+    const iso = answers && answers.__case && answers.__case.assessmentDate;
+    if (!iso) return '';
+    const d = new Date(`${iso}T00:00:00`);
+    if (!Number.isFinite(d.getTime())) return String(iso).trim();
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  };
+
   function buildMbiSummaryLine(allQs, answers) {
     const q = allQs.mbi;
     if (!q || isEmptyAnswer(q, answers.mbi)) return null;
@@ -4849,6 +4942,24 @@
     essential_tremor_major_complaint(q, a) {
       if (a === undefined || a === null || String(a).trim() === '') return null;
       return ['', `Major complaint: ${String(a).trim()}`].join('\n');
+    },
+
+    ted_stocking_physical(q, a, allQs, answers) {
+      const ted = tedStockingState(answers);
+      const right = ted.right != null ? String(ted.right).trim() : '';
+      const left = ted.left != null ? String(ted.left).trim() : '';
+      if (!right && !left) return null;
+      const line = `Bilateral calf circumference: Right ${right} cm; Left ${left} cm.`;
+      const other = answers && answers.sensation_other != null ? String(answers.sensation_other).trim() : '';
+      return other ? line : `Other:\n${line}`;
+    },
+
+    ted_stocking_recommendation(q, a, allQs, answers) {
+      const ted = tedStockingState(answers);
+      const size = ted.size != null ? String(ted.size).trim() : '';
+      if (!size) return null;
+      const date = assessmentDateDmy(answers);
+      return `TED stocking (size ${size}) given${date ? ` on ${date}` : ''}, for post-op use.\n`;
     },
 
     vitals_summary(q, a) {

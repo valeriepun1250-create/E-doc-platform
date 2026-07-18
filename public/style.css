@@ -2188,6 +2188,57 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   resize: vertical;
 }
 
+.ted-stocking-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.ted-stocking-row textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ted-stocking-toggle {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #11654c;
+  background: #f5faf7;
+  border-color: #9bb8ae;
+}
+.ted-stocking-toggle.sel {
+  background: var(--selected-green);
+  border-color: var(--selected-green-border);
+  color: var(--selected-green-text);
+}
+.ted-stocking-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #c9ddd5;
+  border-radius: var(--radius-sm);
+  background: #f7fbf9;
+  color: var(--fg-soft);
+  font-size: 13.5px;
+}
+.ted-stocking-panel[hidden] {
+  display: none;
+}
+.ted-stocking-panel input {
+  width: 88px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.ted-stocking-panel .ted-size-input {
+  width: 120px;
+}
+
 /* Inline option detail text (next to checked checkbox) */
 .detail-input {
   margin-left: 8px; padding: 5px 10px; font-size: 12.5px;
