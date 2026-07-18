@@ -465,6 +465,24 @@
     document.documentElement.style.setProperty('--work-header-offset', `${height}px`);
   }
 
+  function syncFixedFooterBottom() {
+    const vv = window.visualViewport;
+    if (!vv) {
+      document.documentElement.style.setProperty('--fixed-footer-bottom', '0px');
+      return;
+    }
+    const bottom = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--fixed-footer-bottom', `${bottom}px`);
+  }
+
+  syncFixedFooterBottom();
+  window.addEventListener('resize', syncFixedFooterBottom, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(syncFixedFooterBottom, 250), { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncFixedFooterBottom, { passive: true });
+    window.visualViewport.addEventListener('scroll', syncFixedFooterBottom, { passive: true });
+  }
+
   // ---------- browse (single page: Create new case + History) ----------
   async function renderBrowse() {
     app.innerHTML = '';
