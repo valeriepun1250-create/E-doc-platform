@@ -4790,11 +4790,13 @@
       const bp = a.bp != null ? String(a.bp).trim() : '';
       const pulse = a.p != null ? String(a.p).trim() : '';
       const spo2 = a.spo2 != null ? String(a.spo2).trim() : '';
+      const oxygen = a.o2 != null ? String(a.o2).trim() : '';
       const other = a.other != null ? String(a.other).trim() : '';
       const bits = [];
       if (bp) bits.push(`BP ${bp} mmHg`);
       if (pulse) bits.push(`Pulse ${pulse}/minute`);
-      if (spo2) bits.push(`SpO2 ${spo2}%`);
+      if (spo2) bits.push(`SpO2 ${spo2}%${oxygen ? ` ${oxygen}` : ''}`);
+      else if (oxygen) bits.push(`O2 ${oxygen}`);
       if (other) bits.push(other);
       return bits.length ? `Vital signs: ${bits.join(', ')}.` : null;
     },
