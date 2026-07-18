@@ -911,15 +911,6 @@
                 ]
               }
             ]
-          },
-          {
-            "id": "ot_comment",
-            "label": "OT Comment",
-            "type": "long_text",
-            "width": "full",
-            "reportTitle": "OT Comment",
-            "reportHideTitle": true,
-            "reportTemplate": "OT Comment: {answer}"
           }
         ],
         "reportTitle": "Functional Assessment"
@@ -1162,6 +1153,13 @@
       {
         "title": "Treatment / Plan",
         "questions": [
+          {
+            "id": "ot_comment",
+            "label": "OT Comment",
+            "type": "long_text",
+            "width": "full",
+            "reportTemplate": "OT Comment: {answer}"
+          },
           {
             "id": "treatment_plan",
             "label": "Treatment / Plan",
