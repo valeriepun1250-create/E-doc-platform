@@ -4460,14 +4460,18 @@
 
     treatment_plan_lines(q, a) {
       if (isEmptyAnswer(q, a)) return null;
-      if (!Array.isArray(a)) return formatAnswer(q, a);
+      if (!Array.isArray(a)) {
+        const output = formatAnswer(q, a);
+        return q.reportPrefix ? `${q.reportPrefix}${output}` : output;
+      }
       const optionByValue = new Map((q.options || [])
         .filter(opt => typeof opt === 'object' && opt !== null)
         .map(opt => [opt.value, opt]));
-      return a.map(it => {
+      const output = a.map(it => {
         const value = (typeof it === 'object' && it !== null) ? it.value : it;
         return formatCheckEntry(it, !!q.keepOtherLabel, optionByValue.get(value));
       }).join('\n');
+      return q.reportPrefix ? `${q.reportPrefix}${output}` : output;
     },
 
     mbi_summary(q, a, allQs, answers) {

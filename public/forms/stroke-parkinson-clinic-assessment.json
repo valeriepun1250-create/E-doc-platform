@@ -1158,7 +1158,9 @@
             "label": "OT Comment",
             "type": "long_text",
             "width": "full",
-            "reportTemplate": "OT Comment: {answer}"
+            "reportTitle": "OT Comment",
+            "reportHideTitle": true,
+            "reportTemplate": "OT Comment:\n{answer}"
           },
           {
             "id": "treatment_plan",
@@ -1182,7 +1184,10 @@
               }
             ],
             "allowOther": true,
-            "customReport": "treatment_plan_lines"
+            "customReport": "treatment_plan_lines",
+            "reportTitle": "Recommendation",
+            "reportHideTitle": true,
+            "reportPrefix": "Treatment / Plan:\n"
           }
         ],
         "reportTitle": "Treatment / Plan"
