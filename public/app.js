@@ -803,7 +803,37 @@
       if (currentNextIdx !== undefined) goToSection(currentNextIdx);
     };
 
+    function syncRenderedCompositeValues() {
+      root.querySelectorAll('[data-composite-question][data-composite-part]').forEach(inp => {
+        const questionId = inp.dataset.compositeQuestion;
+        const partId = inp.dataset.compositePart;
+        if (!questionId || !partId) return;
+        const target = answers[questionId] && typeof answers[questionId] === 'object'
+          ? answers[questionId]
+          : {};
+        if (inp.value === '') delete target[partId];
+        else target[partId] = inp.value;
+        answers[questionId] = target;
+      });
+    }
+
+    function syncEditedVitalLine(editedParts, report) {
+      if (!editedParts) return undefined;
+      const next = { ...editedParts };
+      if (typeof next.common !== 'string') return next;
+      const latestVitalLine = String(report || '').split('\n').find(line => /^Vital signs:/.test(line));
+      if (!latestVitalLine) return next;
+      const lines = next.common.split('\n');
+      const vitalIndex = lines.findIndex(line => /^Vital signs:/.test(line));
+      if (vitalIndex >= 0) {
+        lines[vitalIndex] = latestVitalLine;
+        next.common = lines.join('\n');
+      }
+      return next;
+    }
+
     function persistEntry(asDraft) {
+      syncRenderedCompositeValues();
       const existingEntry = historyId ? history.load().find(e => e.id === historyId) : null;
       const report = buildReport(form, answers);
       const savedAt = new Date().toISOString();
@@ -814,7 +844,7 @@
         specialty: form.specialty,
         answers,
         report,
-        editedParts: existingEntry && existingEntry.editedParts ? existingEntry.editedParts : undefined,
+        editedParts: syncEditedVitalLine(existingEntry && existingEntry.editedParts, report),
         draft: !!asDraft,
         savedAt,
         expiresAt: expiryFromSavedAt(savedAt),
@@ -2745,6 +2775,8 @@
                     type: p.inputType || 'text',
                     placeholder: p.placeholder || '',
                   });
+              inp.dataset.compositeQuestion = q.id;
+              inp.dataset.compositePart = p.id;
               if (p.wide) inp.classList.add('wide');
               if (p.extraWide) { inp.classList.add('extra-wide'); part.classList.add('extra-wide'); }
               inp.value = curObj[p.id] != null ? curObj[p.id] : '';
