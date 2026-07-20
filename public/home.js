@@ -1,9 +1,15 @@
 (() => {
   const HISTORY_KEY = 'edoc_history_v1';
+  const HISTORY_BACKUP_KEY = 'edoc_history_v1_backup';
   const MEDICAL_HISTORY_KEY = 'otInpatientMedicalCases.v1';
+  const MEDICAL_HISTORY_BACKUP_KEY = 'otInpatientMedicalCases.v1.backup';
   const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
   const historyList = document.getElementById('mainHistoryList');
   const refreshBtn = document.getElementById('refreshHistory');
+
+  if (navigator.storage && typeof navigator.storage.persist === 'function') {
+    navigator.storage.persist().catch(() => {});
+  }
 
   const el = (tag, props = {}, kids = []) => {
     const node = document.createElement(tag);
@@ -21,18 +27,48 @@
     return Number.isFinite(time) ? new Date(time + EXPIRY_MS).toISOString() : null;
   };
 
-  const loadNsHistory = () => {
-    let items;
+  const loadStoredArray = (key, backupKey) => {
+    let items = null;
     try {
-      items = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    } catch {
-      items = [];
+      const stored = localStorage.getItem(key);
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          items = parsed;
+          if (localStorage.getItem(backupKey) === null) {
+            localStorage.setItem(backupKey, stored);
+          }
+        }
+      }
+    } catch { /* recover from the backup below */ }
+    if (!items) {
+      try {
+        const backup = JSON.parse(localStorage.getItem(backupKey) || '[]');
+        if (Array.isArray(backup)) {
+          items = backup;
+          localStorage.setItem(key, JSON.stringify(backup));
+        }
+      } catch { /* use an empty list below */ }
     }
+    return items || [];
+  };
+
+  const saveStoredArray = (key, backupKey, items) => {
+    const stored = JSON.stringify(items);
+    localStorage.setItem(key, stored);
+    try { localStorage.setItem(backupKey, stored); }
+    catch { /* the primary copy was saved successfully */ }
+  };
+
+  const loadNsHistory = () => {
+    const items = loadStoredArray(HISTORY_KEY, HISTORY_BACKUP_KEY);
 
     let dirty = false;
     items.forEach(item => {
-      if (!item.expiresAt) {
-        item.expiresAt = expiryFromSavedAt(item.savedAt);
+      const savedExpiry = expiryFromSavedAt(item.savedAt);
+      const currentExpiry = Date.parse(item.expiresAt || '');
+      if (savedExpiry && (!Number.isFinite(currentExpiry) || Date.parse(savedExpiry) > currentExpiry)) {
+        item.expiresAt = savedExpiry;
         dirty = true;
       }
     });
@@ -48,35 +84,33 @@
       }
       return true;
     });
-    if (dirty) localStorage.setItem(HISTORY_KEY, JSON.stringify(kept));
+    if (dirty) saveStoredArray(HISTORY_KEY, HISTORY_BACKUP_KEY, kept);
     return kept;
   };
 
   const saveNsHistory = items => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+    saveStoredArray(HISTORY_KEY, HISTORY_BACKUP_KEY, items);
   };
 
   const loadMedicalHistory = () => {
-    let items;
-    try {
-      items = JSON.parse(localStorage.getItem(MEDICAL_HISTORY_KEY) || '[]');
-    } catch {
-      items = [];
-    }
+    const items = loadStoredArray(MEDICAL_HISTORY_KEY, MEDICAL_HISTORY_BACKUP_KEY);
     const now = Date.now();
     const kept = items.filter(item => {
-      const createdAt = Date.parse(item.createdAt || item.updatedAt || '');
-      if (!Number.isFinite(createdAt)) return true;
-      return now - createdAt < EXPIRY_MS;
+      const savedTimes = [item.updatedAt, item.createdAt]
+        .map(value => Date.parse(value || ''))
+        .filter(Number.isFinite);
+      if (!savedTimes.length) return true;
+      const lastSavedAt = Math.max(...savedTimes);
+      return now - lastSavedAt < EXPIRY_MS;
     });
     if (kept.length !== items.length) {
-      localStorage.setItem(MEDICAL_HISTORY_KEY, JSON.stringify(kept));
+      saveStoredArray(MEDICAL_HISTORY_KEY, MEDICAL_HISTORY_BACKUP_KEY, kept);
     }
     return kept;
   };
 
   const saveMedicalHistory = items => {
-    localStorage.setItem(MEDICAL_HISTORY_KEY, JSON.stringify(items));
+    saveStoredArray(MEDICAL_HISTORY_KEY, MEDICAL_HISTORY_BACKUP_KEY, items);
   };
 
   const splitMedicalFormType = value => {

@@ -3,9 +3,15 @@
 
   const BANK = window.OT_PHRASE_BANK;
   const STORAGE_KEY = "otInpatientMedicalCases.v1";
+  const STORAGE_BACKUP_KEY = "otInpatientMedicalCases.v1.backup";
+  const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
   const AUTOSAVE_LABEL = "Autosaved locally";
   const NOTE_PART_KEYS = ["greenBox", "common", "problem", "recommendation"];
   const app = document.getElementById("app");
+
+  if (navigator.storage && typeof navigator.storage.persist === "function") {
+    navigator.storage.persist().catch(() => {});
+  }
 
   let cases = [];
   let currentCaseId = null;
@@ -487,7 +493,28 @@
 
   function loadCases() {
     try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      let stored = null;
+      try {
+        const primaryValue = localStorage.getItem(STORAGE_KEY);
+        if (primaryValue !== null) {
+          const parsed = JSON.parse(primaryValue);
+          if (Array.isArray(parsed)) stored = parsed;
+        }
+      } catch (error) {
+        // Recover from the backup below.
+      }
+      if (!stored) {
+        try {
+          const backup = JSON.parse(localStorage.getItem(STORAGE_BACKUP_KEY) || "[]");
+          if (Array.isArray(backup)) {
+            stored = backup;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(backup));
+          }
+        } catch (error) {
+          // Use an empty case list below.
+        }
+      }
+      if (!stored) stored = [];
       const normalized = stored.map((record) => {
         const data = mergeDeep(blankData(), record.data || {});
         normalizeStoredData(data);
@@ -500,10 +527,24 @@
           data
         };
       });
-      cases = normalized.filter((record) => daysSince(record.createdAt) < 7);
+      const now = Date.now();
+      cases = normalized.filter((record) => {
+        const savedTimes = [record.updatedAt, record.createdAt]
+          .map((value) => new Date(value || "").getTime())
+          .filter(Number.isFinite);
+        return !savedTimes.length || now - Math.max(...savedTimes) < RETENTION_MS;
+      });
       if (cases.length !== normalized.length) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(cases));
-        statusMessage = "Cases older than 7 days were auto-deleted.";
+        saveCases();
+        statusMessage = "Cases not saved for 7 days were auto-deleted.";
+      } else {
+        try {
+          if (localStorage.getItem(STORAGE_BACKUP_KEY) === null) {
+            localStorage.setItem(STORAGE_BACKUP_KEY, JSON.stringify(cases));
+          }
+        } catch (error) {
+          // The primary case list remains available.
+        }
       }
     } catch (error) {
       cases = [];
@@ -660,7 +701,13 @@
 
   function saveCases() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cases));
+      const stored = JSON.stringify(cases);
+      localStorage.setItem(STORAGE_KEY, stored);
+      try {
+        localStorage.setItem(STORAGE_BACKUP_KEY, stored);
+      } catch (error) {
+        // The primary copy was saved successfully.
+      }
     } catch (error) {
       statusMessage = "Local browser storage is full or unavailable.";
     }
@@ -682,12 +729,6 @@
   function refreshStatus() {
     const node = app.querySelector("[data-status]");
     if (node) node.textContent = statusMessage || AUTOSAVE_LABEL;
-  }
-
-  function daysSince(isoDate) {
-    const start = new Date(isoDate);
-    if (Number.isNaN(start.getTime())) return 0;
-    return Math.floor((Date.now() - start.getTime()) / 86400000);
   }
 
   function optionLabel(option) {

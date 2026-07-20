@@ -5,10 +5,14 @@
   const nav = document.getElementById('nav');
   const state = { view: 'browse', currentForm: null };
   const HISTORY_KEY = 'edoc_history_v1';
+  const HISTORY_BACKUP_KEY = 'edoc_history_v1_backup';
   const ACTIVE_SESSION_KEY = 'edoc_active_session_v1';
   const FORMS_DIR = window.EDOC_FORMS_DIR || 'forms/';
   const ASSETS_DIR = window.EDOC_ASSETS_DIR || 'images/';
   const MAIN_HOME_URL = window.EDOC_MAIN_HOME_URL || '';
+  if (navigator.storage && typeof navigator.storage.persist === 'function') {
+    navigator.storage.persist().catch(() => {});
+  }
   const MOCA_NORM_ROWS = {
     '65-69': {
       '0-3': { p16: 17, p7: 14, p2: 9 },
@@ -379,13 +383,33 @@
   };
   const history = {
     load() {
-      let arr;
-      try { arr = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
-      catch { arr = []; }
+      let arr = null;
+      try {
+        const stored = localStorage.getItem(HISTORY_KEY);
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) arr = parsed;
+        }
+      } catch { /* recover from the backup below */ }
+      if (!arr) {
+        try {
+          const backup = JSON.parse(localStorage.getItem(HISTORY_BACKUP_KEY) || '[]');
+          if (Array.isArray(backup)) {
+            arr = backup;
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(backup));
+          }
+        } catch { /* use an empty history below */ }
+      }
+      if (!arr) arr = [];
       // Backfill expiresAt for older entries that pre-date this feature.
       let dirty = false;
       arr.forEach(e => {
-        if (!e.expiresAt) { e.expiresAt = expiryFromSavedAt(e.savedAt); dirty = true; }
+        const savedExpiry = expiryFromSavedAt(e.savedAt);
+        const currentExpiry = Date.parse(e.expiresAt || '');
+        if (savedExpiry && (!Number.isFinite(currentExpiry) || Date.parse(savedExpiry) > currentExpiry)) {
+          e.expiresAt = savedExpiry;
+          dirty = true;
+        }
       });
       // Drop anything past its expiry.
       const now = Date.now();
@@ -396,10 +420,22 @@
         if (exp <= now) { dirty = true; return false; }
         return true;
       });
-      if (dirty) localStorage.setItem(HISTORY_KEY, JSON.stringify(kept));
+      if (dirty) history.save(kept);
+      else {
+        try {
+          if (localStorage.getItem(HISTORY_BACKUP_KEY) === null) {
+            localStorage.setItem(HISTORY_BACKUP_KEY, JSON.stringify(kept));
+          }
+        } catch { /* the primary history remains available */ }
+      }
       return kept;
     },
-    save(arr) { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); },
+    save(arr) {
+      const stored = JSON.stringify(arr);
+      localStorage.setItem(HISTORY_KEY, stored);
+      try { localStorage.setItem(HISTORY_BACKUP_KEY, stored); }
+      catch { /* the primary copy was saved successfully */ }
+    },
     add(entry) { const a = history.load(); a.unshift(entry); history.save(a); },
     remove(id) { history.save(history.load().filter(e => e.id !== id)); },
     update(id, patch) {
