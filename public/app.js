@@ -3746,6 +3746,7 @@
     // normal report line is skipped and the section emits one combined sentence
     // listing the deduplicated reasons. Stored at answers.__suspended[q.id].
     if (q.allowSuspend) {
+      wrap.classList.add('has-suspend-control');
       const susp = answers.__suspended = answers.__suspended || {};
       const autoSusp = answers.__autoSuspended = answers.__autoSuspended || {};
       const row = el('div', { class: 'suspend-row' });
@@ -3755,30 +3756,66 @@
         placeholder: 'reason (e.g. dizziness, pain, refused)',
       });
       const syncDerivedSuspensions = () => {
-        const hasTransferLieSit = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit');
-        const hasTransferSitStand = Object.prototype.hasOwnProperty.call(susp, 'transfer_sit_stand');
-        const shouldSuspendAmbulation = hasTransferLieSit || hasTransferSitStand;
-        const hasAmbulation = Object.prototype.hasOwnProperty.call(susp, 'ambulation');
+        const derivedIds = ['balance_stand', 'transfer_lie_sit', 'transfer_sit_stand', 'ambulation'];
+        const has = id => Object.prototype.hasOwnProperty.call(susp, id);
+        const isAuto = id => Object.prototype.hasOwnProperty.call(autoSusp, id);
+        const reasonOf = id => String(susp[id] || '').trim();
+        const desired = new Map();
+        const addDerived = (id, sourceId) => {
+          if (has(sourceId) && !desired.has(id)) desired.set(id, reasonOf(sourceId));
+        };
         let changed = false;
 
-        if (shouldSuspendAmbulation) {
-          if (!hasAmbulation) {
-            susp.ambulation = '';
-            autoSusp.ambulation = true;
-            changed = true;
+        addDerived('balance_stand', 'balance_sit');
+        addDerived('transfer_lie_sit', 'balance_sit');
+        addDerived('transfer_sit_stand', 'balance_sit');
+        addDerived('ambulation', 'balance_sit');
+        addDerived('transfer_sit_stand', 'balance_stand');
+        addDerived('ambulation', 'balance_stand');
+        addDerived('transfer_sit_stand', 'transfer_lie_sit');
+        addDerived('ambulation', 'transfer_lie_sit');
+        addDerived('ambulation', 'transfer_sit_stand');
+
+        desired.forEach((derivedReason, id) => {
+          if (!has(id) || isAuto(id)) {
+            if (susp[id] !== derivedReason) {
+              susp[id] = derivedReason;
+              changed = true;
+            }
+            if (!isAuto(id)) {
+              autoSusp[id] = true;
+              changed = true;
+            }
+            delete answers[id];
+            if (comments) delete comments[id];
           }
-        } else if (autoSusp.ambulation) {
-          delete autoSusp.ambulation;
-          if (Object.prototype.hasOwnProperty.call(susp, 'ambulation')) {
-            delete susp.ambulation;
-            changed = true;
+        });
+
+        derivedIds.forEach(id => {
+          if (isAuto(id) && !desired.has(id)) {
+            delete autoSusp[id];
+            if (has(id)) {
+              delete susp[id];
+              changed = true;
+            }
           }
+        });
+
+        if (has('balance_sit')) {
+          ['balance_stand', 'transfer_lie_sit', 'transfer_sit_stand', 'ambulation'].forEach(id => {
+            if (isAuto(id) && susp[id] !== reasonOf('balance_sit')) {
+              susp[id] = reasonOf('balance_sit');
+              changed = true;
+            }
+          });
         }
 
         if (!Object.keys(autoSusp).length) delete answers.__autoSuspended;
         return changed;
       };
-      if (q.id === 'transfer_lie_sit' || q.id === 'transfer_sit_stand' || q.id === 'ambulation') {
+      if (q.id === 'balance_sit' || q.id === 'balance_stand'
+        || q.id === 'transfer_lie_sit' || q.id === 'transfer_sit_stand'
+        || q.id === 'ambulation') {
         syncDerivedSuspensions();
       }
       const initial = susp[q.id];
@@ -3832,10 +3869,10 @@
           }
           clearAnswer();
           susp[q.id] = reason.value;
-          if (q.id === 'ambulation' && reason.value.trim()) delete autoSusp.ambulation;
+          if (reason.value.trim()) delete autoSusp[q.id];
         } else {
           delete susp[q.id];
-          if (q.id === 'ambulation') delete autoSusp.ambulation;
+          delete autoSusp[q.id];
         }
         const derivedChanged = syncDerivedSuspensions();
         setFrozen(cb.checked);
@@ -3852,7 +3889,7 @@
       lbl.appendChild(document.createTextNode(' Not test due to '));
       lbl.appendChild(reason);
       row.appendChild(lbl);
-      wrap.appendChild(row);
+      head.appendChild(row);
       if (initial !== undefined) {
         wrap.classList.add('suspended');
         setFrozen(true);
@@ -5016,6 +5053,14 @@
       return `TED stocking (size ${size}) given${date ? ` on ${date}` : ''}, for post-op use.\n`;
     },
 
+    heel_protector_recommendation(q, a, allQs, answers) {
+      const treatment = Array.isArray(answers.treatment_done) ? answers.treatment_done : [];
+      const hasHeelProtector = treatment.some(item => /heel\s*protector/i.test(String(item || '')));
+      if (!hasHeelProtector) return null;
+      const date = assessmentDateDmy(answers);
+      return `Bilateral heel protector fit${date ? ` on ${date}` : ''}, for Q4H use.\n`;
+    },
+
     vitals_summary(q, a) {
       if (!a || typeof a !== 'object') return null;
       const bp = a.bp != null ? String(a.bp).trim() : '';
@@ -5168,8 +5213,9 @@
       const bd = subScoreBreakdownLines(q, a, undefined, answers);
       if (bd.length) lines.push(...bd);
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
-      if (impQ && !isEmptyAnswer(impQ, imp)) {
-        lines.push(`Impression: ${formatAnswer(impQ, imp)}`);
+      if (impQ && impQ.hideInReport && impQ.hideReportLabel && !isEmptyAnswer(impQ, imp)) {
+        const impText = formatAnswer(impQ, imp);
+        lines.push(impQ.hideReportLabel ? impText : `Impression: ${impText}`);
       }
       return lines.join('\n');
     },
@@ -5183,6 +5229,14 @@
       const stdQ = allQs.balance_stand, std = answers.balance_stand;
       const sitSuspended = Object.prototype.hasOwnProperty.call(susp, 'balance_sit');
       const standSuspended = Object.prototype.hasOwnProperty.call(susp, 'balance_stand');
+      const sitReason = String(susp.balance_sit || '').trim();
+      const standReason = String(susp.balance_stand || '').trim();
+      if (sitSuspended) {
+        const reason = sitReason || standReason;
+        return reason
+          ? `Balance: Sitting, Standing: Not test due to ${reason}`
+          : 'Balance: Sitting, Standing: Not test';
+      }
       const parts = [];
       if (sitQ) {
         if (sitSuspended) {
@@ -5194,9 +5248,9 @@
       }
       if (stdQ) {
         if (sitSuspended && !standSuspended) {
-          parts.push('Standing: Not test');
+          parts.push(sitReason ? `Standing: Not test due to ${sitReason}` : 'Standing: Not test');
         } else if (standSuspended) {
-          const reason = String(susp.balance_stand || '').trim();
+          const reason = standReason;
           parts.push(reason ? `Standing: Not test due to ${reason}` : 'Standing: Not test');
         } else if (!isEmptyAnswer(stdQ, std)) {
           parts.push(`Standing: ${formatAnswer(stdQ, std)}`);
@@ -5212,23 +5266,39 @@
       const ssQ = allQs.transfer_sit_stand, ss = answers.transfer_sit_stand;
       const lieSitSuspended = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit');
       const sitStandSuspended = Object.prototype.hasOwnProperty.call(susp, 'transfer_sit_stand');
+      const upstreamReason = String(
+        susp.balance_sit || susp.balance_stand || susp.transfer_lie_sit || susp.transfer_sit_stand || ''
+      ).trim();
+      if (Object.prototype.hasOwnProperty.call(susp, 'balance_sit') || lieSitSuspended) {
+        const reason = upstreamReason;
+        return reason
+          ? `Transfer: Lie to Sit, Sit to Stand: Not test due to ${reason}`
+          : 'Transfer: Lie to Sit, Sit to Stand: Not test';
+      }
+      const sameSuspendReason = lieSitSuspended && sitStandSuspended;
+      if (sameSuspendReason) {
+        const reason = upstreamReason;
+        return reason
+          ? `Transfer: Lie to Sit, Sit to Stand: Not test due to ${reason}`
+          : 'Transfer: Lie to Sit, Sit to Stand: Not test';
+      }
       const parts = [];
       if (lsQ) {
         if (lieSitSuspended) {
           const reason = String(susp.transfer_lie_sit || '').trim();
-          parts.push(reason ? `Lie to sit: Not test due to ${reason}` : 'Lie to sit: Not test');
+          parts.push(reason ? `Lie to Sit: Not test due to ${reason}` : 'Lie to Sit: Not test');
         } else if (!isEmptyAnswer(lsQ, ls)) {
-          parts.push(`Lie to sit: ${formatAnswer(lsQ, ls)}`);
+          parts.push(`Lie to Sit: ${formatAnswer(lsQ, ls)}`);
         }
       }
       if (ssQ) {
         if (lieSitSuspended && !sitStandSuspended) {
-          parts.push('Sit to stand: Not test');
+          parts.push(upstreamReason ? `Sit to Stand: Not test due to ${upstreamReason}` : 'Sit to Stand: Not test');
         } else if (sitStandSuspended) {
-          const reason = String(susp.transfer_sit_stand || '').trim();
-          parts.push(reason ? `Sit to stand: Not test due to ${reason}` : 'Sit to stand: Not test');
+          const reason = upstreamReason;
+          parts.push(reason ? `Sit to Stand: Not test due to ${reason}` : 'Sit to Stand: Not test');
         } else if (!isEmptyAnswer(ssQ, ss)) {
-          parts.push(`Sit to stand: ${formatAnswer(ssQ, ss)}`);
+          parts.push(`Sit to Stand: ${formatAnswer(ssQ, ss)}`);
         }
       }
       return parts.length ? `Transfer: ${parts.join('; ')}` : null;
@@ -5240,9 +5310,15 @@
       const aidQ = allQs.ambulation_aid, aid = answers.ambulation_aid;
       const aidStr = aidQ && !isEmptyAnswer(aidQ, aid) ? formatAnswer(aidQ, aid) : null;
       const ambSuspended = Object.prototype.hasOwnProperty.call(susp, 'ambulation');
-      const blockedByTransfer = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit');
-      if (blockedByTransfer && !ambSuspended) {
-        return 'Ambulation: Not test';
+      const blockedByTransfer = Object.prototype.hasOwnProperty.call(susp, 'transfer_lie_sit')
+        || Object.prototype.hasOwnProperty.call(susp, 'transfer_sit_stand');
+      const blockedByBalance = Object.prototype.hasOwnProperty.call(susp, 'balance_sit')
+        || Object.prototype.hasOwnProperty.call(susp, 'balance_stand');
+      const upstreamReason = String(
+        susp.balance_sit || susp.balance_stand || susp.transfer_lie_sit || susp.transfer_sit_stand || susp.ambulation || ''
+      ).trim();
+      if (blockedByBalance || blockedByTransfer) {
+        return upstreamReason ? `Ambulation: Not test due to ${upstreamReason}` : 'Ambulation: Not test';
       }
       if (ambSuspended || isEmptyAnswer(q, a)) {
         if (ambSuspended) {
@@ -5306,7 +5382,13 @@
     // One factor per line in Problem Identification, with sub-options after ":".
     problems_factors(q, a) {
       if (!Array.isArray(a) || !a.length) return null;
-      return a.map(item => {
+      const factorOrder = ['Patient Factor', 'Environmental Factor', 'Social Factor'];
+      const rank = item => {
+        const value = (item && typeof item === 'object') ? item.value : item;
+        const index = factorOrder.indexOf(value);
+        return index >= 0 ? index : factorOrder.length;
+      };
+      return [...a].sort((left, right) => rank(left) - rank(right)).map(item => {
         if (typeof item === 'string' && item.startsWith('Other: ')) {
           return item;
         }
@@ -5370,10 +5452,11 @@
       }
       // Append Impression (extracted from the Mental Function section).
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
-      const impText = (impQ && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
+      const impText = (impQ && (!impQ.hideInReport || impQ.hideReportLabel) && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
+      const impLine = impText ? (impQ.hideReportLabel ? impText : `Impression: ${impText}.`) : '';
       const tail = [
         parts.length ? `${opts.brief ? 'Cognition' : 'Cognitive'}: ${parts.join('; ')}.` : '',
-        impText ? `Impression: ${impText}.` : '',
+        impLine,
       ].filter(Boolean).join(' ');
       return tail || null;
     },
@@ -5535,7 +5618,7 @@
               line = line.split(/;\s*/).filter(s => !/:\s*$/.test(s.trim())).join('; ');
             }
           } else {
-            line = `${q.label}: ${formatAnswer(q, a)}`;
+            line = q.hideReportLabel ? formatAnswer(q, a) : `${q.label}: ${formatAnswer(q, a)}`;
           }
           // Resolve cross-question references like {q:mbi} -> formatted answer.
           line = resolveCrossRefs(line, allQs, answers);
@@ -5633,6 +5716,11 @@
     };
 
     const mbiQ = allQs.mbi, mbiA = answers.mbi;
+    const otComplaintQ = allQs.ot_complaint, otComplaintA = answers.ot_complaint;
+    if (otComplaintQ && !isEmptyAnswer(otComplaintQ, otComplaintA)) {
+      add(formatAnswer(otComplaintQ, otComplaintA));
+    }
+
     if (mbiQ && !isEmptyAnswer(mbiQ, mbiA)) {
       if (isEssentialTremorForm || isParkinsonForm) {
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}`);

@@ -1845,6 +1845,14 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   gap: 10px; flex-wrap: wrap;
 }
 .qfill .qhead .label { flex: 1; }
+.qfill.has-suspend-control .qhead {
+  justify-content: flex-start;
+  align-items: center;
+}
+.qfill.has-suspend-control .qhead .label {
+  flex: 0 1 auto;
+  margin-bottom: 0;
+}
 .qfill.inline-control .qhead {
   align-items: center;
 }
@@ -3168,19 +3176,32 @@ textarea.bad { border-color: var(--danger); background: var(--danger-soft); }
    Suspend assessment toggle
    =========================================================== */
 .suspend-row {
-  margin-top: 10px; padding: 8px 12px;
-  background: var(--warn-soft);
-  border: 1px dashed #f0b65b; border-radius: var(--radius-sm);
+  margin: 0; padding: 0;
+  background: transparent;
+  border: 0; border-radius: 0;
   font-size: 12.5px;
+  flex: 0 1 auto;
+  min-width: min(100%, 280px);
 }
-.suspend-row .inline-text { width: 240px; margin-left: 8px; padding: 5px 10px; }
+.suspend-row .inline-text {
+  width: min(240px, 42vw);
+  margin-left: 4px;
+  padding: 5px 10px;
+}
 .suspend-row .suspend-label {
   display: flex; align-items: center; gap: 6px; margin: 0; color: var(--warn);
   font-weight: 500;
+  white-space: nowrap;
 }
 .suspend-row .suspend-label input { accent-color: var(--warn); }
 .qfill.suspended {
   background: var(--warn-soft); border-color: #f0b65b;
+}
+.qfill.suspended .suspend-row {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px dashed #f0b65b;
+  border-radius: var(--radius-sm);
 }
 .qfill.suspended .qhead .label::after {
   content: " · suspended";

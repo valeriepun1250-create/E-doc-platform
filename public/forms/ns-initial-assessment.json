@@ -765,11 +765,11 @@
             "label": "Impression",
             "type": "short_text",
             "width": "full",
+            "hideReportLabel": true,
             "showIf": {
               "questionId": "cog_status",
               "equals": "Performed"
-            },
-            "hideInReport": true
+            }
           }
         ],
         "reportTitle": "D. Mental Function"
@@ -2148,7 +2148,8 @@
             "label": "Impression",
             "type": "short_text",
             "width": "full",
-            "reportTemplate": "Impression: {answer}."
+            "reportTemplate": "{answer}",
+            "hideReportLabel": true
           },
           {
             "id": "mbi_overall",
@@ -2295,7 +2296,7 @@
             "label": "Major complaint",
             "type": "short_text",
             "width": "full",
-            "reportTemplate": "Major complaint: {answer}."
+            "reportTemplate": "{answer}"
           },
           {
             "id": "ot_adl",
@@ -2404,6 +2405,13 @@
             }
           },
           {
+            "id": "heel_protector_recommendation",
+            "type": "short_text",
+            "width": "full",
+            "hideInForm": true,
+            "customReport": "heel_protector_recommendation"
+          },
+          {
             "id": "treatment_done",
             "label": "Treatment",
             "type": "checkbox",
@@ -2430,8 +2438,10 @@
               "Post-LP assessment",
               "Check TED stocking",
               "Further assessment if stable",
-              "Basic ADL Training",
-              "Basic ADL maintenance",
+              "ADL Training",
+              "Hand function training",
+              "Functional balance training",
+              "ADL maintenance",
               "Cognitive / orientation training",
               "Fall Prevention education / training",
               "Limb function maintenance / positioning",
