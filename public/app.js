@@ -5058,7 +5058,7 @@
       const hasHeelProtector = treatment.some(item => /heel\s*protector/i.test(String(item || '')));
       if (!hasHeelProtector) return null;
       const date = assessmentDateDmy(answers);
-      return `Bilateral heel protector fit${date ? ` on ${date}` : ''}, for Q4H use.\n`;
+      return `Bilateral heel protector fit${date ? ` on ${date}` : ''}.\n`;
     },
 
     vitals_summary(q, a) {
