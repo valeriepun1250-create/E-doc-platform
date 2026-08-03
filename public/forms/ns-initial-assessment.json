@@ -780,7 +780,7 @@
         "questions": [
           {
             "id": "complaint",
-            "label": "Major complaint / others",
+            "label": "Major complaint",
             "type": "short_text",
             "width": "full"
           },

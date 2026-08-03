@@ -4637,7 +4637,7 @@
       let line = `ADL: MBI ${formatAnswer(mbiQ, answers.mbi)}`;
       const overallQ = allQs.mbi_overall;
       if (overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)) {
-        line += ` (${formatAnswer(overallQ, answers.mbi_overall)} Level)`;
+        line += ` (${formatAnswer(overallQ, answers.mbi_overall)})`;
       }
       return line;
     },
