@@ -343,21 +343,6 @@
             "hideInReport": true
           },
           {
-            "id": "financial",
-            "label": "Financial",
-            "type": "checkbox",
-            "width": "full",
-            "options": [
-              "Family support / saving",
-              "Public allowance",
-              "Comprehensive Social Security Assistance",
-              "Disability Allowance",
-              "Old Age Allowance",
-              "Old Age Living Allowance"
-            ],
-            "allowOther": true
-          },
-          {
             "id": "social_service",
             "label": "Social service",
             "type": "checkbox",
@@ -510,7 +495,6 @@
             "width": "half",
             "options": [
               "Name",
-              "Age",
               "Time",
               "Place",
               "Person"
