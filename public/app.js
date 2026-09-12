@@ -574,7 +574,7 @@
 
     const allForms = await listForms();
     for (const f of allForms) {
-      ncForm.appendChild(el('option', { value: f.id }, [`[${f.specialty}] ${f.title}`]));
+      ncForm.appendChild(el('option', { value: f.id }, [displayFormTitle(f)]));
     }
 
     app.querySelector('#ncStart').onclick = () => {
@@ -4689,34 +4689,35 @@
     },
 
     spinal_cervical_disease(q, a, allQs, answers) {
-      if (isEmptyAnswer(q, a)) return null;
-      const ndiLine = cervicalNdiSummaryLine(q, a).replace(/^NDI:/, 'Neck Disability Index:');
-      const ndiBreakdown = cervicalNdiBreakdownLines(q, a);
-      const lines = ['Disease-specific Assessment', ndiLine, ...ndiBreakdown];
+      const lines = ['Disease-specific Assessment'];
+      if (!isEmptyAnswer(q, a)) {
+        lines.push(
+          cervicalNdiSummaryLine(q, a).replace(/^NDI:/, 'Neck Disability Index:'),
+          ...cervicalNdiBreakdownLines(q, a),
+        );
+      }
       const vasQ = allQs.cervical_pain_vas;
       const vas = answers.cervical_pain_vas;
       if (vasQ && !isEmptyAnswer(vasQ, vas)) lines.push(`Pain assessment: VAS ${formatAnswer(vasQ, vas)}`);
 
       const joaQ = allQs.cervical_joa;
       const joa = answers.cervical_joa;
-      if (joaQ && !isEmptyAnswer(joaQ, joa)) {
-        lines.push(...cervicalJoaGroupedLine(joa));
-      }
-      return lines.join('\n');
+      if (joaQ && !isEmptyAnswer(joaQ, joa)) lines.push(...cervicalJoaGroupedLine(joa));
+      return lines.length > 1 ? lines.join('\n') : null;
     },
 
     spinal_thoracolumbar_disease(q, a, allQs, answers) {
-      if (isEmptyAnswer(q, a)) return null;
-      const odiLine = spinalOdiSummaryLine(q, a).replace(/^ODI:/, 'Oswestry Disability Index:');
-      const lines = [
-        'Disease-specific Assessment',
-        odiLine,
-        ...spinalOdiBreakdownLines(q, a),
-      ];
+      const lines = ['Disease-specific Assessment'];
+      if (!isEmptyAnswer(q, a)) {
+        lines.push(
+          spinalOdiSummaryLine(q, a).replace(/^ODI:/, 'Oswestry Disability Index:'),
+          ...spinalOdiBreakdownLines(q, a),
+        );
+      }
       const vasQ = allQs.thoracolumbar_pain_vas;
       const vas = answers.thoracolumbar_pain_vas;
       if (vasQ && !isEmptyAnswer(vasQ, vas)) lines.push(`Pain assessment: VAS ${formatAnswer(vasQ, vas)}`);
-      return lines.join('\n');
+      return lines.length > 1 ? lines.join('\n') : null;
     },
 
     // Compact two-line summary for the Premorbid ADL section. Attach this to
