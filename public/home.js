@@ -3,6 +3,7 @@
   const HISTORY_BACKUP_KEY = 'edoc_history_v1_backup';
   const MEDICAL_HISTORY_KEY = 'otInpatientMedicalCases.v1';
   const MEDICAL_HISTORY_BACKUP_KEY = 'otInpatientMedicalCases.v1.backup';
+  const ORTHO_HISTORY_KEY = 'ortho.assessments.v1';
   const EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
   const historyList = document.getElementById('mainHistoryList');
   const refreshBtn = document.getElementById('refreshHistory');
@@ -113,6 +114,13 @@
     saveStoredArray(MEDICAL_HISTORY_KEY, MEDICAL_HISTORY_BACKUP_KEY, items);
   };
 
+  const loadOrthoHistory = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem(ORTHO_HISTORY_KEY) || '{}');
+      return data && typeof data === 'object' && !Array.isArray(data) ? Object.values(data) : [];
+    } catch { return []; }
+  };
+
   const splitMedicalFormType = value => {
     const text = String(value || '');
     const match = text.match(/^\[([^\]]+)\]\s*(.+)$/);
@@ -154,9 +162,29 @@
     };
   };
 
+  const normalizeOrthoItem = item => {
+    const formTitles = {
+      ortho_day: 'Ortho Day Rehab FU',
+      ghf_initial: 'Geriatric Hip Fracture Initial',
+    };
+    return {
+      source: 'ortho',
+      id: item.id,
+      specialty: 'Ortho',
+      primaryName: item.label || item.formType || 'Untitled case',
+      date: item.date || item.updatedAt || item.createdAt,
+      formTitle: formTitles[item.formType] || 'Ortho Assessment',
+      formId: `ortho-${item.formType || 'assessment'}`,
+      draft: false,
+      edited: !!(item.od_summaryEdits && Object.keys(item.od_summaryEdits).length),
+      updatedAt: item.updatedAt || item.createdAt || '',
+    };
+  };
+
   const loadCombinedHistory = () => [
     ...loadNsHistory().map(normalizeNsItem),
     ...loadMedicalHistory().map(normalizeMedicalItem),
+    ...loadOrthoHistory().map(normalizeOrthoItem),
   ].sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
 
   const formatDate = iso => {
@@ -174,6 +202,10 @@
     if (item.source === 'medical') {
       const params = new URLSearchParams({ case: item.id });
       return `medical/?${params.toString()}`;
+    }
+    if (item.source === 'ortho') {
+      const params = new URLSearchParams({ case: item.id });
+      return `ortho/?${params.toString()}`;
     }
     const params = new URLSearchParams({ history: item.id });
     return `ns/?${params.toString()}`;
@@ -212,6 +244,10 @@
             if (!confirm('Delete this saved response?')) return;
             if (item.source === 'medical') {
               saveMedicalHistory(loadMedicalHistory().filter(historyItem => historyItem.id !== item.id));
+            } else if (item.source === 'ortho') {
+              const data = loadOrthoHistory().filter(historyItem => historyItem.id !== item.id)
+                .reduce((out, historyItem) => { out[historyItem.id] = historyItem; return out; }, {});
+              localStorage.setItem(ORTHO_HISTORY_KEY, JSON.stringify(data));
             } else {
               saveNsHistory(loadNsHistory().filter(historyItem => historyItem.id !== item.id));
             }

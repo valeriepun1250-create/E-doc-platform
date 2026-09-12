@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#c0392b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Ortho OT" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Ortho OT Assessment</title>
+  <script>
+    // The service worker is what makes the app work offline and installable, but it
+    // serves files from its cache before the network — so on a local preview it keeps
+    // handing back the previous version and an edit looks like it did nothing. Skip it
+    // on localhost: this guard cannot fire on a real host, so anywhere the app is
+    // actually deployed still registers it exactly as before. Do not remove it to
+    // "test the service worker locally" — deploy and test there instead.
+    if ('serviceWorker' in navigator &&
+        location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -10,6 +10,10 @@
   const FORMS_DIR = window.EDOC_FORMS_DIR || 'forms/';
   const ASSETS_DIR = window.EDOC_ASSETS_DIR || 'images/';
   const MAIN_HOME_URL = window.EDOC_MAIN_HOME_URL || '';
+  const displayFormTitle = form => {
+    const title = String(form && form.title || 'Assessment');
+    return title.startsWith('[') ? title : `[${form.specialty}] ${title}`;
+  };
   if (navigator.storage && typeof navigator.storage.persist === 'function') {
     navigator.storage.persist().catch(() => {});
   }
@@ -623,7 +627,7 @@
         : iso;
     };
     const caseLabel = caseInfo && caseInfo.caseId ? ` • ${caseInfo.caseId}` : '';
-    app.querySelector('#fTitle').textContent = `[${form.specialty}] ${form.title}${caseLabel}`;
+    app.querySelector('#fTitle').textContent = `${displayFormTitle(form)}${caseLabel}`;
     const metaBits = [];
     if (caseInfo && caseInfo.assessmentDate) metaBits.push(`Assessment Date ${formatDisplayDate(caseInfo.assessmentDate)}`);
     metaBits.push('Local browser storage only');
@@ -1239,7 +1243,7 @@
     const c = (answers.__case) || {};
     app.querySelector('#rTitle').textContent = `Generated Summary${c.caseId ? ' • ' + c.caseId : ''}`;
     const meta = [];
-    meta.push(`[${form.specialty}] ${form.title}`);
+    meta.push(displayFormTitle(form));
     meta.push('Not copied');
     app.querySelector('#rMeta').textContent = meta.join(' · ');
 
@@ -1795,6 +1799,25 @@
         }
         break;
       }
+      case 'select': {
+        const select = el('select');
+        select.appendChild(el('option', { value: '' }, [q.placeholder || 'Select an option']));
+        (q.options || []).forEach(option => {
+          const opt = typeof option === 'string' ? { value: option, label: option } : option;
+          select.appendChild(el('option', { value: opt.value }, [opt.label || opt.value]));
+        });
+        select.value = cur == null ? '' : String(cur);
+        select.onchange = () => set(select.value);
+        if (q.inlineControl) {
+          wrap.classList.add('inline-control');
+          select.style.width = 'max-content';
+          select.style.maxWidth = '100%';
+          head.appendChild(select);
+        } else {
+          wrap.appendChild(select);
+        }
+        break;
+      }
       case 'multiple_choice': {
         const group = el('div', { class: 'checks' });
         if (compactExpandableIds.has(q.id)) group.classList.add('compact-expandable-options');
@@ -1820,7 +1843,7 @@
             else set(opt.value);
           };
           row.appendChild(r);
-          row.appendChild(document.createTextNode(opt.value));
+          row.appendChild(document.createTextNode(opt.label || opt.value));
           wrapOpt.appendChild(row);
 
           // Inline detail input on a radio option (e.g. cog_status "Failed to
@@ -1835,7 +1858,7 @@
                   placeholder: opt.detailPlaceholder || 'specify',
                 })
               : el('input', {
-                  type: 'text', class: 'inline-text detail-input',
+                  type: 'text', class: 'inline-text detail-input' + (q.id === 'caring_concern' ? ' detail-input-wide' : ''),
                   placeholder: opt.detailPlaceholder || 'specify',
                 });
             const startDetail = (cur && typeof cur === 'object' && cur.value === opt.value && cur.detail) ? cur.detail : '';
@@ -5191,6 +5214,17 @@
       return detail
         ? `Cognitive assessment: ${val} ${detail}.`
         : `Cognitive assessment: ${val}.`;
+    },
+
+    preoperative_cog_status_header(q, a) {
+      if (!a) return null;
+      const val = (typeof a === 'object' && a !== null) ? a.value : a;
+      const detail = (typeof a === 'object' && a !== null && a.detail) ? a.detail : '';
+      if (val === 'Performed') return 'Pre-operative cognitive assessment:';
+      if (!val) return null;
+      return detail
+        ? `Pre-operative cognitive assessment: ${val} ${detail}.`
+        : `Pre-operative cognitive assessment: ${val}.`;
     },
 
     // Single multi-line MoCA block: total line with cut-off + Education,

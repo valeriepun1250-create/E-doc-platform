@@ -1785,6 +1785,16 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   color: var(--muted-strong);
   font-size: 13px;
 }
+.opt-block .detail-input-wide {
+  width: 700px !important;
+  max-width: 700px !important;
+}
+@media (max-width: 760px) {
+  .opt-block .detail-input-wide {
+    width: calc(100vw - 48px) !important;
+    max-width: calc(100vw - 48px) !important;
+  }
+}
 
 .qfill.heading.heading-with-trigger {
   justify-content: flex-start;
@@ -1855,9 +1865,13 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 }
 .qfill.inline-control .qhead {
   align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
 }
 .qfill.inline-control .qhead .label {
   margin-bottom: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 .qfill.inline-control .inline-control-group {
   flex: 0 0 auto;
