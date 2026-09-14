@@ -154,13 +154,13 @@ html, body {
 /* Ward, date and form sit on one row where there is width for them, and stack
    in order on a phone. The button aligns with the inputs, not their captions. */
 .create-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
-.create-field { flex: 1 1 190px; min-width: 0; }
-.create-action { flex: 0 0 auto; }
+.create-field { min-width: 0; }
+.create-field .text-input { min-width: 0; }
+.create-action { min-width: 0; }
 .create-label {
   display: flex;
   align-items: baseline;
@@ -687,6 +687,26 @@ html, body {
      The editor takes the same measure so lines do not rewrap when toggling Edit. */
   .summary-box, .summary-edit { max-width: 82ch; }
 
+  /* iPad portrait has enough room for two fields per line, but not for three
+     native controls plus the action without Safari's intrinsic widths colliding. */
+  .create-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .create-field:first-child,
+  .create-action { grid-column: 1 / -1; }
+  .create-action .btn { width: 100%; }
+
+}
+
+/* iPad landscape and wider screens can keep the compact single-row workflow. */
+@media (min-width: 960px) {
+  .create-row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.35fr) auto;
+    align-items: end;
+  }
+  .create-field:first-child,
+  .create-action { grid-column: auto; }
+  .create-action .btn { width: auto; }
 }
 
 @media (max-width: 420px) {

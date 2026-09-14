@@ -7,6 +7,7 @@
       {
         "title": "Vital signs and Premorbid ADL",
         "reportTitle": "A. Vital signs and Premorbid ADL",
+        "hideReportTitle": true,
         "questions": [
           { "type": "heading", "label": "Vital signs" },
           {
@@ -24,7 +25,7 @@
             ],
             "joinWith": "  ",
             "reportTemplate": "Vital signs: BP {bp} mmHg, Pulse {pulse}/minute, SpO2 {spo2}% {oxygen} {other}",
-            "hideInReport": true
+            "customReport": "vitals_summary"
           },
           { "type": "heading", "label": "Premorbid ADL" },
           {
@@ -36,8 +37,7 @@
               { "value": "Assisted in", "detail": true, "detailPlaceholder": "details", "detailJoiner": " " },
               "Dependent"
             ],
-            "customReport": "premorbid_adl",
-            "hideInReport": true
+            "customReport": "premorbid_adl"
           },
           {
             "id": "indoor_walk", "label": "Indoor mobility", "type": "multiple_choice", "width": "full",
@@ -82,7 +82,7 @@
               { "value": "8 — Very Severely Frail", "label": "8 — Very Severely Frail" },
               { "value": "9 — Terminally Ill", "label": "9 — Terminally Ill" }
             ],
-            "hideInReport": true
+            "customReport": "cfs_summary"
           }
         ]
       },
@@ -311,6 +311,32 @@
               { "id": "mobility", "label": "Mobility", "options": [0, 3, 8, 12, 15], "allowNA": true },
               { "id": "stairs", "label": "Stairs", "options": [0, 2, 5, 8, 10], "allowNA": true }
             ]
+          },
+          {
+            "id": "mbi_impression",
+            "label": "Impression",
+            "type": "short_text",
+            "width": "full",
+            "reportTemplate": "{answer}",
+            "hideReportLabel": true
+          },
+          {
+            "id": "mbi_overall",
+            "label": "Overall functional level",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Supervision",
+              "Mild Assistance",
+              "Moderate Assistance",
+              "Maximal Assistance",
+              "Dependent"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "hideInReport": true
           },
           {
             "id": "fall_risk", "label": "Fall risk", "type": "multiple_choice", "width": "half",

@@ -4516,8 +4516,15 @@
     if (!raw) return '';
     return /s$/i.test(raw) ? raw : `${raw}s`;
   };
+  const formatClinicalFrailtyScale = value =>
+    String(value || '').replace(/\s*[—–-]\s*/, ' ').trim();
 
   const customReportFns = {
+    cfs_summary(q, a) {
+      if (isEmptyAnswer(q, a)) return null;
+      return `Clinical Frailty Scale: ${formatClinicalFrailtyScale(a)}`;
+    },
+
     attendance_mobility(q, a) {
       if (!a || typeof a !== 'object') return null;
       const bits = [];
@@ -5088,9 +5095,11 @@
     vitals_summary(q, a) {
       if (!a || typeof a !== 'object') return null;
       const bp = a.bp != null ? String(a.bp).trim() : '';
-      const pulse = a.p != null ? String(a.p).trim() : '';
+      const pulseValue = a.p != null ? a.p : a.pulse;
+      const pulse = pulseValue != null ? String(pulseValue).trim() : '';
       const spo2 = a.spo2 != null ? String(a.spo2).trim() : '';
-      const oxygen = a.o2 != null ? String(a.o2).trim() : '';
+      const oxygenValue = a.o2 != null ? a.o2 : a.oxygen;
+      const oxygen = oxygenValue != null ? String(oxygenValue).trim() : '';
       const other = a.other != null ? String(a.other).trim() : '';
       const bits = [];
       if (bp) bits.push(`BP ${bp} mmHg`);
@@ -5489,6 +5498,10 @@
       const impQ = allQs.cog_impression, imp = answers.cog_impression;
       const impText = (impQ && (!impQ.hideInReport || impQ.hideReportLabel) && !isEmptyAnswer(impQ, imp)) ? formatAnswer(impQ, imp) : '';
       const impLine = impText ? (impQ.hideReportLabel ? impText : `Impression: ${impText}.`) : '';
+      if (opts.brief && opts.compactImpression) {
+        const summary = parts.length ? `Cognition: ${parts.join('; ')}` : '';
+        return [summary, impLine].filter(Boolean).join(', ') || null;
+      }
       const tail = [
         parts.length ? `${opts.brief ? 'Cognition' : 'Cognitive'}: ${parts.join('; ')}.` : '',
         impLine,
@@ -5699,6 +5712,7 @@
 
   function buildReportParts(form, answers) {
     const { headerLines, blocks } = buildReportBlocks(form, answers);
+    const isErasForm = form && form.id === 'surgical-eras-assessment.json';
     const isProblem = b => /problem\s*identification/i.test(b.title || '');
     const isRecommend = b => /recommendation/i.test(b.title || '');
     const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
@@ -5707,13 +5721,27 @@
       if (index > 0 && /^Vital signs:/.test(prev) && /^Premorbid ADL:/.test(line || '')) {
         return ['', line];
       }
-      if (index > 0 && /^Speech:/.test(prev) && /^Cognitive assessment:/.test(line || '')) {
+      if (
+        index > 0 &&
+        ((isErasForm && /^Pre-operative cognitive assessment:/.test(line || '')) ||
+          (/^Speech:/.test(prev) && /^Cognitive assessment:/.test(line || '')))
+      ) {
+        return ['', line];
+      }
+      if (
+        isErasForm &&
+        index > 0 &&
+        (/^Abbreviated Mental Test \(AMT\):/.test(line || '') ||
+          /^Clock Drawing Test \(CDT\):/.test(line || '') ||
+          /^Psychological Distress:/.test(line || '') ||
+          /^Treatment plan:/.test(line || ''))
+      ) {
         return ['', line];
       }
       if (
         index > 0 &&
         prev.trim() &&
-        !/^Cognitive assessment:/.test(prev) &&
+        !/^(?:Pre-operative )?cognitive assessment:/i.test(prev) &&
         (/^Clock Drawing Test \(CDT\):/.test(line || '') ||
           /^HK-Montreal Cognitive Assessment \(MoCA\):/.test(line || ''))
       ) {
@@ -5743,6 +5771,7 @@
   function buildOtCommentExtract(form, answers) {
     const allQs = flattenQuestions(form);
     const parts = [];
+    const isErasForm = form && form.id === 'surgical-eras-assessment.json';
     const isEssentialTremorForm = form && form.id === 'stroke-essential-tremor-clinic.json';
     const isParkinsonForm = form && form.id === 'stroke-parkinson-clinic-assessment.json';
     const add = value => {
@@ -5757,7 +5786,13 @@
     }
 
     if (mbiQ && !isEmptyAnswer(mbiQ, mbiA)) {
-      if (isEssentialTremorForm || isParkinsonForm) {
+      if (isErasForm) {
+        const overallQ = allQs.mbi_overall;
+        const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
+          ? ` (${formatAnswer(overallQ, answers.mbi_overall)})`
+          : '';
+        add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}${overall}`);
+      } else if (isEssentialTremorForm || isParkinsonForm) {
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}`);
       } else {
         const overallQ = allQs.mbi_overall;
@@ -5766,6 +5801,45 @@
           : '';
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}${overall}`);
       }
+    }
+
+    if (isErasForm) {
+      add(customReportFns.cognitive(
+        allQs.ot_cognitive || { id: 'ot_cognitive' },
+        answers.ot_cognitive,
+        allQs,
+        answers,
+        { brief: true, compactImpression: true },
+      ));
+
+      const cfsQ = allQs.cfs, cfsA = answers.cfs;
+      let postOpText = '';
+      if (cfsQ && !isEmptyAnswer(cfsQ, cfsA)) {
+        postOpText = `Clinical Frailty Scale: ${formatClinicalFrailtyScale(cfsA)}`;
+      }
+
+      const concern = answers.caring_concern;
+      const concernText = concern && typeof concern === 'object'
+        ? String(concern.detail || concern.value || '').trim()
+        : String(concern || '').trim();
+      if (concernText) {
+        const sentence = /[.!?]$/.test(concernText) ? concernText : `${concernText}.`;
+        postOpText += `${postOpText ? '; ' : ''}${sentence}`;
+      }
+
+      const planChoiceQ = allQs.treatment_plan, planChoiceA = answers.treatment_plan;
+      const planDetailQ = allQs.caring_plan, planDetailA = answers.caring_plan;
+      const planChoice = planChoiceQ && !isEmptyAnswer(planChoiceQ, planChoiceA)
+        ? formatAnswer(planChoiceQ, planChoiceA).replace(/^[A-Z](?=[a-z])/, initial => initial.toLowerCase())
+        : '';
+      const planDetail = planDetailQ && !isEmptyAnswer(planDetailQ, planDetailA)
+        ? formatAnswer(planDetailQ, planDetailA).replace(/[.\s]+$/, '')
+        : '';
+      if (planChoice || planDetail) {
+        const plan = `Plan${planChoice ? ` ${planChoice}` : ''}${planDetail ? `: ${planDetail}` : ''}.`;
+        postOpText += `${postOpText ? (concernText ? ' ' : '; ') : ''}${plan}`;
+      }
+      add(postOpText);
     }
 
     if (isParkinsonForm) {
@@ -5888,7 +5962,7 @@
     }
     if (spinalParts.length) add(spinalParts.join('; '));
 
-    if (!isEssentialTremorForm && !isParkinsonForm) {
+    if (!isErasForm && !isEssentialTremorForm && !isParkinsonForm) {
       const cognitiveLine = customReportFns.cognitive(
         allQs.ot_cognitive || { id: 'ot_cognitive' },
         answers.ot_cognitive,
@@ -5917,11 +5991,24 @@
 
   function buildReport(form, answers) {
     const { headerLines, blocks } = buildReportBlocks(form, answers);
+    const isErasForm = form && form.id === 'surgical-eras-assessment.json';
     const stripPrefix = t => (t || '').replace(/^[A-Z]\.\s+/, '');
-    const linesWithTargetedSpacing = lines => lines.flatMap((line, index) =>
-      index > 0 && /^Vital signs:/.test(lines[index - 1] || '') && /^Basic ADL:/.test(line || '')
-        ? ['', line]
-        : [line]);
+    const linesWithTargetedSpacing = lines => lines.flatMap((line, index) => {
+      const prev = lines[index - 1] || '';
+      if (index > 0 && /^Vital signs:/.test(prev) && /^Premorbid ADL:/.test(line || '')) {
+        return ['', line];
+      }
+      if (isErasForm && index > 0) {
+        if (/^(?:Pre-operative )?Cognitive assessment:/.test(line || '')) return ['', line];
+        if (/^Abbreviated Mental Test \(AMT\):/.test(line || '') ||
+            /^Clock Drawing Test \(CDT\):/.test(line || '') ||
+            /^Psychological Distress:/.test(line || '') ||
+            /^Treatment plan:/.test(line || '')) {
+          return ['', line];
+        }
+      }
+      return [line];
+    });
     const out = [...headerLines];
     blocks.forEach(b => {
       out.push('');
