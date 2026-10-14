@@ -2520,6 +2520,28 @@ table.subscore .rating button { min-width: 34px; padding: 4px 10px; font-size: 1
   }
 }
 
+.crst-high-score-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.crst-high-score-toggle input {
+  margin: 0;
+  accent-color: var(--primary);
+}
+.crst-high-score-preview {
+  margin: 8px 0 0 24px;
+  color: var(--fg-soft);
+  font-size: 13px;
+}
+.crst-high-score-preview[hidden] {
+  display: none;
+}
+
 /* Modified Barthel Index: clearer row separation and balanced score controls. */
 table.subscore.mbi-subscore {
   border-collapse: separate;
@@ -3898,6 +3920,62 @@ body.is-home #version-badge {
 .quest-domain-percent {
   font-size: 14px;
   line-height: 1.5;
+}
+
+.pdq39-table {
+  display: table;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+.pdq39-table .quest-table-col-item,
+.pdq39-table .quest-item-cell {
+  width: 38%;
+  min-width: 0;
+}
+.pdq39-table .quest-table-col-score,
+.pdq39-table .quest-choice-cell {
+  width: 9%;
+  min-width: 0;
+}
+.pdq39-table .quest-table-col-subscore,
+.pdq39-table .quest-domain-cell {
+  width: 17%;
+  min-width: 0;
+}
+.pdq39-table th,
+.pdq39-table td {
+  padding: 8px 5px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.pdq39-table .quest-score-subhead {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .pdq39-table th,
+  .pdq39-table td {
+    padding: 5px 1px;
+    font-size: 10px;
+  }
+  .pdq39-table .quest-score-subhead {
+    font-size: 9px;
+  }
+  .pdq39-table .quest-choice-btn {
+    width: min(100%, 28px);
+    min-width: 0;
+    min-height: 28px;
+  }
+  .pdq39-table .quest-item-inner {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .pdq39-table .quest-domain-title,
+  .pdq39-table .quest-domain-numerator,
+  .pdq39-table .quest-domain-percent {
+    font-size: 10px;
+  }
 }
 
 @media (max-width: 1024px) {

@@ -1,0 +1,1883 @@
+{
+  "specialty": "Stroke",
+  "title": "TDPD",
+  "description": "Stroke TDPD clinic assessment.",
+  "schema": {
+    "sections": [
+      {
+        "title": "Social History and Home Environment",
+        "hideReportTitle": true,
+        "questions": [
+          {
+            "id": "attendance_mobility",
+            "label": "Attendance and mobility",
+            "type": "composite",
+            "width": "full",
+            "hideLabel": true,
+            "customReport": "attendance_mobility",
+            "parts": [
+              {
+                "id": "come_with",
+                "label": "Come with",
+                "placeholder": "family / carer",
+                "wide": true,
+                "showIf": {
+                  "itemId": "come_alone",
+                  "notEquals": true
+                }
+              },
+              {
+                "id": "come_alone",
+                "label": "Come alone",
+                "inputType": "checkbox",
+                "suffix": ";"
+              },
+              {
+                "id": "walk_with",
+                "label": "Walk",
+                "placeholder": "stick / rollator / frame",
+                "wide": true,
+                "showIf": {
+                  "itemId": "on_wheelchair",
+                  "notEquals": true
+                }
+              },
+              {
+                "id": "on_wheelchair",
+                "label": "On wheelchair",
+                "inputType": "checkbox"
+              }
+            ]
+          },
+          {
+            "id": "review_period",
+            "label": "Review period",
+            "type": "multiple_choice",
+            "width": "full",
+            "reportTitle": " ",
+            "reportHideTitle": true,
+            "reportTemplate": "Review period: {answer}",
+            "options": [
+              "Baseline",
+              "Post op",
+              "Post op 1-month",
+              "Post op 3-month",
+              "Post op 6-month",
+              "Post op 12-month"
+            ]
+          },
+          {
+            "id": "lives_with",
+            "label": "Living arrangement",
+            "type": "checkbox",
+            "width": "full",
+            "reportTitle": "Social History and Home Environment",
+            "options": [
+              {
+                "value": "Live with",
+                "detail": true,
+                "detailPlaceholder": "family / carer"
+              },
+              "Live alone",
+              "Day time alone",
+              "OAHR"
+            ],
+            "allowOther": true,
+            "allowComment": true,
+            "commentLabel": "Main carer / details",
+            "customReport": "social_lives_home"
+          },
+          {
+            "id": "home_access",
+            "label": "Home environment",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Direct lift landing",
+              {
+                "value": "Non-direct lift landing",
+                "detail": true,
+                "detailPlaceholder": "FOS / floor"
+              },
+              {
+                "value": "No lift",
+                "detail": true,
+                "detailPlaceholder": "FOS / floor"
+              }
+            ],
+            "allowComment": true,
+            "commentLabel": "Floor / stairs detail",
+            "hideInReport": true
+          },
+          {
+            "id": "bathing_setup",
+            "label": "Bathing",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Tub",
+              "Shower",
+              "Hot water system"
+            ],
+            "allowOther": true,
+            "customReport": "bathing_combo"
+          },
+          {
+            "id": "bath_method",
+            "label": "Bath by",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "options": [
+              "Stand",
+              "Squat",
+              {
+                "value": "Sit on",
+                "subOptions": [
+                  "Shower chair",
+                  "Bath board",
+                  "Shower stool"
+                ],
+                "subAllowOther": true
+              },
+              "Bedbath"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "social_service",
+            "label": "Social support",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Nil",
+              "MOW",
+              {
+                "value": "Home Help Service",
+                "subOptions": [
+                  "Personal care",
+                  "Household",
+                  "Escort"
+                ],
+                "subAllowOther": true
+              },
+              "Day Care Centre",
+              "Elderly Centre"
+            ],
+            "allowOther": true,
+            "reportTemplate": "Social support: {answer}."
+          },
+          {
+            "id": "financial",
+            "label": "Financial",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Family support / saving",
+              "Comprehensive Social Security Assistance",
+              "Disability Allowance",
+              "Old Age Allowance",
+              "Old Age Living Allowance"
+            ],
+            "allowOther": true,
+            "reportTemplate": "Financial: {answer}."
+          },
+          {
+            "id": "assistive_devices",
+            "label": "Assistive device available",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Nil",
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator",
+              "Wheelchair",
+              "Commode",
+              "Shower chair",
+              "Bath board",
+              "Handrail",
+              "Safety alarm"
+            ],
+            "allowOther": true,
+            "reportTemplate": "Assistive device available: {answer}."
+          }
+        ],
+        "reportTitle": "Social History and Home Environment"
+      },
+      {
+        "title": "Premorbid Function",
+        "questions": [
+          {
+            "id": "badl",
+            "label": "BADL",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Assistance",
+              "Dependent"
+            ],
+            "allowComment": true,
+            "commentLabel": "Detail",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail",
+            "customReport": "essential_tremor_premorbid"
+          },
+          {
+            "id": "functional_mobility",
+            "label": "Functional Mobility",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Unaided",
+              "Assisted",
+              "Dependent"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "functional_mobility_aid",
+            "label": "Aids",
+            "type": "checkbox",
+            "width": "half",
+            "mergeUp": true,
+            "options": [
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator"
+            ],
+            "allowOther": true,
+            "otherPlaceholder": "walking aid",
+            "hideInReport": true
+          },
+          {
+            "id": "outdoor_function",
+            "label": "Outdoor",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Assistance",
+              "Dependent"
+            ],
+            "allowComment": true,
+            "commentLabel": "Detail",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail",
+            "hideInReport": true
+          },
+          {
+            "id": "iadl",
+            "label": "IADL",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Assistance",
+              "Dependent"
+            ],
+            "allowComment": true,
+            "commentLabel": "Detail",
+            "commentSingleLine": true,
+            "commentPlaceholder": "add detail",
+            "hideInReport": true
+          },
+          {
+            "id": "life_role",
+            "label": "Life Role",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              {
+                "value": "Retired",
+                "detail": true,
+                "detailPlaceholder": "previous role",
+                "detailJoiner": " "
+              },
+              {
+                "value": "Unemployed",
+                "detail": true,
+                "detailPlaceholder": "details",
+                "detailJoiner": " "
+              },
+              {
+                "value": "Employed",
+                "detail": true,
+                "detailPlaceholder": "occupation",
+                "detailJoiner": " "
+              }
+            ],
+            "allowOther": true,
+            "hideInReport": true
+          },
+          {
+            "id": "dominant_hand",
+            "label": "Dominant hand",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Right",
+              "Left"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "fall_history_recent",
+            "label": "History of Fall in recent year",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Nil",
+              {
+                "value": "Number of fall",
+                "detail": true,
+                "detailPlaceholder": "number"
+              }
+            ],
+            "allowComment": true,
+            "commentLabel": "Detail",
+            "commentSingleLine": true,
+            "commentPlaceholder": "fall detail",
+            "hideInReport": true
+          },
+          {
+            "id": "leisure",
+            "label": "Leisure",
+            "type": "long_text",
+            "width": "full",
+            "hideInReport": true
+          }
+        ],
+        "reportTitle": "B. Premorbid Function"
+      },
+      {
+        "title": "Medical History",
+        "questions": [
+          {
+            "id": "tremor_onset",
+            "label": "Tremor onset",
+            "type": "long_text",
+            "width": "full",
+            "reportTemplate": "Tremor onset: {answer}"
+          },
+          {
+            "id": "tremor_medication",
+            "label": "Tremor medication",
+            "type": "multiple_choice",
+            "width": "full",
+            "options": [
+              "No",
+              {
+                "value": "Yes",
+                "detail": true,
+                "detailPlaceholder": "medication",
+                "detailJoiner": ": "
+              }
+            ],
+            "reportTemplate": "Tremor medication: {answer}"
+          },
+          {
+            "id": "past_history",
+            "label": "Past history",
+            "type": "long_text",
+            "width": "full",
+            "reportTemplate": "Past history: {answer}"
+          }
+        ],
+        "reportTitle": "C. Medical History"
+      },
+      {
+        "title": "General Assessment",
+        "questions": [
+          {
+            "type": "heading",
+            "label": "Mental and Cognitive Function"
+          },
+          {
+            "id": "mental_state",
+            "label": "Mental state",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "Alert",
+              "Dull",
+              "Confused"
+            ],
+            "customReport": "essential_tremor_mental"
+          },
+          {
+            "id": "follow_cmd_quality",
+            "label": "Follow command",
+            "type": "multiple_choice",
+            "width": "half",
+            "mergeUp": true,
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "follow_cmd_steps",
+            "label": "Step command",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "options": [
+              "1 step",
+              "2 step",
+              "3 step"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "cog_status",
+            "label": "Cognition assessment",
+            "type": "heading",
+            "width": "full",
+            "hideInReport": true
+          },
+          {
+            "id": "moca",
+            "label": "HK-Montreal Cognitive Assessment (MoCA)",
+            "type": "sub_score",
+            "mode": "max",
+            "totalMax": 30,
+            "width": "full",
+            "breakdownItemsPerLine": 4,
+            "breakdownSep": "   ",
+            "customReport": "essential_tremor_moca",
+            "headerInputs": [
+              {
+                "id": "moca_age_cluster",
+                "label": "Age",
+                "type": "select",
+                "placeholder": "Select age",
+                "options": [
+                  "65-69",
+                  "70-79",
+                  "≥80"
+                ]
+              },
+              {
+                "id": "moca_education",
+                "label": "Education",
+                "type": "number",
+                "inputType": "number",
+                "placeholder": "Years",
+                "min": 0,
+                "step": 1
+              }
+            ],
+            "items": [
+              {
+                "id": "executive_function",
+                "label": "Executive Function",
+                "max": 5
+              },
+              {
+                "id": "naming",
+                "label": "Naming",
+                "max": 3
+              },
+              {
+                "id": "attention",
+                "label": "Attention",
+                "max": 6
+              },
+              {
+                "id": "language",
+                "label": "Language",
+                "max": 3
+              },
+              {
+                "id": "abstraction",
+                "label": "Abstraction",
+                "max": 2
+              },
+              {
+                "id": "delayed_recall",
+                "label": "Delayed Recall",
+                "max": 5
+              },
+              {
+                "id": "orientation",
+                "label": "Orientation",
+                "max": 6
+              }
+            ]
+          },
+          {
+            "id": "moca_band",
+            "label": "MoCA percentile",
+            "type": "multiple_choice",
+            "width": "full",
+            "mergeUp": true,
+            "hideInForm": true,
+            "options": [
+              ">16th percentile",
+              "<=16th percentile: DSM-5 minor NCD",
+              "<=7th percentile: Petersen MCI",
+              "<=2nd percentile: DSM-5 major NCD"
+            ],
+            "hideInReport": true
+          },
+          {
+            "id": "major_complaint",
+            "label": "Major complaint",
+            "type": "short_text",
+            "width": "full",
+            "customReport": "essential_tremor_major_complaint"
+          },
+          {
+            "type": "heading",
+            "label": "Physical Assessment"
+          },
+          {
+            "id": "power",
+            "label": "Power",
+            "type": "composite",
+            "layout": "grid-2x2",
+            "width": "half",
+            "rowHeaders": [
+              "Upper",
+              "Lower"
+            ],
+            "colHeaders": [
+              "Right",
+              "Left"
+            ],
+            "parts": [
+              {
+                "id": "rul",
+                "placeholder": "5"
+              },
+              {
+                "id": "lul",
+                "placeholder": "5"
+              },
+              {
+                "id": "rll",
+                "placeholder": "5"
+              },
+              {
+                "id": "lll",
+                "placeholder": "5"
+              }
+            ],
+            "customReport": "essential_tremor_power"
+          },
+          {
+            "id": "tone",
+            "label": "Tone",
+            "type": "multiple_choice",
+            "width": "half",
+            "options": [
+              "NAD"
+            ],
+            "allowOther": true,
+            "keepOtherLabel": true,
+            "otherPlaceholder": "describe"
+          },
+          {
+            "id": "coordination",
+            "label": "Coordination",
+            "type": "multiple_choice",
+            "width": "half",
+            "mergeUp": true,
+            "options": [
+              "NAD"
+            ],
+            "allowOther": true,
+            "keepOtherLabel": true,
+            "otherPlaceholder": "describe"
+          },
+          {
+            "id": "balance_sitting_static",
+            "label": "Balance - Sitting static",
+            "type": "checkbox",
+            "width": "half",
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "customReport": "essential_tremor_balance"
+          },
+          {
+            "id": "balance_sitting_dynamic",
+            "label": "Balance - Sitting dynamic",
+            "type": "checkbox",
+            "width": "half",
+            "mergeUp": true,
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "hideInReport": true
+          },
+          {
+            "id": "balance_standing_static",
+            "label": "Balance - Standing static",
+            "type": "checkbox",
+            "width": "half",
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "hideInReport": true
+          },
+          {
+            "id": "balance_standing_dynamic",
+            "label": "Balance - Standing dynamic",
+            "type": "checkbox",
+            "width": "half",
+            "mergeUp": true,
+            "options": [
+              "Good",
+              "Fair",
+              "Poor"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "hideInReport": true
+          },
+          {
+            "id": "transfer_level",
+            "label": "Transfer",
+            "type": "checkbox",
+            "width": "full",
+            "options": [
+              "Independent",
+              "Supervision",
+              "Mild Assistance",
+              "Moderate Assistance",
+              "Maximal Assistance",
+              "Dependent"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "reportTemplate": "Transfer: {answer}"
+          },
+          {
+            "id": "ambulation",
+            "label": "Ambulation",
+            "type": "checkbox",
+            "width": "half",
+            "options": [
+              "Independent",
+              "Supervision",
+              "Mild Assistance",
+              "Moderate Assistance",
+              "Maximal Assistance",
+              "Dependent"
+            ],
+            "combineAdjacent": true,
+            "maxSelect": 2,
+            "consecutiveOnly": true,
+            "customReport": "ambulation_combo"
+          },
+          {
+            "id": "ambulation_aid",
+            "label": "Ambulation aid",
+            "type": "multiple_choice",
+            "width": "half",
+            "mergeUp": true,
+            "options": [
+              "Stick",
+              "Quadripod",
+              "Frame",
+              "Rollator"
+            ],
+            "allowOther": true,
+            "otherPlaceholder": "specify",
+            "hideInReport": true
+          },
+          {
+            "type": "heading",
+            "label": "Functional Assessment"
+          },
+          {
+            "id": "mbi",
+            "label": "ADL: Modified Barthel Index",
+            "type": "sub_score",
+            "mode": "options",
+            "totalMax": 100,
+            "width": "full",
+            "pendingPolicy": {
+              "oneOfGroups": [
+                [
+                  "mobility",
+                  "wheelchair"
+                ]
+              ],
+              "pendingText": ", pending further assessment"
+            },
+            "includeNAInBreakdown": true,
+            "breakdownPosition": "after",
+            "breakdownItemsPerLine": 5,
+            "breakdownSep": "   ",
+            "combineItems": [
+              {
+                "ids": [
+                  "mobility",
+                  "wheelchair"
+                ],
+                "label": "Mobility/Wheelchair"
+              }
+            ],
+            "items": [
+              {
+                "id": "bowels",
+                "label": "Bowels",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "mbi_bowels_stoma",
+                  "label": "Stoma"
+                }
+              },
+              {
+                "id": "bladder",
+                "label": "Bladder",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "mbi_bladder_foley",
+                  "label": "Foley"
+                }
+              },
+              {
+                "id": "grooming",
+                "label": "Grooming",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "toileting",
+                "label": "Toileting",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "feeding",
+                "label": "Feeding",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "qualifier": {
+                  "id": "mbi_feeding_rt",
+                  "label": "R/T"
+                }
+              },
+              {
+                "id": "dressing",
+                "label": "Dressing",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "bathing",
+                "label": "Bathing",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "transfer",
+                "label": "Transfer",
+                "options": [
+                  0,
+                  3,
+                  8,
+                  12,
+                  15
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              },
+              {
+                "id": "mobility",
+                "label": "Mobility",
+                "options": [
+                  0,
+                  3,
+                  8,
+                  12,
+                  15
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "exclusiveWith": "wheelchair"
+              },
+              {
+                "id": "wheelchair",
+                "label": "Wheelchair",
+                "options": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  5
+                ],
+                "allowNA": true,
+                "defaultNA": true,
+                "exclusiveWith": "mobility"
+              },
+              {
+                "id": "stairs",
+                "label": "Stairs",
+                "options": [
+                  0,
+                  2,
+                  5,
+                  8,
+                  10
+                ],
+                "allowNA": true,
+                "defaultNA": true
+              }
+            ],
+            "customReport": "essential_tremor_mbi_summary"
+          },
+          {
+            "id": "lawton_iadl",
+            "label": "IADL: Lawton IADL",
+            "type": "sub_score",
+            "mode": "options",
+            "totalMax": 27,
+            "width": "full",
+            "customReport": "lawton_summary",
+            "items": [
+              {
+                "id": "telephone",
+                "label": "Use of telephone",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "transportation",
+                "label": "Transportation",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "shopping",
+                "label": "Shopping",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "meal_preparation",
+                "label": "Meal Preparation",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "housework",
+                "label": "Housework",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "handyman_work",
+                "label": "Handyman Work",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "laundry",
+                "label": "Laundry",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "medication_management",
+                "label": "Medication Management",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "id": "money_management",
+                "label": "Money Management",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ]
+          }
+        ],
+        "reportTitle": "Assessment"
+      },
+      {
+        "title": "Disease specific Assessment",
+        "questions": [
+          {
+            "id": "upper_limb_hand_function",
+            "label": "Upper Limb and Hand Function",
+            "type": "bilateral_hand_function",
+            "width": "full",
+            "reportTitle": "Assessment",
+            "reportHideTitle": true,
+            "customReport": "essential_tremor_upper_limb_report",
+            "rows": [
+              {
+                "id": "grasp_release",
+                "label": "Grasp / Release",
+                "inputs": [
+                  {
+                    "id": "full",
+                    "label": "Full",
+                    "type": "option"
+                  },
+                  {
+                    "id": "status",
+                    "hideIfChecked": "full"
+                  }
+                ]
+              },
+              {
+                "id": "opposition",
+                "label": "Opposition"
+              },
+              {
+                "id": "grip",
+                "label": "Grip (kg)"
+              },
+              {
+                "id": "pinch",
+                "label": "Pinch (kg)"
+              },
+              {
+                "id": "nine_hole_peg",
+                "label": "Nine Hole Peg Test (seconds)"
+              }
+            ]
+          },
+          {
+            "id": "jebsen_hand_function_test",
+            "label": "Jebsen Hand Function Test",
+            "type": "jebsen_table",
+            "width": "full",
+            "reportTitle": "Assessment",
+            "reportHideTitle": true,
+            "customReport": "jebsen_taylor_report",
+            "meta": [
+              {
+                "id": "dominant_hand",
+                "label": "Dominant hand",
+                "type": "multiple_choice",
+                "options": [
+                  "Right",
+                  "Left"
+                ]
+              },
+              {
+                "id": "gender",
+                "label": "Gender",
+                "type": "multiple_choice",
+                "options": [
+                  "M",
+                  "F"
+                ]
+              },
+              {
+                "id": "age",
+                "label": "Age",
+                "type": "number",
+                "placeholder": "age"
+              }
+            ],
+            "rows": [
+              {
+                "id": "writing",
+                "label": "Writing"
+              },
+              {
+                "id": "simulated_page_turning",
+                "label": "Simulated page Turning"
+              },
+              {
+                "id": "lifting_small_common_objects",
+                "label": "Lifting Small, Common Objects"
+              },
+              {
+                "id": "simulated_feeding",
+                "label": "Simulated Feeding"
+              },
+              {
+                "id": "stacking_checkers",
+                "label": "Stacking Checkers"
+              },
+              {
+                "id": "lifting_large_light_objects",
+                "label": "Lifting Large, Light Objects"
+              },
+              {
+                "id": "lifting_large_heavy_objects",
+                "label": "Lifting Large, Heavy Objects"
+              }
+            ]
+          },
+          {
+            "id": "crst_heading",
+            "label": "Clinical Rating Scale for Tremor (CRST)",
+            "type": "heading",
+            "width": "full"
+          },
+          {
+            "id": "crst_part_a",
+            "label": "Part A",
+            "type": "number",
+            "max": 88,
+            "suffix": "/88",
+            "inputWidthChars": 3,
+            "width": "half",
+            "reportTitle": "Assessment",
+            "reportHideTitle": true,
+            "customReport": "essential_tremor_crst_summary"
+          },
+          {
+            "id": "crst_part_b",
+            "label": "Part B",
+            "type": "number",
+            "max": 36,
+            "suffix": "/36",
+            "inputWidthChars": 3,
+            "width": "half",
+            "hideInReport": true
+          },
+          {
+            "id": "crst_part_c",
+            "label": "Part C",
+            "type": "sub_score",
+            "mode": "options",
+            "totalMax": 32,
+            "displayDescriptions": "grid",
+            "width": "full",
+            "hideInReport": true,
+            "items": [
+              {
+                "id": "speaking",
+                "label": "1) Speaking",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Normal"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Mild voice tremulousness when nervous only"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Mild voice tremor, constant"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Moderate voice tremor"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Severe voice tremor. Some words difficult to understand"
+                  }
+                ]
+              },
+              {
+                "id": "feeding_solids",
+                "label": "2) Feeding (other than liquids)",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Normal"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Can bring all solids to mouth, spilling only rarely"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Spills peas or similar food. Tends to bring head at least halfway forward to meet food."
+                  },
+                  {
+                    "value": 3,
+                    "text": "Unable to cut OR requires two hands to feed"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Needs help to feed"
+                  }
+                ]
+              },
+              {
+                "id": "bringing_liquids",
+                "label": "3) Bringing liquids to mouth",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Normal"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Can use spoon if not completely full"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Unable to use spoon. Uses cup or glass"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Can drink from cup, but needs two hands"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Needs a straw to drink from cup"
+                  }
+                ]
+              },
+              {
+                "id": "hygiene",
+                "label": "4) Hygiene",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Normal"
+                  },
+                  {
+                    "value": 1,
+                    "text": "More careful than the average person"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Does everything, but with errors. Needs electric razor"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Unable to do most fine tasks (lipstick or shaving) unless using two hands"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Unable to do any fine-movement tasks"
+                  }
+                ]
+              },
+              {
+                "id": "dressing",
+                "label": "5) Dressing",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Normal"
+                  },
+                  {
+                    "value": 1,
+                    "text": "More careful than the average person"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Able to do everything, but with errors"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Needs assistance with buttoning or shoelaces"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Requires assistance even for gross motor activities"
+                  }
+                ]
+              },
+              {
+                "id": "writing_function",
+                "label": "6) Writing",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Normal"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Legible and continues to write letters"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Legible, but no longer writes letters"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Illegible"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Unable to sign"
+                  }
+                ]
+              },
+              {
+                "id": "working",
+                "label": "7) Working",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "Tremor does not interfere with the job"
+                  },
+                  {
+                    "value": 1,
+                    "text": "More careful than the average person"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Poorer performance than usual because of tremor"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Have changed job because of the tremor. Tremor limits housework, such as ironing"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Unable to do any outside job. Housework very limited"
+                  }
+                ]
+              },
+              {
+                "id": "social_activities",
+                "label": "8) Social activities",
+                "options": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "descriptions": [
+                  {
+                    "value": 0,
+                    "text": "No changes"
+                  },
+                  {
+                    "value": 1,
+                    "text": "Minimal change. Still socializes"
+                  },
+                  {
+                    "value": 2,
+                    "text": "Avoids encounters with strangers"
+                  },
+                  {
+                    "value": 3,
+                    "text": "Avoids encounters with friends"
+                  },
+                  {
+                    "value": 4,
+                    "text": "Avoids any public encounter"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "reportTitle": "E. Disease specific Assessment"
+      },
+      {
+        "title": "Mood and Quality of Life Assessment",
+        "questions": [
+          {
+            "id": "dass21",
+            "label": "DASS-21",
+            "type": "dass21_table",
+            "width": "full",
+            "customReport": "dass21_summary",
+            "instructions": "填表說明：請小心閱讀以下每一個句子，並在其右方圈上一數字，表示「過往一個星期」如何適用於你。答案並無對錯之分。請不要花太多時間在某一句子上。",
+            "scaleGuide": "評估量表：0 = 不適用  1 = 頗適用，或間中適用  2 = 很適用，或經常適用  3 = 最適用，或常常適用",
+            "scoreNote": "Severity matched according to DASS severity ratings",
+            "rows": [
+              {
+                "id": "q1",
+                "number": 1,
+                "label": "我覺得很難讓自己安靜下來",
+                "domain": "S"
+              },
+              {
+                "id": "q2",
+                "number": 2,
+                "label": "我感到口乾",
+                "domain": "A"
+              },
+              {
+                "id": "q3",
+                "number": 3,
+                "label": "我好像不能再有任何愉快、舒暢的感覺",
+                "domain": "D"
+              },
+              {
+                "id": "q4",
+                "number": 4,
+                "label": "我感到呼吸困難（例如不是做運動時也感到氣促或透不過氣來）",
+                "domain": "A"
+              },
+              {
+                "id": "q5",
+                "number": 5,
+                "label": "我感到很難自動去開始工作",
+                "domain": "D"
+              },
+              {
+                "id": "q6",
+                "number": 6,
+                "label": "我對事情往往作出過敏反應",
+                "domain": "S"
+              },
+              {
+                "id": "q7",
+                "number": 7,
+                "label": "我感到頭抖（例如手震）",
+                "domain": "A"
+              },
+              {
+                "id": "q8",
+                "number": 8,
+                "label": "我覺得自己消耗很多精神",
+                "domain": "S"
+              },
+              {
+                "id": "q9",
+                "number": 9,
+                "label": "我憂慮一些令自己恐慌或出醜的場合",
+                "domain": "A"
+              },
+              {
+                "id": "q10",
+                "number": 10,
+                "label": "我覺得自己對將來沒有甚麼可盼望",
+                "domain": "D"
+              },
+              {
+                "id": "q11",
+                "number": 11,
+                "label": "我感到忐忑不安",
+                "domain": "S"
+              },
+              {
+                "id": "q12",
+                "number": 12,
+                "label": "我感到很難放鬆自己",
+                "domain": "S"
+              },
+              {
+                "id": "q13",
+                "number": 13,
+                "label": "我感到憂鬱沮喪",
+                "domain": "D"
+              },
+              {
+                "id": "q14",
+                "number": 14,
+                "label": "我無法容忍任何阻礙我繼續工作的事情",
+                "domain": "S"
+              },
+              {
+                "id": "q15",
+                "number": 15,
+                "label": "我感到快要恐慌了",
+                "domain": "A"
+              },
+              {
+                "id": "q16",
+                "number": 16,
+                "label": "我對任何事也不能熱衷",
+                "domain": "D"
+              },
+              {
+                "id": "q17",
+                "number": 17,
+                "label": "我覺得自己不怎麼配做人",
+                "domain": "D"
+              },
+              {
+                "id": "q18",
+                "number": 18,
+                "label": "我發覺自己很容易被觸怒",
+                "domain": "S"
+              },
+              {
+                "id": "q19",
+                "number": 19,
+                "label": "我察覺自己在沒有明顯的體力勞動時，也感到心律不正常",
+                "domain": "A"
+              },
+              {
+                "id": "q20",
+                "number": 20,
+                "label": "我無緣無故地感到害怕",
+                "domain": "A"
+              },
+              {
+                "id": "q21",
+                "number": 21,
+                "label": "我感到生命毫無意義",
+                "domain": "D"
+              }
+            ]
+          },
+          {
+            "id": "pdq39_heading",
+            "label": "PDQ-39",
+            "type": "heading",
+            "width": "full",
+            "reminderText": "在過去的一個月，柏金遜氏症對你在下列各項的日常生活影響有多少：每題請選擇最適合的一個答案。"
+          },
+          {
+            "id": "pdq39",
+            "label": "題目",
+            "type": "quest_table",
+            "width": "full",
+            "customReport": "pdq39_summary",
+            "scoreLabels": {
+              "0": "從來沒有",
+              "1": "偶然",
+              "2": "有時候",
+              "3": "經常",
+              "4": "完全做不到 或 所有時候"
+            },
+            "domains": [
+              {
+                "id": "mobility",
+                "label": "Mobility",
+                "numeratorLabel": "/40",
+                "percentDenominator": 40
+              },
+              {
+                "id": "adl",
+                "label": "ADL",
+                "numeratorLabel": "/24",
+                "percentDenominator": 24
+              },
+              {
+                "id": "emotional",
+                "label": "Emotional Wellbeing",
+                "numeratorLabel": "/24",
+                "percentDenominator": 24
+              },
+              {
+                "id": "stigma",
+                "label": "Stigma",
+                "numeratorLabel": "/16",
+                "percentDenominator": 16
+              },
+              {
+                "id": "social",
+                "label": "Social Support",
+                "numeratorLabel": "/12",
+                "percentDenominator": 12
+              },
+              {
+                "id": "cognitive",
+                "label": "Cognitive Impairment",
+                "numeratorLabel": "/16",
+                "percentDenominator": 16
+              },
+              {
+                "id": "communication",
+                "label": "Communication",
+                "numeratorLabel": "/12",
+                "percentDenominator": 12
+              },
+              {
+                "id": "bodily",
+                "label": "Bodily Discomfort",
+                "numeratorLabel": "/12",
+                "percentDenominator": 12
+              }
+            ],
+            "rows": [
+              {
+                "id": "pdq1",
+                "number": 1,
+                "label": "做從前喜歡的消遣活動時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq2",
+                "number": 2,
+                "label": "做家居工作(如煮飯,家務)時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq3",
+                "number": 3,
+                "label": "購物後攜帶所購物品時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq4",
+                "number": 4,
+                "label": "步行半哩(大約 800 米)時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq5",
+                "number": 5,
+                "label": "步行一百碼(大約 90 米)時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq6",
+                "number": 6,
+                "label": "在家中自由走動時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq7",
+                "number": 7,
+                "label": "在公眾場所內走動時有困難",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq8",
+                "number": 8,
+                "label": "外出時需要別人陪伴",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq9",
+                "number": 9,
+                "label": "在公眾場所內很怕或很擔心會跌倒",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq10",
+                "number": 10,
+                "label": "留在家中的時間比起自己希望的為長",
+                "domain": "mobility"
+              },
+              {
+                "id": "pdq11",
+                "number": 11,
+                "label": "替自己沐浴時有困難",
+                "domain": "adl"
+              },
+              {
+                "id": "pdq12",
+                "number": 12,
+                "label": "替自己穿衣時有困難",
+                "domain": "adl"
+              },
+              {
+                "id": "pdq13",
+                "number": 13,
+                "label": "替自己扣鈕或縛鞋帶時有困難",
+                "domain": "adl"
+              },
+              {
+                "id": "pdq14",
+                "number": 14,
+                "label": "要清楚地書寫時有困難",
+                "domain": "adl"
+              },
+              {
+                "id": "pdq15",
+                "number": 15,
+                "label": "用刀切食物時有困難",
+                "domain": "adl"
+              },
+              {
+                "id": "pdq16",
+                "number": 16,
+                "label": "拿起水杯要保持不倒瀉水會有困難",
+                "domain": "adl"
+              },
+              {
+                "id": "pdq17",
+                "number": 17,
+                "label": "感到抑鬱",
+                "domain": "emotional"
+              },
+              {
+                "id": "pdq18",
+                "number": 18,
+                "label": "感到孤單和被隔離",
+                "domain": "emotional"
+              },
+              {
+                "id": "pdq19",
+                "number": 19,
+                "label": "感覺想哭或流淚",
+                "domain": "emotional"
+              },
+              {
+                "id": "pdq20",
+                "number": 20,
+                "label": "感到憤怒或苦澀",
+                "domain": "emotional"
+              },
+              {
+                "id": "pdq21",
+                "number": 21,
+                "label": "感到焦慮",
+                "domain": "emotional"
+              },
+              {
+                "id": "pdq22",
+                "number": 22,
+                "label": "替自己的將來感到憂慮",
+                "domain": "emotional"
+              },
+              {
+                "id": "pdq23",
+                "number": 23,
+                "label": "不想讓他人知道你有柏金遜氏症",
+                "domain": "stigma"
+              },
+              {
+                "id": "pdq24",
+                "number": 24,
+                "label": "盡量避免在公眾場合飲食",
+                "domain": "stigma"
+              },
+              {
+                "id": "pdq25",
+                "number": 25,
+                "label": "因自己患有柏金遜氏症，在公眾場合會感到尷尬",
+                "domain": "stigma"
+              },
+              {
+                "id": "pdq26",
+                "number": 26,
+                "label": "為別人對自己患病所作出的反應而感到擔心",
+                "domain": "stigma"
+              },
+              {
+                "id": "pdq27",
+                "number": 27,
+                "label": "親密的人際關係因患病而出現問題",
+                "domain": "social"
+              },
+              {
+                "id": "pdq28",
+                "number": 28,
+                "label": "缺乏配偶或伴侶所給予的支持",
+                "domain": "social",
+                "allowNA": true
+              },
+              {
+                "id": "pdq29",
+                "number": 29,
+                "label": "缺乏家庭或摯友所給予的支持",
+                "domain": "social"
+              },
+              {
+                "id": "pdq30",
+                "number": 30,
+                "label": "在日間無故地睡著",
+                "domain": "cognitive"
+              },
+              {
+                "id": "pdq31",
+                "number": 31,
+                "label": "集中精神時有困難 (如正在閱讀或觀看電視)",
+                "domain": "cognitive"
+              },
+              {
+                "id": "pdq32",
+                "number": 32,
+                "label": "覺得自己記憶力差",
+                "domain": "cognitive"
+              },
+              {
+                "id": "pdq33",
+                "number": 33,
+                "label": "有發惡夢或出現幻覺的情況",
+                "domain": "cognitive"
+              },
+              {
+                "id": "pdq34",
+                "number": 34,
+                "label": "說話時有困難",
+                "domain": "communication"
+              },
+              {
+                "id": "pdq35",
+                "number": 35,
+                "label": "覺得自己不能與別人正常地溝通",
+                "domain": "communication"
+              },
+              {
+                "id": "pdq36",
+                "number": 36,
+                "label": "覺得被別人忽視",
+                "domain": "communication"
+              },
+              {
+                "id": "pdq37",
+                "number": 37,
+                "label": "肌肉有痛性抽筋",
+                "domain": "bodily"
+              },
+              {
+                "id": "pdq38",
+                "number": 38,
+                "label": "關節或身體部分覺得疼痛",
+                "domain": "bodily"
+              },
+              {
+                "id": "pdq39",
+                "number": 39,
+                "label": "對外界環境的冷或熱感到很不舒服 (例：進出空氣調節房間)",
+                "domain": "bodily"
+              }
+            ],
+            "hideLabel": true
+          }
+        ],
+        "reportTitle": "[ Mood and Quality of Life Assessment ]"
+      }
+    ]
+  }
+}

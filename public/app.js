@@ -1069,27 +1069,29 @@
       return result;
     }
 
-    function collectQuestMissing() {
+    function collectScoredTableMissing() {
+      const questionId = formQuestions.pdq39 ? 'pdq39' : 'quest_functional';
       const result = {
-        sectionIdx: sectionIndexForQuestion('quest_functional'),
+        sectionIdx: sectionIndexForQuestion(questionId),
         headerIds: new Set(),
         itemIdsByQuestion: new Map(),
         hasMissing: false,
       };
 
-      const questQ = formQuestions.quest_functional;
-      const questAnswers = answers.quest_functional && typeof answers.quest_functional === 'object'
-        ? answers.quest_functional
+      const scoredTable = formQuestions[questionId];
+      const tableAnswers = answers[questionId] && typeof answers[questionId] === 'object'
+        ? answers[questionId]
         : {};
-      const missingRows = questQ && Array.isArray(questQ.rows)
-        ? questQ.rows.filter(row => {
-          const value = questAnswers[row.id];
-          return typeof value !== 'number' && value !== 'NA';
+      const missingRows = scoredTable && Array.isArray(scoredTable.rows)
+        ? scoredTable.rows.filter(row => {
+          const value = tableAnswers[row.id];
+          return !((typeof value === 'number' && value >= 0 && value <= 4)
+            || (value === 'NA' && row.allowNA));
         })
         : [];
 
       if (missingRows.length) {
-        result.itemIdsByQuestion.set('quest_functional', new Set(missingRows.map(row => row.id)));
+        result.itemIdsByQuestion.set(questionId, new Set(missingRows.map(row => row.id)));
         result.hasMissing = true;
       }
       return result;
@@ -1135,7 +1137,7 @@
     function validateBeforeGenerate() {
       const missing = mergeMissingResults(
         collectCognitiveMissing(),
-        collectQuestMissing(),
+        collectScoredTableMissing(),
       );
       if (!missing.hasMissing) return true;
       const targetIdx = missing.sectionIdx >= 0 ? missing.sectionIdx : currentIdx;
@@ -2290,6 +2292,7 @@
         const totalCell = el('strong', {}, ['0']);
         let totalMaxCell = null;
         const totalSuffix = el('span', { class: 'si-pending' }, ['']);
+        let refreshCrstHighScorePreview = () => {};
         // Track each row's chip-row so we can re-paint after exclusiveWith flips.
         const rowRefs = {};
         const supportsFullScore = q.id === 'mbi' || q.id === 'lawton_iadl';
@@ -2318,6 +2321,7 @@
               : '';
             totalCell.textContent = (incomplete ? '≥' : '') + String(t);
           }
+          refreshCrstHighScorePreview();
         }
 
         function repaintRow(itemId) {
@@ -2581,6 +2585,29 @@
         ]);
         table.appendChild(totalRow);
         wrap.appendChild(table);
+        if (q.id === 'crst_part_c') {
+          const tick = el('input', { type: 'checkbox' });
+          tick.checked = answers.crst_part_c_high_score === true;
+          const label = el('label', { class: 'crst-high-score-toggle' }, [
+            tick,
+            document.createTextNode('Show item(s) equal or above score 2 in report'),
+          ]);
+          const preview = el('div', { class: 'crst-high-score-preview' });
+          refreshCrstHighScorePreview = () => {
+            preview.hidden = !tick.checked;
+            if (!tick.checked) return;
+            const items = crstPartCHighScoreItems(q, curObj);
+            preview.textContent = `item(s) equal or above score 2: ${items.join(', ') || 'none'}`;
+          };
+          tick.onchange = () => {
+            if (tick.checked) answers.crst_part_c_high_score = true;
+            else delete answers.crst_part_c_high_score;
+            refreshCrstHighScorePreview();
+            fire();
+          };
+          wrap.appendChild(label);
+          wrap.appendChild(preview);
+        }
         refreshTotal();
         break;
       }
@@ -3653,7 +3680,8 @@
           });
         };
 
-        const table = el('table', { class: 'assessment-table quest-table' });
+        const isPdq39 = q.id === 'pdq39';
+        const table = el('table', { class: 'assessment-table quest-table' + (isPdq39 ? ' pdq39-table' : '') });
         table.appendChild(el('thead', {}, [
           el('tr', {}, [
             el('th', { class: 'quest-table-col-item' }, [q.label || 'Item']),
@@ -4168,6 +4196,21 @@
   function formatQuestPercent(value) {
     if (!Number.isFinite(value)) return '';
     return value.toFixed(1);
+  }
+
+  function formatPdq39DomainScore(value) {
+    return Number(value.toFixed(1)).toString();
+  }
+
+  function formatPdq39SummaryIndex(value) {
+    // The supplied report example displays 8.95 for an exact mean of 8.9583…
+    return (Math.floor((value + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
+  function crstPartCHighScoreItems(question, scores) {
+    return (question.items || [])
+      .filter(item => scores && typeof scores[item.id] === 'number' && scores[item.id] >= 2)
+      .map(item => item.label.replace(/^\d+\)\s*/, '').toLowerCase());
   }
 
   // Shared incomplete-check for sub_score pendingPolicy. Honours both
@@ -4962,13 +5005,16 @@
             : percent <= 74
               ? 'Marked disability'
               : 'Severe disability';
+      const highScoreItems = answers.crst_part_c_high_score === true
+        ? ` (item(s) equal or above score 2: ${crstPartCHighScoreItems(allQs.crst_part_c, rawC).join(', ') || 'none'})`
+        : '';
 
       return [
         '[Clinical Rating Scale for Tremor (CRST)]',
         `Part A: ${partA}/88`,
         `Part B: ${partB}/36`,
-        `Part C: ${partC}/32`,
-        `Total: ${total}/${maxTotal} ( Severity: ${percentText}, ${severity} )`,
+        `Part C: ${partC}/32${highScoreItems}`,
+        `Total: ${total}/${maxTotal} (Severity: ${percentText}, ${severity}.)`,
       ].join('\n');
     },
 
@@ -5058,6 +5104,30 @@
         const percent = item.denominator > 0 ? (item.numerator / item.denominator) * 100 : 0;
         lines.push(`${item.label}: ${item.numerator}/${item.denominator} (${formatQuestPercent(percent)}%)`);
       });
+      return lines.join('\n');
+    },
+
+    pdq39_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const rows = q.rows || [];
+      const complete = rows.every(row =>
+        (typeof a[row.id] === 'number' && a[row.id] >= 0 && a[row.id] <= 4)
+        || (row.allowNA && a[row.id] === 'NA'));
+      if (!complete) return null;
+
+      const domainScores = computeQuestDomainScores(q, a);
+      const scores = (q.domains || []).map(domain => {
+        const result = domainScores.get(domain.id);
+        return result && result.percent;
+      });
+      if (scores.length !== 8 || scores.some(score => !Number.isFinite(score))) return null;
+
+      const lines = ['', 'PDQ-39'];
+      (q.domains || []).forEach((domain, index) => {
+        lines.push(`${domain.label} ${formatPdq39DomainScore(scores[index])}`);
+      });
+      const summaryIndex = scores.reduce((sum, score) => sum + score, 0) / 8;
+      lines.push(`Summary index (SI): ${formatPdq39SummaryIndex(summaryIndex)}`);
       return lines.join('\n');
     },
 
@@ -5773,6 +5843,8 @@
     const parts = [];
     const isErasForm = form && form.id === 'surgical-eras-assessment.json';
     const isEssentialTremorForm = form && form.id === 'stroke-essential-tremor-clinic.json';
+    const isTdpdForm = form && form.id === 'stroke-tdpd.json';
+    const isEssentialTremorLikeForm = isEssentialTremorForm || isTdpdForm;
     const isParkinsonForm = form && form.id === 'stroke-parkinson-clinic-assessment.json';
     const add = value => {
       const text = String(value || '').replace(/\s+/g, ' ').trim();
@@ -5792,7 +5864,7 @@
           ? ` (${formatAnswer(overallQ, answers.mbi_overall)})`
           : '';
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}${overall}`);
-      } else if (isEssentialTremorForm || isParkinsonForm) {
+      } else if (isEssentialTremorLikeForm || isParkinsonForm) {
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}`);
       } else {
         const overallQ = allQs.mbi_overall;
@@ -5901,7 +5973,7 @@
       }
     }
 
-    if (isEssentialTremorForm) {
+    if (isEssentialTremorLikeForm) {
       const lawtonQ = allQs.lawton_iadl, lawtonA = answers.lawton_iadl;
       if (lawtonQ && lawtonA && typeof lawtonA === 'object' && !isEmptyAnswer(lawtonQ, lawtonA)) {
         const total = Object.values(lawtonA).reduce((sum, value) => sum + (typeof value === 'number' ? value : 0), 0);
@@ -5927,14 +5999,27 @@
         }
       }
 
-      const questQ = allQs.quest_functional, questA = answers.quest_functional;
-      if (questQ && questA && typeof questA === 'object') {
-        const domainScores = computeQuestDomainScores(questQ, questA);
-        const total = Array.from(domainScores.values()).reduce((sum, item) => sum + item.numerator, 0);
-        const naCount = Array.from(domainScores.values()).reduce((sum, item) => sum + item.naCount, 0);
-        const totalDenominator = Math.max(0, 120 - naCount * 4);
-        if (total || Object.keys(questA).length) {
-          add(`QUEST: Total: ${total}/${totalDenominator}`);
+      if (isTdpdForm) {
+        const pdqQ = allQs.pdq39, pdqA = answers.pdq39;
+        if (pdqQ && pdqA && typeof pdqA === 'object'
+            && (pdqQ.rows || []).every(row => typeof pdqA[row.id] === 'number'
+              || (row.allowNA && pdqA[row.id] === 'NA'))) {
+          const scores = Array.from(computeQuestDomainScores(pdqQ, pdqA).values());
+          if (scores.length === 8 && scores.every(score => Number.isFinite(score.percent))) {
+            const summaryIndex = scores.reduce((sum, score) => sum + score.percent, 0) / 8;
+            add(`PDQ-39 SI: ${formatPdq39SummaryIndex(summaryIndex)}`);
+          }
+        }
+      } else {
+        const questQ = allQs.quest_functional, questA = answers.quest_functional;
+        if (questQ && questA && typeof questA === 'object') {
+          const domainScores = computeQuestDomainScores(questQ, questA);
+          const total = Array.from(domainScores.values()).reduce((sum, item) => sum + item.numerator, 0);
+          const naCount = Array.from(domainScores.values()).reduce((sum, item) => sum + item.naCount, 0);
+          const totalDenominator = Math.max(0, 120 - naCount * 4);
+          if (total || Object.keys(questA).length) {
+            add(`QUEST: Total: ${total}/${totalDenominator}`);
+          }
         }
       }
     }
@@ -5962,7 +6047,7 @@
     }
     if (spinalParts.length) add(spinalParts.join('; '));
 
-    if (!isErasForm && !isEssentialTremorForm && !isParkinsonForm) {
+    if (!isErasForm && !isEssentialTremorLikeForm && !isParkinsonForm) {
       const cognitiveLine = customReportFns.cognitive(
         allQs.ot_cognitive || { id: 'ot_cognitive' },
         answers.ot_cognitive,
