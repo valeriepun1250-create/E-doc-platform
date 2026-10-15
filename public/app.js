@@ -1526,6 +1526,7 @@
                    : q.width === 'third' ? 'third'
                    : '';
     const wrap = el('div', { class: 'qfill' + (widthCls ? ' ' + widthCls : '') });
+    if (q.questionnaireHeading) wrap.classList.add('questionnaire-heading');
     if (q.id && ctx && ctx.missingRequired && ctx.missingRequired.headerIds && ctx.missingRequired.headerIds.has(q.id)) {
       wrap.classList.add('is-required-missing');
     }

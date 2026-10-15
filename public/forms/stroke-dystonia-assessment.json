@@ -1006,6 +1006,7 @@
           {
             "id": "dass21",
             "label": "DASS-21",
+            "questionnaireHeading": true,
             "type": "dass21_table",
             "width": "full",
             "customReport": "dass21_summary",
@@ -1151,6 +1152,7 @@
           {
             "id": "ess",
             "label": "Epworth Sleepiness Scale (ESS)",
+            "questionnaireHeading": true,
             "type": "sub_score",
             "mode": "options",
             "totalMax": 24,
@@ -1244,6 +1246,7 @@
           {
             "id": "psqi",
             "label": "匹茲堡睡眠品質量表（PSQI）",
+            "questionnaireHeading": true,
             "type": "psqi_table",
             "width": "full",
             "customReport": "psqi_summary",
@@ -1312,6 +1315,7 @@
           {
             "id": "fss",
             "label": "Fatigue Severity Scale (FSS)",
+            "questionnaireHeading": true,
             "type": "sub_score",
             "mode": "options",
             "totalMax": 63,
@@ -1441,6 +1445,7 @@
           {
             "id": "eq5d5l",
             "label": "EQ-5D-5L",
+            "questionnaireHeading": true,
             "type": "eq5d5l",
             "width": "full",
             "customReport": "eq5d5l_summary",

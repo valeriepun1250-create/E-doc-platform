@@ -1835,6 +1835,10 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   font-weight: 700;
 }
 .qfill .label { font-weight: 600; margin-bottom: 8px; color: var(--fg); }
+.qfill.questionnaire-heading > .qhead .label {
+  font-size: 18px;
+  font-weight: 700;
+}
 .qfill.mbi-score .qhead .label,
 .qfill.lawton-score .qhead .label {
   font-size: 16px;
