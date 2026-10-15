@@ -1097,6 +1097,78 @@
       return result;
     }
 
+    function collectEssMissing() {
+      const question = formQuestions.ess;
+      const value = answers.ess;
+      const missing = question && hasAnySubScoreInput(question, value)
+        ? subScoreMissingItems(question, value)
+        : [];
+      return {
+        sectionIdx: sectionIndexForQuestion('ess'),
+        headerIds: new Set(),
+        itemIdsByQuestion: missing.length
+          ? new Map([['ess', new Set(missing.map(item => item.id))]])
+          : new Map(),
+        hasMissing: missing.length > 0,
+      };
+    }
+
+    function collectPsqiMissing() {
+      const question = formQuestions.psqi;
+      const value = answers.psqi;
+      const started = question && value && typeof value === 'object'
+        && Object.values(value).some(item => item !== '' && item !== null && item !== undefined);
+      const missing = started ? psqiMissingFields(question, value) : [];
+      return {
+        sectionIdx: sectionIndexForQuestion('psqi'),
+        headerIds: new Set(),
+        itemIdsByQuestion: missing.length
+          ? new Map([['psqi', new Set(missing)]])
+          : new Map(),
+        hasMissing: missing.length > 0,
+      };
+    }
+
+    function collectFssMissing() {
+      const question = formQuestions.fss;
+      const value = answers.fss;
+      const missing = question && hasAnySubScoreInput(question, value)
+        ? question.items.filter(item => {
+          const score = value && value[item.id];
+          return !Number.isInteger(score) || score < 1 || score > 7;
+        })
+        : [];
+      return {
+        sectionIdx: sectionIndexForQuestion('fss'),
+        headerIds: new Set(),
+        itemIdsByQuestion: missing.length
+          ? new Map([['fss', new Set(missing.map(item => item.id))]])
+          : new Map(),
+        hasMissing: missing.length > 0,
+      };
+    }
+
+    function collectEq5dMissing() {
+      const question = formQuestions.eq5d5l;
+      const value = answers.eq5d5l;
+      const started = question && value && typeof value === 'object'
+        && Object.values(value).some(item => item !== '' && item !== null && item !== undefined);
+      const missing = started ? [
+        ...(question.dimensions || []).filter(dimension =>
+          !Number.isInteger(value[dimension.id]) || value[dimension.id] < 1 || value[dimension.id] > 5)
+          .map(dimension => dimension.id),
+        ...(!Number.isInteger(value.healthToday) || value.healthToday < 0 || value.healthToday > 100
+          ? ['healthToday'] : []),
+      ] : [];
+      return {
+        sectionIdx: sectionIndexForQuestion('eq5d5l'),
+        headerIds: new Set(),
+        itemIdsByQuestion: missing.length
+          ? new Map([['eq5d5l', new Set(missing)]]) : new Map(),
+        hasMissing: missing.length > 0,
+      };
+    }
+
     function mergeMissingResults(...results) {
       const merged = {
         sectionIdx: -1,
@@ -1138,6 +1210,10 @@
       const missing = mergeMissingResults(
         collectCognitiveMissing(),
         collectScoredTableMissing(),
+        collectEssMissing(),
+        collectPsqiMissing(),
+        collectFssMissing(),
+        collectEq5dMissing(),
       );
       if (!missing.hasMissing) return true;
       const targetIdx = missing.sectionIdx >= 0 ? missing.sectionIdx : currentIdx;
@@ -2259,6 +2335,7 @@
         break;
       }
       case 'sub_score': {
+        if (q.id === 'ess') wrap.classList.add('ess-score');
         if (q.id === 'mbi') wrap.classList.add('mbi-score');
         if (q.id === 'lawton_iadl') wrap.classList.add('lawton-score');
         const mode = q.mode || 'max';
@@ -2285,6 +2362,7 @@
           class: 'subscore'
             + (q.id === 'mbi' ? ' mbi-subscore' : '')
             + (q.id === 'lawton_iadl' ? ' lawton-subscore' : '')
+            + (q.id === 'fss' ? ' fss-subscore' : '')
             + (q.id === 'fes' ? ' fes-subscore' : '')
             + (q.id === 'amt' ? ' amt-subscore' : '')
             + (q.id === 'moca' ? ' moca-subscore' : ''),
@@ -2378,6 +2456,12 @@
             }, ['Set Full Score']),
           ]);
           wrap.appendChild(toolbar);
+        }
+        if (q.id === 'fss') {
+          wrap.appendChild(el('div', { class: 'fss-scale-legend' }, [
+            el('span', {}, ['1 = Disagree']),
+            el('span', {}, ['7 = Agree']),
+          ]));
         }
 
         const renderDescriptionChoices = (it, btnByVal, setVal) => {
@@ -2585,6 +2669,22 @@
         ]);
         table.appendChild(totalRow);
         wrap.appendChild(table);
+        if (q.id === 'fss') {
+          const status = el('div', { class: 'fss-cutoff-preview' });
+          const refreshFssCutoff = () => {
+            const values = q.items.map(item => curObj[item.id]);
+            if (values.some(value => !Number.isInteger(value) || value < 1 || value > 7)) {
+              status.textContent = 'Complete all nine items to compare with cutoff 36.';
+              return;
+            }
+            const total = values.reduce((sum, value) => sum + value, 0);
+            status.textContent = total < 36 ? 'Below cutoff 36'
+              : total === 36 ? 'At cutoff 36' : 'Above cutoff 36';
+          };
+          refreshFssCutoff();
+          if (ctx && ctx.onChange) ctx.onChange(refreshFssCutoff);
+          wrap.appendChild(status);
+        }
         if (q.id === 'crst_part_c') {
           const tick = el('input', { type: 'checkbox' });
           tick.checked = answers.crst_part_c_high_score === true;
@@ -3538,6 +3638,220 @@
         computeScores();
         break;
       }
+      case 'eq5d5l': {
+        const curObj = (cur && typeof cur === 'object' && !Array.isArray(cur)) ? cur : {};
+        answers[q.id] = curObj;
+        const missing = ctx.missingRequired && ctx.missingRequired.itemIdsByQuestion
+          ? ctx.missingRequired.itemIdsByQuestion.get(q.id) : null;
+        const panel = el('div', { class: 'eq5d-form' });
+        panel.appendChild(el('p', { class: 'eq5d-instructions' }, [q.instructions || '']));
+        (q.dimensions || []).forEach(dimension => {
+          const group = el('fieldset', {
+            class: 'eq5d-dimension' + (missing && missing.has(dimension.id) ? ' is-required-missing' : ''),
+          });
+          group.appendChild(el('legend', {}, [dimension.label]));
+          const choices = el('div', { class: 'eq5d-options' });
+          const groupName = uid();
+          (dimension.options || []).forEach((option, index) => {
+            const level = index + 1;
+            const choice = el('label', { class: 'eq5d-option' });
+            const radio = el('input', { type: 'radio', name: groupName, value: String(level) });
+            radio.checked = curObj[dimension.id] === level;
+            radio.onchange = () => {
+              if (radio.checked) {
+                curObj[dimension.id] = level;
+                fire();
+              }
+            };
+            choice.appendChild(radio);
+            choice.appendChild(el('span', {}, [option]));
+            choices.appendChild(choice);
+          });
+          group.appendChild(choices);
+          panel.appendChild(group);
+        });
+        const health = el('label', {
+          class: 'eq5d-health' + (missing && missing.has('healthToday') ? ' is-required-missing' : ''),
+        });
+        health.appendChild(el('span', {}, [q.healthTodayLabel || '您今天的健康狀況']));
+        const healthInput = el('input', {
+          type: 'number', min: '0', max: '100', step: '1', inputmode: 'numeric',
+          value: curObj.healthToday ?? '', 'aria-label': '您今天的健康狀況，0 至 100',
+        });
+        healthInput.oninput = () => {
+          const value = Number(healthInput.value);
+          if (healthInput.value !== '' && Number.isInteger(value) && value >= 0 && value <= 100) {
+            curObj.healthToday = value;
+          } else {
+            delete curObj.healthToday;
+          }
+          fire();
+        };
+        health.appendChild(healthInput);
+        panel.appendChild(health);
+        wrap.appendChild(panel);
+        break;
+      }
+      case 'pain_nprs': {
+        const state = (cur && typeof cur === 'object') ? cur : {};
+        answers[q.id] = state;
+        const panel = el('div', { class: 'pain-nprs' });
+        const yesId = uid(), noId = uid();
+        const yes = el('label', {}, [el('input', { type: 'radio', name: q.id, id: yesId, value: 'positive' }), document.createTextNode('+ve: ')]);
+        const score = el('input', { type: 'number', min: '0', max: '10', step: '1', placeholder: 'NPRS', value: state.nprs ?? '', 'aria-label': 'NPRS 0 to 10' });
+        const no = el('label', {}, [el('input', { type: 'radio', name: q.id, id: noId, value: 'negative' }), document.createTextNode('-ve')]);
+        yes.querySelector('input').checked = state.value === 'positive';
+        no.querySelector('input').checked = state.value === 'negative';
+        const sync = value => {
+          state.value = value;
+          if (value === 'negative') delete state.nprs;
+          fire();
+        };
+        yes.querySelector('input').onchange = () => sync('positive');
+        no.querySelector('input').onchange = () => sync('negative');
+        score.oninput = () => {
+          const n = Number(score.value);
+          if (score.value !== '' && Number.isInteger(n) && n >= 0 && n <= 10) {
+            state.value = 'positive'; state.nprs = n; yes.querySelector('input').checked = true;
+          } else delete state.nprs;
+          fire();
+        };
+        panel.appendChild(yes); panel.appendChild(score); panel.appendChild(el('span', {}, ['/10'])); panel.appendChild(no);
+        wrap.appendChild(panel);
+        break;
+      }
+      case 'psqi_table': {
+        const curObj = (cur && typeof cur === 'object') ? cur : {};
+        answers[q.id] = curObj;
+        const missing = ctx.missingRequired && ctx.missingRequired.itemIdsByQuestion
+          ? ctx.missingRequired.itemIdsByQuestion.get(q.id) : null;
+        const panel = el('div', { class: 'psqi-form' });
+        panel.appendChild(el('p', { class: 'psqi-instructions' }, [q.instructions || '']));
+        const preview = el('div', { class: 'psqi-score-preview' });
+        const refresh = () => {
+          const score = computePsqiScores(q, curObj);
+          preview.textContent = score
+            ? `PSQI: ${score.total}/21 (components: ${score.components.join(', ')})`
+            : 'PSQI: complete all scored answers for the /21 total';
+          fire();
+        };
+        const timeField = (id, label) => {
+          const row = el('label', { class: 'psqi-field' + (missing && missing.has(id) ? ' is-required-missing' : '') });
+          row.appendChild(el('span', {}, [label]));
+          const input = el('input', { type: 'time', value: curObj[id] || '' });
+          input.onchange = () => {
+            if (input.value) curObj[id] = input.value;
+            else delete curObj[id];
+            refresh();
+          };
+          row.appendChild(input);
+          return row;
+        };
+        const numberField = (id, label, max, unit) => {
+          const row = el('label', { class: 'psqi-field' + (missing && missing.has(id) ? ' is-required-missing' : '') });
+          row.appendChild(el('span', {}, [label]));
+          const input = el('input', { type: 'number', min: '0', max: String(max), step: '1', value: curObj[id] ?? '' });
+          input.oninput = () => {
+            if (input.value === '') delete curObj[id];
+            else {
+              const value = Number(input.value);
+              if (Number.isInteger(value) && value >= 0 && value <= max) curObj[id] = value;
+              else delete curObj[id];
+            }
+            refresh();
+          };
+          row.appendChild(input);
+          if (unit) row.appendChild(el('span', { class: 'psqi-unit' }, [unit]));
+          return row;
+        };
+        const ratingField = (id, label, labels, detail = false) => {
+          const row = el('div', { class: 'psqi-rating' + (missing && missing.has(id) ? ' is-required-missing' : '') });
+          const prompt = el('div', { class: 'psqi-rating-label' }, [label]);
+          if (detail) {
+            const input = el('input', { type: 'text', placeholder: '其他情況（如有）', value: curObj.q5jDetail || '' });
+            input.oninput = () => {
+              if (input.value.trim()) curObj.q5jDetail = input.value;
+              else delete curObj.q5jDetail;
+              fire();
+            };
+            prompt.appendChild(input);
+          }
+          row.appendChild(prompt);
+          const choices = el('div', { class: 'psqi-choices' });
+          labels.forEach((text, score) => {
+            const button = el('button', {
+              type: 'button',
+              class: 'psqi-choice' + (curObj[id] === score ? ' sel' : ''),
+              title: text,
+              'aria-label': `${label}：${score}，${text}`,
+              'aria-pressed': curObj[id] === score ? 'true' : 'false',
+              onclick: () => {
+                if (curObj[id] === score) delete curObj[id];
+                else curObj[id] = score;
+                [...choices.children].forEach((choice, index) => {
+                  const selected = curObj[id] === index;
+                  choice.classList.toggle('sel', selected);
+                  choice.setAttribute('aria-pressed', String(selected));
+                });
+                refresh();
+              },
+            }, [String(score)]);
+            choices.appendChild(button);
+          });
+          row.appendChild(choices);
+          return row;
+        };
+        const ratingGroup = (labels, items) => {
+          const group = el('div', { class: 'psqi-rating-group' });
+          const header = el('div', { class: 'psqi-scale-header' });
+          header.appendChild(el('span', { 'aria-hidden': 'true' }));
+          const descriptions = el('div', { class: 'psqi-scale-labels' });
+          labels.forEach(label => descriptions.appendChild(el('span', {}, [label])));
+          header.appendChild(descriptions);
+          group.appendChild(header);
+          items.forEach(item => group.appendChild(ratingField(item.id, item.label, labels, item.detail)));
+          panel.appendChild(group);
+        };
+        panel.appendChild(timeField('q1', '1. 晚上通常幾點上床睡覺？'));
+        panel.appendChild(numberField('q2', '2. 上床後通常多久才能入睡？', 1440, '分鐘'));
+        panel.appendChild(timeField('q3', '3. 早上通常幾點起床？'));
+        const duration = el('div', { class: 'psqi-duration' + (missing && missing.has('q4') ? ' is-required-missing' : '') });
+        duration.appendChild(el('span', { class: 'psqi-duration-label' }, ['4. 每晚實際睡著的時間']));
+        const durationControls = el('div', { class: 'psqi-duration-controls' });
+        [['q4Hours', 24, '小時'], ['q4Minutes', 59, '分鐘']].forEach(([id, max, unit]) => {
+          const control = el('label', { class: 'psqi-duration-control' });
+          const input = el('input', { type: 'number', min: '0', max: String(max), step: '1', value: curObj[id] ?? '', 'aria-label': `每晚實際睡著的時間（${unit}）` });
+          input.oninput = () => {
+            if (input.value === '') delete curObj[id];
+            else {
+              const value = Number(input.value);
+              if (Number.isInteger(value) && value >= 0 && value <= max) curObj[id] = value;
+              else delete curObj[id];
+            }
+            refresh();
+          };
+          control.appendChild(input);
+          control.appendChild(el('span', { class: 'psqi-unit' }, [unit]));
+          durationControls.appendChild(control);
+        });
+        duration.appendChild(durationControls);
+        panel.appendChild(duration);
+        panel.appendChild(el('h4', {}, ['5. 過去一個月，睡眠有多少次受到以下困擾？']));
+        ratingGroup(q.frequencyLabels || [], [
+          ...(q.disturbances || []).map((item, index) => ({ id: item.id, label: `${String.fromCharCode(97 + index)}. ${item.label}`, detail: item.id === 'q5j' })),
+          { id: 'q6', label: '6.過去一個月來，您有多少次需要藉助藥物(醫師處方或 成藥)來幫助睡眠？' },
+          { id: 'q7', label: '7.過去一個月來，當您在開車、用餐、從事日常社交活動時，有多少次覺得難以保持清醒狀態' },
+        ]);
+        ratingGroup(q.difficultyLabels || [], [{ id: 'q8', label: '8.過去一個月來，要打起精神來完成您應該做的事情對您有多少困擾？' }]);
+        ratingGroup(q.qualityLabels || [], [{ id: 'q9', label: '9.過去一個月來，您對您自己的睡眠品質整體評價如何？' }]);
+        panel.appendChild(preview);
+        wrap.appendChild(panel);
+        const score = computePsqiScores(q, curObj);
+        preview.textContent = score
+          ? `PSQI: ${score.total}/21 (components: ${score.components.join(', ')})`
+          : 'PSQI: complete all scored answers for the /21 total';
+        break;
+      }
       case 'quest_vas': {
         const row = el('div', { class: 'quest-vas' });
         const prompt = el('div', { class: 'quest-vas-prompt' }, [q.prompt || q.label || '']);
@@ -3962,6 +4276,10 @@
       // If every recorded value is the NA marker, treat as empty.
       return !Object.values(a).some(v => typeof v === 'number');
     }
+    if (q.type === 'eq5d5l') {
+      return typeof a !== 'object' || !Object.values(a).some(v => typeof v === 'number');
+    }
+    if (q.type === 'pain_nprs') return typeof a !== 'object' || !a.value;
     if (q.type === 'asia_chart') {
       if (typeof a !== 'object') return true;
       const useSensoryScoring = q.sensoryScoring !== false;
@@ -4196,6 +4514,55 @@
   function formatQuestPercent(value) {
     if (!Number.isFinite(value)) return '';
     return value.toFixed(1);
+  }
+
+  function psqiTimeMinutes(value) {
+    if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return null;
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours < 24 && minutes < 60 ? hours * 60 + minutes : null;
+  }
+
+  function psqiMissingFields(q, a) {
+    const value = a && typeof a === 'object' ? a : {};
+    const missing = [];
+    const bedtime = psqiTimeMinutes(value.q1);
+    const wakeTime = psqiTimeMinutes(value.q3);
+    if (bedtime === null) missing.push('q1');
+    if (!Number.isInteger(value.q2) || value.q2 < 0 || value.q2 > 1440) missing.push('q2');
+    if (wakeTime === null) missing.push('q3');
+    if (!Number.isInteger(value.q4Hours) || value.q4Hours < 0 || value.q4Hours > 24) missing.push('q4');
+    if (!Number.isInteger(value.q4Minutes) || value.q4Minutes < 0 || value.q4Minutes > 59) missing.push('q4');
+    const sleepMinutes = value.q4Hours * 60 + value.q4Minutes;
+    const timeInBed = bedtime === null || wakeTime === null
+      ? null : (wakeTime - bedtime + 1440) % 1440;
+    if (timeInBed !== null && (!timeInBed || sleepMinutes > timeInBed || sleepMinutes === 0)) missing.push('q4');
+    [...(q.disturbances || []).map(item => item.id), 'q6', 'q7', 'q8', 'q9'].forEach(id => {
+      if (!Number.isInteger(value[id]) || value[id] < 0 || value[id] > 3) missing.push(id);
+    });
+    return [...new Set(missing)];
+  }
+
+  function computePsqiScores(q, a) {
+    if (psqiMissingFields(q, a).length) return null;
+    const sleepMinutes = a.q4Hours * 60 + a.q4Minutes;
+    const timeInBed = (psqiTimeMinutes(a.q3) - psqiTimeMinutes(a.q1) + 1440) % 1440;
+    const latency = a.q2 <= 15 ? 0 : a.q2 <= 30 ? 1 : a.q2 <= 60 ? 2 : 3;
+    const latencySum = latency + a.q5a;
+    const disturbanceSum = (q.disturbances || [])
+      .filter(item => item.id !== 'q5a')
+      .reduce((sum, item) => sum + a[item.id], 0);
+    const daytimeSum = a.q7 + a.q8;
+    const efficiency = (sleepMinutes / timeInBed) * 100;
+    const components = [
+      a.q9,
+      latencySum === 0 ? 0 : latencySum <= 2 ? 1 : latencySum <= 4 ? 2 : 3,
+      sleepMinutes > 420 ? 0 : sleepMinutes >= 360 ? 1 : sleepMinutes >= 300 ? 2 : 3,
+      efficiency > 85 ? 0 : efficiency >= 75 ? 1 : efficiency >= 65 ? 2 : 3,
+      disturbanceSum === 0 ? 0 : disturbanceSum <= 9 ? 1 : disturbanceSum <= 18 ? 2 : 3,
+      a.q6,
+      daytimeSum === 0 ? 0 : daytimeSum <= 2 ? 1 : daytimeSum <= 4 ? 2 : 3,
+    ];
+    return { components, total: components.reduce((sum, score) => sum + score, 0) };
   }
 
   function formatPdq39DomainScore(value) {
@@ -5086,6 +5453,54 @@
       ].join('\n');
     },
 
+    ess_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const items = q.items || [];
+      if (items.length !== 8 || items.some(item =>
+        !Number.isInteger(a[item.id]) || a[item.id] < 0 || a[item.id] > 3)) return null;
+      const total = items.reduce((sum, item) => sum + a[item.id], 0);
+      return `- ESS: ${total}/24`;
+    },
+
+    psqi_summary(q, a) {
+      const score = computePsqiScores(q, a);
+      if (!score) return null;
+      const severity = score.total < 5 ? 'low' : 'high';
+      const cutoff = score.total < 5 ? 'below cutoff 5'
+        : score.total === 5 ? 'at cutoff 5' : 'above cutoff 5';
+      return `- Generalized PSQI score: ${score.total}/21 (${cutoff}, sleep quality severity: ${severity})`;
+    },
+
+    fss_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const items = q.items || [];
+      if (items.length !== 9 || items.some(item =>
+        !Number.isInteger(a[item.id]) || a[item.id] < 1 || a[item.id] > 7)) return null;
+      const total = items.reduce((sum, item) => sum + a[item.id], 0);
+      const cutoff = total < 36 ? 'below cutoff 36'
+        : total === 36 ? 'just at cutoff 36' : 'above cutoff 36';
+      return `- FSS: ${total} (${cutoff})`;
+    },
+
+    eq5d5l_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      const dimensions = q.dimensions || [];
+      if (dimensions.length !== 5 || dimensions.some(dimension =>
+        !Number.isInteger(a[dimension.id]) || a[dimension.id] < 1 || a[dimension.id] > 5)
+        || !Number.isInteger(a.healthToday) || a.healthToday < 0 || a.healthToday > 100) return null;
+      const profile = dimensions.map(dimension => a[dimension.id]).join('');
+      return `- ED 5D: ${profile} (overall health ${a.healthToday}%)`;
+    },
+
+    pain_nprs_summary(q, a) {
+      if (!a || typeof a !== 'object') return null;
+      if (a.value === 'negative') return 'Pain: -ve';
+      if (a.value !== 'positive') return null;
+      const score = Number.isInteger(a.nprs) && a.nprs >= 0 && a.nprs <= 10
+        ? ` (NPRS: ${a.nprs}/10)` : '';
+      return `Pain: +ve${score}`;
+    },
+
     essential_tremor_quest_summary(q, a) {
       if (!a || typeof a !== 'object') return null;
       const domains = q.domains || [];
@@ -5744,6 +6159,9 @@
             const lbl = q.commentLabel || 'Other';
             line += `; ${lbl}: ${cmt}`;
           }
+          if (q.reportBlankBefore && sectionLines.length && sectionLines[sectionLines.length - 1] !== '') {
+            sectionLines.push('');
+          }
           if (q.type === 'sub_score' && q.showBreakdown !== false) {
             const bd = subScoreBreakdownLines(q, a, undefined, answers);
             if (q.breakdownPosition === 'before') {
@@ -5844,7 +6262,8 @@
     const isErasForm = form && form.id === 'surgical-eras-assessment.json';
     const isEssentialTremorForm = form && form.id === 'stroke-essential-tremor-clinic.json';
     const isTdpdForm = form && form.id === 'stroke-tdpd.json';
-    const isEssentialTremorLikeForm = isEssentialTremorForm || isTdpdForm;
+    const isDystoniaForm = form && form.id === 'stroke-dystonia-assessment.json';
+    const isEssentialTremorLikeForm = isEssentialTremorForm || isTdpdForm || isDystoniaForm;
     const isParkinsonForm = form && form.id === 'stroke-parkinson-clinic-assessment.json';
     const add = value => {
       const text = String(value || '').replace(/\s+/g, ' ').trim();
