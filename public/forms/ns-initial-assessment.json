@@ -1905,30 +1905,15 @@
             "label": "Other",
             "type": "long_text",
             "width": "full",
-            "mergeUp": true,
             "tedStockingControl": true,
-            "tedStockingQuestionId": "ted_stocking",
-            "showIf": {
-              "questionId": "spinal_region",
-              "notAnyOf": [
-                "Spinal_Cervical Ax",
-                "Spinal_Thoraco-Lumba Ax"
-              ]
-            }
+            "tedStockingQuestionId": "ted_stocking"
           },
           {
             "id": "ted_stocking_physical",
             "type": "short_text",
             "width": "full",
             "hideInForm": true,
-            "customReport": "ted_stocking_physical",
-            "showIf": {
-              "questionId": "spinal_region",
-              "notAnyOf": [
-                "Spinal_Cervical Ax",
-                "Spinal_Thoraco-Lumba Ax"
-              ]
-            }
+            "customReport": "ted_stocking_physical"
           }
         ],
         "reportTitle": "E. Physical Assessment",
@@ -2379,14 +2364,7 @@
             "type": "short_text",
             "width": "full",
             "hideInForm": true,
-            "customReport": "ted_stocking_recommendation",
-            "showIf": {
-              "questionId": "spinal_region",
-              "notAnyOf": [
-                "Spinal_Cervical Ax",
-                "Spinal_Thoraco-Lumba Ax"
-              ]
-            }
+            "customReport": "ted_stocking_recommendation"
           },
           {
             "id": "heel_protector_recommendation",

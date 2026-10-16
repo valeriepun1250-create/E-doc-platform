@@ -4702,13 +4702,20 @@
     return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
   };
 
+  const formatOverallFunctionalLevel = (q, value) => {
+    if (!q || isEmptyAnswer(q, value)) return '';
+    return formatAnswer(q, value)
+      .replace(/\b(Mild|Moderate|Maximal) Assistance to (Mild|Moderate|Maximal) Assistance\b/g, '$1 to $2 Assistance');
+  };
+
   function buildMbiSummaryLine(allQs, answers) {
     const q = allQs.mbi;
     if (!q || isEmptyAnswer(q, answers.mbi)) return null;
     let line = `Modified Barthel Index (MBI): ${formatAnswer(q, answers.mbi)}`;
     const overallQ = allQs.mbi_overall, overall = answers.mbi_overall;
-    if (overallQ && !isEmptyAnswer(overallQ, overall)) {
-      line += ` (${formatAnswer(overallQ, overall)} Level)`;
+    const overallText = formatOverallFunctionalLevel(overallQ, overall);
+    if (overallText) {
+      line += ` (${overallText})`;
     }
     return line;
   }
@@ -5074,12 +5081,12 @@
 
     ot_adl_summary(q, a, allQs, answers) {
       const mbiQ = allQs.mbi;
-      if (!mbiQ || isEmptyAnswer(mbiQ, answers.mbi)) return null;
-      let line = `ADL: MBI ${formatAnswer(mbiQ, answers.mbi)}`;
       const overallQ = allQs.mbi_overall;
-      if (overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)) {
-        line += ` (${formatAnswer(overallQ, answers.mbi_overall)})`;
-      }
+      const hasMbi = mbiQ && !isEmptyAnswer(mbiQ, answers.mbi);
+      const overall = formatOverallFunctionalLevel(overallQ, answers.mbi_overall);
+      if (!hasMbi && !overall) return null;
+      let line = hasMbi ? `ADL: MBI ${formatAnswer(mbiQ, answers.mbi)}` : 'ADL: MBI';
+      if (overall) line += ` (${overall})`;
       return line;
     },
 
@@ -5469,7 +5476,7 @@
       const severity = score.total < 5 ? 'low' : 'high';
       const cutoff = score.total < 5 ? 'below cutoff 5'
         : score.total === 5 ? 'at cutoff 5' : 'above cutoff 5';
-      return `- Generalized PSQI score: ${score.total}/21 (${cutoff}, sleep quality severity: ${severity})`;
+      return `- Global PSQI score: ${score.total}/21 (${cutoff}, sleep quality severity: ${severity})`;
     },
 
     fss_summary(q, a) {
@@ -5564,10 +5571,12 @@
 
     ted_stocking_recommendation(q, a, allQs, answers) {
       const ted = tedStockingState(answers);
+      const right = ted.right != null ? String(ted.right).trim() : '';
+      const left = ted.left != null ? String(ted.left).trim() : '';
       const size = ted.size != null ? String(ted.size).trim() : '';
-      if (!size) return null;
+      if (!right || !left || !size) return null;
       const date = assessmentDateDmy(answers);
-      return `TED stocking (size ${size}) given${date ? ` on ${date}` : ''}, for post-op use.\n`;
+      return `Bilateral TED stocking size ${size} given on ${date || 'the assessment date'}, for post-op use.`;
     },
 
     heel_protector_recommendation(q, a, allQs, answers) {
@@ -6272,6 +6281,8 @@
     };
 
     const mbiQ = allQs.mbi, mbiA = answers.mbi;
+    const overallQ = allQs.mbi_overall;
+    const overallText = formatOverallFunctionalLevel(overallQ, answers.mbi_overall);
     const otComplaintQ = allQs.ot_complaint, otComplaintA = answers.ot_complaint;
     if (otComplaintQ && !isEmptyAnswer(otComplaintQ, otComplaintA)) {
       add(formatAnswer(otComplaintQ, otComplaintA));
@@ -6279,20 +6290,16 @@
 
     if (mbiQ && !isEmptyAnswer(mbiQ, mbiA)) {
       if (isErasForm) {
-        const overallQ = allQs.mbi_overall;
-        const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
-          ? ` (${formatAnswer(overallQ, answers.mbi_overall)})`
-          : '';
+        const overall = overallText ? ` (${overallText})` : '';
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}${overall}`);
       } else if (isEssentialTremorLikeForm || isParkinsonForm) {
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}`);
       } else {
-        const overallQ = allQs.mbi_overall;
-        const overall = overallQ && !isEmptyAnswer(overallQ, answers.mbi_overall)
-          ? `(${formatAnswer(overallQ, answers.mbi_overall)})`
-          : '';
+        const overall = overallText ? `(${overallText})` : '';
         add(`ADL: MBI ${formatAnswer(mbiQ, mbiA)}${overall}`);
       }
+    } else if (overallText) {
+      add(`ADL: MBI (${overallText})`);
     }
 
     if (isErasForm) {
