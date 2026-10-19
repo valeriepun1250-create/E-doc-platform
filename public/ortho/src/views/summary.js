@@ -40,7 +40,7 @@ export function renderSummary() {
     )
   );
 
-  const content = el("div", { class: "content" });
+  const content = el("div", { class: "content summary-content" });
   screen.appendChild(content);
 
   const shown = formParts(a).filter(p =>

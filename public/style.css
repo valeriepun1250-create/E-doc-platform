@@ -958,8 +958,21 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
 
 .platform-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
   gap: 14px;
+}
+
+/* The shared hub must fit in an iPad window, including Split View. */
+.main-home .history-detail { flex-wrap: wrap; }
+.main-home .history-summary { min-width: 0; flex: 0 1 auto; }
+.main-home .history-summary .case-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.main-home .history-form-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .platform-card {
@@ -1225,7 +1238,7 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   }
 
   .platform-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
     gap: 10px;
   }
 

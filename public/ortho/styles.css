@@ -437,6 +437,7 @@ html, body {
 
 /* ── Summary ── */
 .summary-box {
+  width: 100%;
   background: #f8f9f9;
   border-radius: 10px;
   padding: 16px;
@@ -671,6 +672,9 @@ html, body {
     padding: 16px 0;
     padding-bottom: calc(92px + env(safe-area-inset-bottom));
   }
+  .content.summary-content {
+    width: calc(100% - 32px);
+  }
   .form-card { padding: 22px; }
 
   /* Align the fixed/sticky bars with the content column. */
@@ -685,10 +689,6 @@ html, body {
   .score-head { flex: 0 0 210px; }
   /* flex:1 lets the segmented grid take all remaining width. */
   .score-chips { flex: 1; min-width: 0; }
-
-  /* Monospace summary at full window width runs to ~150 characters a line.
-     The editor takes the same measure so lines do not rewrap when toggling Edit. */
-  .summary-box, .summary-edit { max-width: 82ch; }
 
   /* iPad portrait has enough room for two fields per line, but not for three
      native controls plus the action without Safari's intrinsic widths colliding. */
