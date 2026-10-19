@@ -12,8 +12,8 @@
 import { render } from "../render.js";
 import { computedValue } from "./report.js";
 import {
-  chipOption, chipsFromMap, dateInput, el, fieldBlock, formCard, numInput, textArea,
-  textInput
+  chipOption, chipsFromMap, collapsibleCard, dateInput, el, fieldBlock, formCard,
+  numInput, textArea, textInput
 } from "../dom.js";
 import { quickFillChip, scoreBody } from "../score.js";
 import {
@@ -78,7 +78,14 @@ export function evalShowIf(cond, a) {
   return true;
 }
 
-export function showQuestion(a, q) { return evalShowIf(q.showIf, a); }
+// `showIf` may be one condition or a list, and a list must hold in full. Two are
+// needed where a question is gated from two directions at once — a grid that both its
+// own "Not tested" status and the section's Pre-op choice can put away. It cannot be
+// left to one of them: a question hidden by the other is cleared by the stale-value
+// rule, so it reads blank and its gate falls open again.
+export function showQuestion(a, q) {
+  return [].concat(q.showIf || []).every(c => evalShowIf(c, a));
+}
 
 // The app's stale-value rule: an answer sitting behind a condition that no longer
 // holds is wrong, not merely hidden, so it is cleared rather than left to reappear.
@@ -165,10 +172,34 @@ export function renderSchemaForm(a, content, sections) {
     else groups[groups.length - 1].items.push(q);
   });
 
-  groups.forEach(g => {
+  groups.forEach((g, i) => {
     if (!g.items.length) return;
-    content.appendChild(formCard(g.title, ...g.items.map(q => renderSchemaQuestion(a, q))));
+    const build = () => g.items.map(q => renderSchemaQuestion(a, q));
+    if (!section.collapsed) {
+      content.appendChild(formCard(g.title, ...build()));
+      return;
+    }
+    // A section that is usually not indicated stays shut until it is wanted — but it
+    // opens itself once it holds answers, because State.expanded is cleared whenever a
+    // case is opened and a shut card over yesterday's ratings reads as lost work.
+    const answered = answeredCount(a, g.items);
+    content.appendChild(collapsibleCard(
+      "sec_" + section.id + "_" + i, g.title, answered, build,
+      { open: answered > 0, hint: section.hint }));
   });
+}
+
+// How much of a group has been answered. A score counts each rated item, so a collapsed
+// card reads "(6)" rather than "(1)" — the count is there to say how much is inside.
+export function answeredCount(a, questions) {
+  return questions.reduce((n, q) => {
+    if (!isAnswerable(q)) return n;
+    if (q.type === "score") {
+      const obj = objField(a, q.id);
+      return n + (q.items || []).filter(it => !isBlankAnswer(obj[it.key])).length;
+    }
+    return n + (isBlankAnswer(a[q.id]) ? 0 : 1);
+  }, 0);
 }
 
 export function renderSchemaQuestion(a, q) {

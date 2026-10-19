@@ -841,6 +841,12 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border: 2px solid #b7dec7;
 }
 
+.home-history-card .badge.Ortho {
+  background: #f5ecff;
+  color: #6d28d9;
+  border: 2px solid #dcc8fb;
+}
+
 .home-history-card .badge.General {
   background: #e8f7ef;
   color: #0f5f43;

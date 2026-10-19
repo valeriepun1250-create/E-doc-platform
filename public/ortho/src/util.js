@@ -113,6 +113,23 @@ export function collapseSharedValue(line) {
   return caption + pairs.map(p => p[0]).join(", ") + ": " + pairs[0][1];
 }
 
+// A span across two grades of the same scale says the noun once: "Maximal assistance to
+// Moderate assistance" is how the grades are named, but "Maximal to Moderate assistance"
+// is how it is read aloud.
+//
+// Only when every part genuinely ends in the same word, and none of them is that word by
+// itself — which is what makes this safe to apply to every span rather than flagging the
+// questions that want it. "Supervision to Independent", "Dependent to Maximal assistance"
+// and "Fair to Good" share no last word, so they come through untouched.
+export function joinSharedTail(parts, join = " to ") {
+  const words = parts.map(p => p.trim().split(/\s+/));
+  const tail = words[0][words[0].length - 1];
+  const shared = words.length > 1 &&
+    words.every(w => w.length > 1 && w[w.length - 1] === tail);
+  if (!shared) return parts.join(join);
+  return words.map(w => w.slice(0, -1).join(" ")).join(join) + " " + tail;
+}
+
 export function wrapSemicolons(line) {
   const parts = line.split("; ");
   if (parts.length < 2) return [line];

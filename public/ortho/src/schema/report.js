@@ -16,8 +16,8 @@ import {
   hasAnyScore, hasPendingScore, scoreBand, scoreBreakdownLines, scoreMax, scoreTotal
 } from "../score.js";
 import {
-  boxes, collapseSharedValue, fmtEventDate, isBlankAnswer, joinList, objField,
-  pickLabels, tidyLine, wrapSemicolons
+  boxes, collapseSharedValue, fmtEventDate, isBlankAnswer, joinList, joinSharedTail,
+  objField, pickLabels, tidyLine, wrapSemicolons
 } from "../util.js";
 import {
   detailKey, isReportable, normOption, qOptions, schemaQuestions, showQuestion,
@@ -71,7 +71,12 @@ export function buildSchemaSummary(a, sections, parts) {
   });
 
   const out = {};
-  parts.forEach(p => { out[p.key] = buf[p.key].join("\n").trimEnd(); });
+  parts.forEach(p => {
+    const body = buf[p.key].join("\n").trimEnd();
+    // A part may head its note with a fixed title. Only when there is a note to head:
+    // an untouched assessment stays empty rather than showing a title over nothing.
+    out[p.key] = body && p.header ? p.header + "\n\n" + body : body;
+  });
   return out;
 }
 
@@ -165,8 +170,10 @@ export function formatSchemaAnswer(a, q) {
       if (!picked.length) return "";
       if (picked.length === 1) return optionText(a, q, picked[0]);
       // These scales are declared best-first, so reading the pair back to front
-      // gives the natural "Fair to Good" rather than "Good to Fair".
-      return picked.reverse().map(o => optionText(a, q, o)).join(" to ");
+      // gives the natural "Fair to Good" rather than "Good to Fair". joinSharedTail
+      // then says a repeated noun once — "Maximal to Moderate assistance" — and leaves
+      // a span whose ends differ exactly as it found it.
+      return joinSharedTail(picked.reverse().map(o => optionText(a, q, o)));
     }
     case "yesno":
       return v === "yes" ? "Yes" : v === "no" ? "No" : "";

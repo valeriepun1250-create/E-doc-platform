@@ -89,10 +89,11 @@ html, body {
   background: rgba(255,255,255,0.2);
   border: none;
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  min-height: 44px;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  padding: 6px 11px;
+  padding: 9px 16px;
   border-radius: 20px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -556,6 +557,8 @@ html, body {
 .form-card.collapsible.open .collapsible-header { border-bottom: 1px solid var(--primary-light); }
 .collapsible-caret { color: var(--primary); font-size: 12px; flex-shrink: 0; width: 14px; text-align: center; }
 .collapsible-title { flex: 1; font-weight: 600; color: var(--primary); font-size: 14px; }
+.collapsible-title.stacked { display: flex; flex-direction: column; gap: 2px; }
+.collapsible-hint { font-weight: 400; font-size: 12px; color: var(--text-muted); }
 .collapsible-count { color: var(--text-secondary); font-size: 12px; }
 .collapsible-body  { padding: 12px 16px 16px; }
 

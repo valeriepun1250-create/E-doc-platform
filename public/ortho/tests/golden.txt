@@ -1,0 +1,283 @@
+########################################################################
+# Geriatric Hip Fracture Initial — instruments scored
+########################################################################
+
+GREEN BOX
+=========
+otComment note; Premorbid ADL: MBI 100/100; Current ADL: MBI 100/100 (Supervision to Independent). adlNote text; Cognitive function: AMT: 10/10; CDT: 2/10; MoCA: 30/30 (>16th percentile). cogNote text
+
+COMMON ASSESSMENT NOTES
+=======================
+<Initial Assessment Note>
+
+Vital signs: BP 1 mmHg; Pulse 2/min; SpO2 3%, Room air; Afebrile
+
+PREMORBID FUNCTION
+(Information collected from patient)
+Indoor mobility: Independent (Unaided)  Outdoor mobility: Independent (Unaided)
+
+Modified Barthel Index (MBI): 100/100 (Supervision to Independent)
+Bowels: 10/10   Bladder: 10/10   Grooming: 5/5   Toileting: 10/10   Feeding: 10/10
+Dressing: 10/10   Bathing: 5/5   Transfer: 15/15   Mobility: 15/15   Stairs: 10/10
+
+Chinese Lawton Instrumental Activities of Daily Living Scale (4-point Scale): 27/27 (Supervision to Independent)
+Use of telephone: 3/3   Transportation: 3/3   Shopping: 3/3   Meal preparation: 3/3   Housework: 3/3
+Handyman work: 3/3   Laundry: 3/3   Medication Mx: 3/3   Money Mx: 3/3
+
+SOCIAL HISTORY AND HOME ENVIRONMENT
+Limited information from patient.
+
+MENTAL AND COGNITIVE FUNCTION:
+Alert. Follow 1 step command
+Oriented to time, place and person
+Speech: Normal, Limited, No verbal response, other detail
+Abbreviated Mental Test (AMT): 10/10 (cut off <6 indicated further evaluations for possibility of cognitive impairment)
+Age: 1/1; Time: 1/1; Address to recall: 1/1; Current year: 1/1; Place: 1/1; Recognition of two persons: 1/1; Date of birth: 1/1; Date of Mid-Autumn Festival: 1/1; Name of present Governor or Chinese leader: 1/1; Count from 20 to 1 backwards: 1/1
+
+Clock Drawing Test (CDT): 2/10 (cut off 3/4; Lower score indicated higher cognitive function)
+
+HK-Montreal Cognitive Assessment (MoCA): 30/30 (Education: 2 years) (cut-off: 17/30, >16th percentile)
+Visuospatial / Executive: 5/5   Naming: 3/3   Attention: 6/6   Language: 3/3   Abstraction: 2/2
+Delayed Recall: 5/5   Orientation: 6/6
+
+PHYSICAL EXAMINATION
+Pain at fracture site: Resting: Nil;
+                       Movement: Nil;
+                       Weight Bearing: Nil
+Pain remarks: painNote text
+Swelling: Yes (Location: yes detail)
+MMT: Upper limb (R|L): 1 | 2; Lower limb (R|L): 3 | 4
+Balance: Sitting: Fair to Good; Standing: Fair to Good
+Transfer: Lie to Sit: Supervision to Independent; Sit to Stand: Supervision to Independent
+Ambulation: Supervision to Independent (Unaided)
+Vision: NAD
+Hearing: NAD
+Complications: Delirium, Pressure sore (Site: pressure_sore detail), DVT
+Remarks: remarks note
+
+FUNCTIONAL ASSESSMENT
+Modified Barthel Index (MBI): 100/100
+Bowels: 10/10   Bladder: 10/10   Grooming: 5/5   Toileting: 10/10   Feeding: 10/10
+Dressing: 10/10   Bathing: 5/5   Transfer: 15/15   Mobility: 15/15   Stairs: 10/10
+Comment: mbiComment text
+Overall functional level: Supervision to Independent
+
+Chinese Lawton IADL: 27/27
+Use of telephone: 3/3   Transportation: 3/3   Shopping: 3/3   Meal preparation: 3/3   Housework: 3/3
+Handyman work: 3/3   Laundry: 3/3   Medication Mx: 3/3   Money Mx: 3/3
+
+FALL ASSESSMENT
+Fall Risk: Yes (Low risk); Risk factors: Dizziness, LL weakness, Cognitive problem, Gait disturbance, History of fall, Poor safety awareness, Other detail
+History of fall in recent year: Yes; Frequency: 2
+Fall Details: fallDetails note
+
+HOME DISCHARGE READINESS SCALE (HDRS)
+Factor 1 (Patient) — Rating: 5/5  [Patient attitude: 5/5  Patient sense of competency: 5/5]
+Factor 2 (Carer) — Rating: 5/5  [Availability of carer: 5/5  Carer attitude and competency: 5/5]
+Factor 3 (Environment) — Rating: 5/5  [Specific home safety: 5/5  Specific home environment: 5/5]
+Level of Readiness: Level 6 (Very High)
+
+OT COMMENT
+otComment note
+Premorbid ADL: MBI 100/100
+Current ADL: MBI 100/100 (Supervision to Independent)
+adlNote text
+Cognitive function: AMT: 10/10; CDT: 2/10; MoCA: 30/30 (>16th percentile)
+cogNote text
+
+PROBLEM
+=======
+Patient Factor: Impaired ADL function, Impaired cognition, Impaired physical stability, Impaired safety awareness, Other detail
+Environmental Factor: Limited accessibility, Risky home environment, Other detail
+Social Factor: Live alone / Daytime / Nighttime alone, Lack of competent caregiver, Other detail
+
+RECOMMENDATION
+==============
+Treatment:
+Pre-operation assessment done, Cognitive Assessment done, Cognitive/Orientation training done, ADL Assessment and Training done, IADL Assessment and Training done, Patient education on Fall Prevention and Home safety done, Limb function maintenance/positioning done, Pressure injury prevention done, Tailor-made pressure stockings done, Carer interview/education/training done, Home Assessment and Modification done, Aids Prescription done, Home visit done, other_done detail
+
+Treatment plan:
+Continue ADL training, Maintenance training, other_plan detail
+
+Recommendation:
+Continue Hip Rehabilitation Program, Suggest Direct discharge home, other_rec detail
+
+########################################################################
+# Geriatric Hip Fracture Initial — instruments not tested
+########################################################################
+
+GREEN BOX
+=========
+otComment note; Premorbid ADL: MBI 100/100; Current ADL: Not tested due to pre-operation. adlNote text; Pre-op cognitive function: AMT: Not applicable; CDT: Not applicable; MoCA: Not applicable. cogNote text
+
+COMMON ASSESSMENT NOTES
+=======================
+<Initial Assessment Note>
+
+[Pre-operation]
+Vital signs: BP 1 mmHg; Pulse 2/min; SpO2 3%, Room air; Afebrile
+
+PREMORBID FUNCTION
+(Information collected from patient)
+Indoor mobility: Independent (Unaided)  Outdoor mobility: Independent (Unaided)
+
+Modified Barthel Index (MBI): 100/100 (Supervision to Independent)
+Bowels: 10/10   Bladder: 10/10   Grooming: 5/5   Toileting: 10/10   Feeding: 10/10
+Dressing: 10/10   Bathing: 5/5   Transfer: 15/15   Mobility: 15/15   Stairs: 10/10
+
+Chinese Lawton Instrumental Activities of Daily Living Scale (4-point Scale): 27/27 (Supervision to Independent)
+Use of telephone: 3/3   Transportation: 3/3   Shopping: 3/3   Meal preparation: 3/3   Housework: 3/3
+Handyman work: 3/3   Laundry: 3/3   Medication Mx: 3/3   Money Mx: 3/3
+
+SOCIAL HISTORY AND HOME ENVIRONMENT
+Limited information from patient.
+
+MENTAL AND COGNITIVE FUNCTION:
+Alert. Follow 1 step command
+Oriented to time, place and person
+Speech: Normal, Limited, No verbal response, other detail
+
+Cognitive Assessment (Pre-operation):
+Abbreviated Mental Test (AMT): Not applicable
+
+Clock Drawing Test (CDT): Not applicable
+
+HK-Montreal Cognitive Assessment (MoCA): Not applicable
+
+PHYSICAL EXAMINATION
+Pain at fracture site: Resting: Nil;
+                       Movement: Nil;
+                       Weight Bearing: Nil
+Pain remarks: painNote text
+Swelling: Yes (Location: yes detail)
+MMT: Upper limb (R|L): 1 | 2; Lower limb (R|L): 3 | 4
+Balance: Sitting: Fair to Good; Standing: Fair to Good
+Transfer: Lie to Sit: Supervision to Independent; Sit to Stand: Supervision to Independent
+Ambulation: Supervision to Independent (Unaided)
+Vision: NAD
+Hearing: NAD
+Complications: Delirium, Pressure sore (Site: pressure_sore detail), DVT
+Remarks: remarks note
+
+FUNCTIONAL ASSESSMENT
+Modified Barthel Index (MBI): Not tested due to pre-operation
+Chinese Lawton IADL: Not tested due to pre-operation
+
+FALL ASSESSMENT
+Fall Risk: Yes (Low risk); Risk factors: Dizziness, LL weakness, Cognitive problem, Gait disturbance, History of fall, Poor safety awareness, Other detail
+History of fall in recent year: Yes; Frequency: 2
+Fall Details: fallDetails note
+
+HOME DISCHARGE READINESS SCALE (HDRS)
+Factor 1 (Patient) — Rating: 5/5  [Patient attitude: 5/5  Patient sense of competency: 5/5]
+Factor 2 (Carer) — Rating: 5/5  [Availability of carer: 5/5  Carer attitude and competency: 5/5]
+Factor 3 (Environment) — Rating: 5/5  [Specific home safety: 5/5  Specific home environment: 5/5]
+Level of Readiness: Level 6 (Very High)
+
+OT COMMENT
+otComment note
+Premorbid ADL: MBI 100/100
+Current ADL: Not tested due to pre-operation
+adlNote text
+Pre-op cognitive function: AMT: Not applicable; CDT: Not applicable; MoCA: Not applicable
+cogNote text
+
+PROBLEM
+=======
+Patient Factor: Impaired ADL function, Impaired cognition, Impaired physical stability, Impaired safety awareness, Other detail
+Environmental Factor: Limited accessibility, Risky home environment, Other detail
+Social Factor: Live alone / Daytime / Nighttime alone, Lack of competent caregiver, Other detail
+
+RECOMMENDATION
+==============
+Treatment:
+Pre-operation assessment done, Cognitive Assessment done, Cognitive/Orientation training done, ADL Assessment and Training done, IADL Assessment and Training done, Patient education on Fall Prevention and Home safety done, Limb function maintenance/positioning done, Pressure injury prevention done, Tailor-made pressure stockings done, Carer interview/education/training done, Home Assessment and Modification done, Aids Prescription done, Home visit done, other_done detail
+
+Treatment plan:
+Continue ADL training, Maintenance training, other_plan detail
+
+Recommendation:
+Continue Hip Rehabilitation Program, Suggest Direct discharge home, other_rec detail
+
+########################################################################
+# Ortho Day Rehab FU
+########################################################################
+
+A. COMMON ASSESSMENT NOTES
+==========================
+Attended today for Bone Health Medication FU
+Fracture site: Left NOF, TOF, Subtrochanteric, Greater trochanter, Pubic rami
+Post hip operation (15/1/2026): 1 month
+Occupation: Retired
+Premorbid function: ADL independent; IADL independent
+Came with daughter
+
+SOCIAL HISTORY AND HOME ENVIRONMENT
+Lives with spouse; Daytime alone; Main carer: daughter
+Home environment: Direct lift landing
+Bathing facility: Standard toilet with handrail, Squat toilet with handrail
+Assistive device available: Safety alarm, Wheelchair (standard), Wheelchair (transit)
+Walking aids: indoor stick; outdoor frame
+Social service: Home help service (MOW, Cleansing), Day care centre (3)
+
+FALL HISTORY
+Fall / near-fall incident in the recent 1 year: Yes (2 times)
+Episode 1: Indoor (bathroom, on a wet floor); reason: Dizziness, LL weakness
+Episode 2: Outdoor (street, uneven kerb); reason: Dizziness
+
+B. PHYSICAL ASSESSMENT NOTES
+============================
+Vital signs: BP 130/80 mmHg; pulse 72/min; afebrile
+[x] Visual impaired  [x] Hearing impaired  [ ] Nil visual and hearing impairment
+
+Mental:
+Oriented to time, place, person
+Follows 2-step command
+Mood: Cheerful
+Clock Drawing Test: 8/10
+
+Physical examination:
+ROM: Full — limited hip flexion
+MMT: Upper limb (R|L) 5 | 5; Lower limb (R|L) 4 | 4
+Sitting balance: [x] Satisfactory [ ] Fair [ ] Poor
+Standing balance: [ ] Satisfactory [x] Fair [ ] Poor
+
+FALL RISK ASSESSMENT
+Fear of fall: Yes
+Fall Efficacy Scale: 60/100
+
+FRAT: 12/20, Fall Risk Status: High Risk
+Automatic high risk status:
+[x] Recent change in functional status and / or medication affecting safe mobility
+[ ] Dizziness / postural hypotension
+[ ] Nil
+
+Fall Risk Factor Checklist:
+[x] Vision: [ ] Difficulty seeing objects [ ] Difficulty seeing signs [ ] Difficulty finding way around
+[x] Mobility: [ ] Unknown or appears unsafe [ ] Impulsive [ ] Forgets gait aid
+[x] Transfers: Unknown or appears unsafe
+[x] Behaviours: [ ] Agitation [ ] Confusion [ ] Disorientation [ ] Difficulty following instructions or non-compliant
+[x] ADL: [ ] Risk-taking behaviours [ ] Observed unsafe use of equipment
+[x] Footwear: [ ] Unsafe footwear [ ] Inappropriate clothing
+[x] Environment: Difficulties with orientation to environment
+[x] Nutrition: [ ] Underweight [ ] Low appetite
+[x] Continence: [ ] Reported or known urgency [ ] Nocturia [ ] Accidents
+[ ] Nil
+
+FUNCTIONAL SCORES
+Modified Barthel Index: 100/100
+  Bowels: 10/10, Bladder: 10/10, Grooming: 5/5, Toileting: 10/10, Feeding: 10/10, Dressing: 10/10, Bathing: 5/5, Transfer: 15/15, Mobility: 15/15, Stairs: 10/10
+Chinese Lawton IADL: 27/27
+  Use of telephone: 3/3, Transportation: 3/3, Shopping: 3/3, Meal preparation: 3/3, Housework: 3/3, Handyman work: 3/3, Laundry: 3/3, Medication Mx: 3/3, Money Mx: 3/3
+
+C. PROBLEM
+==========
+- Fracture site pain
+- Impaired health status / multiple medical problems
+- Impaired cognition / physical ability
+
+D. RECOMMENDATION
+=================
+- Fall education talk provided. Continue Fragility Fracture Day Rehabilitation Service
+- Not indicated for Fragility Fracture Day Rehabilitation Training program
+- Suggest for Fragility Fracture Day Rehabilitation Training program (Agreed)

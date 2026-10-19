@@ -141,11 +141,25 @@ export function formCard(title, ...fields) {
 }
 
 // Collapsible subsection card — State.expanded[subKey] drives open/closed.
-export function collapsibleCard(subKey, title, count, buildBody) {
-  const isOpen = !!State.expanded[subKey];
+// opts.open  — where an untouched card starts. It applies only until the user has
+//              decided for themselves: once they tap, the key is set and their choice
+//              wins, open or shut. Omit it and an untouched card is closed, which is
+//              what every caller before it relied on.
+// opts.hint   — a line under the title saying when the card is worth opening. It sits
+//              in the header, not the body, so it is readable while the card is shut —
+//              which is the only time it can do any good.
+export function collapsibleCard(subKey, title, count, buildBody, opts = {}) {
+  const isOpen = State.expanded[subKey] === undefined
+    ? !!opts.open : !!State.expanded[subKey];
+  // Stacked only when there is a hint, so a card without one keeps the markup it had.
+  const titleEl = opts.hint
+    ? el("span", { class: "collapsible-title stacked" },
+        el("span", {}, title),
+        el("span", { class: "collapsible-hint" }, opts.hint))
+    : el("span", { class: "collapsible-title" }, title);
   const header = el("div", { class: "collapsible-header" + (isOpen ? " open" : "") },
     el("span", { class: "collapsible-caret" }, isOpen ? "▼" : "▶"),
-    el("span", { class: "collapsible-title" }, title),
+    titleEl,
     count ? el("span", { class: "collapsible-count" }, "(" + count + ")") : null
   );
   header.addEventListener("click", () => { State.expanded[subKey] = !isOpen; render(); });
@@ -154,30 +168,104 @@ export function collapsibleCard(subKey, title, count, buildBody) {
 }
 
 // Copy button with the clipboard-API-then-execCommand fallback and a "copied" flip.
+// Copying a note is the last step of every assessment, so it has to be both correct
+// and honest about failing.
+//
+// The text goes on the clipboard twice: as plain text, and as HTML. The HTML flavour is
+// not for formatting — it is what stops the receiving app reading the note as a link.
+// A block beginning "Treatment:" is a bare word and a colon, the shape of a URI scheme,
+// and apps that take only plain text have lowercased the scheme and percent-encoded the
+// rest: "treatment:%0ACognitive%20…". Selecting by hand never had the problem, because a
+// selection carries both flavours — this gives the button the same two, on every path it
+// can take, including the fallback below.
+function asHtml(text) {
+  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // <pre> keeps the runs of spaces the score breakdowns line their columns up with.
+  return '<pre style="font-family:inherit;white-space:pre-wrap">' + esc + "</pre>";
+}
+
+// Last resort, for a browser with no clipboard API — a non-secure origin, say, which
+// is what an intranet served over plain http:// is. Not a rare path, then: wherever the
+// app ends up hosted without TLS, this is the only path, so it has to be as good as the
+// modern one rather than a degraded version of it.
+//
+// Which is why it copies a selection over a contenteditable element rather than a
+// textarea. A textarea holds no markup, so copying from one puts plain text on the
+// clipboard and nothing else — the exact condition that had "Treatment:" arriving as a
+// percent-encoded link. Selecting rendered HTML is what the user does by hand when they
+// select the note themselves, and that has always pasted correctly.
+//
+// The element must also end up genuinely selected: execCommand copies whatever the
+// selection holds, so a failure to select this one means copying whatever was already
+// selected on the page — which is how a copy can silently return the screen's furniture
+// instead of the note.
+function legacyCopy(text) {
+  const sel = document.getSelection && document.getSelection();
+  if (!sel) return false;                   // nothing to select with, nothing to copy
+
+  const host = document.createElement("div");
+  host.setAttribute("contenteditable", "true");   // what lets iOS select and copy it
+  host.innerHTML = asHtml(text);
+  host.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;" +
+    "padding:0;border:none;opacity:0;overflow:hidden;font-size:16px;" +   // 16px: iOS zooms below it
+    "-webkit-user-select:text;user-select:text";   // the page's own rules may forbid it
+  document.body.appendChild(host);
+
+  const prev = sel.rangeCount ? sel.getRangeAt(0) : null;
+
+  let ok = false;
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(host);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    ok = document.execCommand("copy");
+  } catch { ok = false; }
+
+  document.body.removeChild(host);
+  // Drop our own range whatever happened — it points into a node that no longer exists —
+  // and put back whatever the user had selected; copying should not disturb it.
+  sel.removeAllRanges();
+  if (prev) sel.addRange(prev);
+  return ok;
+}
+
 export function copyButton(getText) {
   const btn = el("button", { class: "btn btn-primary btn-sm" }, "Copy");
   btn.addEventListener("click", () => {
     const text = getText();
-    const done = () => {
-      btn.textContent = "✓ Copied!";
-      btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    const say = (label, cls) => {
+      btn.textContent = label;
+      if (cls) btn.classList.add(cls);
+      setTimeout(() => { btn.textContent = "Copy"; if (cls) btn.classList.remove(cls); }, 2000);
     };
-    navigator.clipboard.writeText(text).then(done).catch(() => {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      done();
-    });
+    const done = () => say("✓ Copied!", "copied");
+    // Never claim success it did not have: a button that says "Copied!" over an
+    // untouched clipboard is worse than one that admits it failed.
+    const failed = () => say("Copy failed");
+
+    const clip = navigator.clipboard;
+    const both = () => {
+      if (!clip || !clip.write || typeof ClipboardItem === "undefined") return null;
+      return clip.write([new ClipboardItem({
+        "text/plain": new Blob([text], { type: "text/plain" }),
+        "text/html":  new Blob([asHtml(text)], { type: "text/html" })
+      })]);
+    };
+    const plain = () => (clip && clip.writeText ? clip.writeText(text) : null);
+    const legacy = () => { legacyCopy(text) ? done() : failed(); };
+
+    // Each step falls to the next, so an unsupported API is the same as a refused one.
+    try {
+      const rich = both();
+      if (rich) { rich.then(done).catch(() => {
+        const p = plain();
+        if (p) p.then(done).catch(legacy); else legacy();
+      }); return; }
+      const p = plain();
+      if (p) { p.then(done).catch(legacy); return; }
+    } catch { /* fall through */ }
+    legacy();
   });
   return btn;
 }
-
-// ══ Geriatric Hip Fracture Initial Assessment ══════════════════════════════
-// Content follows the NS Initial Assessment used by the neurosurgery OT team
-// (forms/ns-initial-assessment.json in the OT E-Documentation Platform), with the
-// spinal instruments dropped and the ortho paper form's vocabulary preferred where
-// it is the more specific of the two.
