@@ -14,6 +14,24 @@ import { seedSchemaFields } from "./schema/engine.js";
 import { isBlankAnswer, objField, today, uid } from "./util.js";
 
 export const STORAGE_KEY = "ortho.assessments.v1";
+export const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function isExpiredAssessment(a, now = Date.now()) {
+  const created = Date.parse(a && a.createdAt || "");
+  return Number.isFinite(created) && now - created >= RETENTION_MS;
+}
+
+export function expireAssessments() {
+  const expired = Object.keys(State.assessments).filter(id => isExpiredAssessment(State.assessments[id]));
+  if (!expired.length) return false;
+  expired.forEach(id => { delete State.assessments[id]; });
+  Storage.save(State.assessments);
+  if (expired.includes(State.currentId)) {
+    State.currentId = null;
+    State.view = "home";
+  }
+  return true;
+}
 
 // Where a record keeps its pinned (hand-edited) summary parts. The "od_" prefix is
 // historic — it predates the second form — but the field is per-record, so every
@@ -29,7 +47,12 @@ export const Storage = {
     // The caregiver's relationship moved onto the Caregiver chip itself, so it lives
     // under a different key now. Removable once no device still holds a record
     // written before 2026-08-27.
-    Object.values(data).forEach(a => {
+    const now = Date.now();
+    const kept = Object.fromEntries(Object.entries(data).filter(([, a]) => !isExpiredAssessment(a, now)));
+    if (Object.keys(kept).length !== Object.keys(data).length) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(kept)); } catch {}
+    }
+    Object.values(kept).forEach(a => {
       if (a.ghf_carerRelationship && !a.ghf_premorbidSource__d_caregiver) {
         a.ghf_premorbidSource__d_caregiver = a.ghf_carerRelationship;
       }
@@ -138,7 +161,7 @@ export const Storage = {
       // "fracture" needs nothing: it is what the line now reads outright. The retired
       // answer stays on the record unread, as every retired value here does.
     });
-    return data;
+    return kept;
   },
   save(data) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
@@ -186,6 +209,10 @@ export function blankAssessment(label, date, formType) {
 export function saveSoon() {
   clearTimeout(State.saveTimer);
   State.saveTimer = setTimeout(() => {
+    if (expireAssessments()) {
+      render();
+      return;
+    }
     if (State.currentId && State.assessments[State.currentId]) {
       State.assessments[State.currentId].updatedAt = new Date().toISOString();
     }

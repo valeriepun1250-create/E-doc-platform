@@ -6,7 +6,12 @@
   const STORAGE_BACKUP_KEY = "otInpatientMedicalCases.v1.backup";
   const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
   const AUTOSAVE_LABEL = "Autosaved locally";
-  const NOTE_PART_KEYS = ["greenBox", "common", "problem", "recommendation"];
+  const GDS_COMPLETION_REMINDER = "GDS is not yet completed. Please answer all 15 questions.";
+  const NOTE_PART_KEYS = ["greenBox", "common", "problem", "remarks", "recommendation"];
+  const HOME_O2_BREATHING_TREATMENT = "Education on Breathing Technique, Handheld Fan and Energy Conservation";
+  const HOME_O2_HAGO_TREATMENT = "HaGO Tele-information prescribed";
+  const HOME_O2_HAGO_SUMMARY_LABEL = "Prescription of HA Go (Tele information)";
+  const HOME_O2_HAGO_TREATMENT_LEGACY = "HaGO Tele-information prescribed";
   const app = document.getElementById("app");
 
   if (navigator.storage && typeof navigator.storage.persist === "function") {
@@ -95,6 +100,7 @@
         notAssessed: true,
         stoma: false,
         foley: false,
+        bilateralPcn: false,
         feedingRoute: ""
       };
     });
@@ -170,6 +176,8 @@
       sensation: [],
       sensationRemarks: {},
       tactileSensation: "",
+      softCalf: { right: "", left: "" },
+      calfCircumference: { right: "", left: "" },
       otherInfo: ""
     };
   }
@@ -242,6 +250,329 @@
     };
   }
 
+  function makeHomeO2Activity(name = "", custom = false, source = {}) {
+    return {
+      name: source.name || name,
+      custom: !!(source.custom || custom),
+      status: source.status || "",
+      notCompletedReason: source.notCompletedReason || "",
+      beginning: makeOximetryPoint(source.beginning || {}),
+      dyspnea: source.dyspnea || "",
+      immediate: makeOximetryPoint(source.immediate || {}),
+      recovery: makeOximetryPoint(source.recovery || {}),
+      assistance: source.assistance || ""
+    };
+  }
+
+  function makeHomeO2ActivitySet(source = {}) {
+    const sourceActivities = Array.isArray(source.activities) ? source.activities : [];
+    const activities = BANK.homeO2DefaultActivities.map((name, index) => makeHomeO2Activity(name, false, sourceActivities[index] || {}));
+    sourceActivities.slice(BANK.homeO2DefaultActivities.length).forEach((activity) => {
+      activities.push(makeHomeO2Activity("", true, activity || {}));
+    });
+    return {
+      rest: makeOximetryPoint(source.rest || {}),
+      activities
+    };
+  }
+
+  function makeHomeO2OximetryTest(source = {}) {
+    const oxygen = normalizeHomeO2TestOxygen(source);
+    return {
+      oxygenMode: oxygen.mode,
+      oxygenL: oxygen.litre,
+      ...makeHomeO2ActivitySet(source)
+    };
+  }
+
+  function normalizeHomeO2TestOxygen(source = {}) {
+    const mode = BANK.homeO2OximetryOxygenModes.includes(source.oxygenMode) ? source.oxygenMode : "";
+    if (mode === "Room Air") return { mode, litre: "" };
+    if (mode === "O2") return { mode, litre: source.oxygenL || "" };
+    const legacyText = homeO2LegacyOxygenText(source);
+    if (/room air/i.test(legacyText)) return { mode: "Room Air", litre: "" };
+    if (legacyText && /\b(o2|oxygen)\b/i.test(legacyText)) return { mode: "O2", litre: extractHomeO2Litre(legacyText) };
+    if (legacyText && extractHomeO2Litre(legacyText)) return { mode: "O2", litre: extractHomeO2Litre(legacyText) };
+    return { mode: "", litre: "" };
+  }
+
+  function homeO2LegacyOxygenText(source = {}) {
+    const typed = String(source.oxygenUse || source.label || "").trim();
+    if (typed) return typed;
+    const flow = String(source.flow || "").trim();
+    return flow;
+  }
+
+  function extractHomeO2Litre(value) {
+    const text = String(value || "").trim();
+    const match = text.match(/(\d+(?:\.\d+)?)/);
+    return match ? match[1] : "";
+  }
+
+  function normalizeHomeO2OximetryModes(source = {}) {
+    const savedModes = Array.isArray(source.oxygenModes) ? source.oxygenModes : [];
+    const validModes = savedModes.filter((mode) => BANK.homeO2OximetryOxygenModes.includes(mode));
+    if (validModes.length) return [...new Set(validModes)];
+    const derived = [];
+    const addMode = (mode) => {
+      if (BANK.homeO2OximetryOxygenModes.includes(mode) && !derived.includes(mode)) derived.push(mode);
+    };
+    (Array.isArray(source.tests) ? source.tests : []).forEach((test) => {
+      const oxygen = normalizeHomeO2TestOxygen(test || {});
+      addMode(oxygen.mode);
+    });
+    if (homeO2TaskSetHasInput(source.roomAir)) addMode("Room Air");
+    (Array.isArray(source.oxygenFlows) ? source.oxygenFlows : []).forEach((flow) => {
+      const flowText = String(flow && flow.flow || "").trim();
+      if (homeO2TaskSetHasInput(flow) || (flowText && flowText !== "1")) addMode("O2");
+    });
+    return derived;
+  }
+
+  function makeHomeO2OximetryTests(source = {}) {
+    const rawTests = Array.isArray(source.tests) ? source.tests : [];
+    if (rawTests.some(homeO2TaskSetHasInput)) return rawTests.map((test) => makeHomeO2OximetryTest(test || {}));
+    const legacyTests = [];
+    if (homeO2TaskSetHasInput(source.roomAir)) {
+      legacyTests.push({ oxygenUse: "Room Air", ...(source.roomAir || {}) });
+    }
+    (Array.isArray(source.oxygenFlows) ? source.oxygenFlows : []).forEach((flow) => {
+      const flowText = String(flow && flow.flow || "").trim();
+      if (homeO2TaskSetHasInput(flow) || (flowText && flowText !== "1")) {
+        legacyTests.push(flow || {});
+      }
+    });
+    return legacyTests.map((test) => makeHomeO2OximetryTest(test || {}));
+  }
+
+  function ensureHomeO2OximetryTestsForModes(oximetry = {}) {
+    oximetry.tests = Array.isArray(oximetry.tests) ? oximetry.tests : [];
+    oximetry.oxygenModes = Array.isArray(oximetry.oxygenModes)
+      ? oximetry.oxygenModes.filter((mode) => BANK.homeO2OximetryOxygenModes.includes(mode))
+      : [];
+    if (!oximetry.done) return;
+    if (oximetry.oxygenModes.includes("Room Air") && !oximetry.tests.some((test) => test.oxygenMode === "Room Air")) {
+      oximetry.tests.unshift(makeHomeO2OximetryTest({ oxygenMode: "Room Air" }));
+    }
+    if (oximetry.oxygenModes.includes("O2") && !oximetry.tests.some((test) => test.oxygenMode === "O2")) {
+      oximetry.tests.push(makeHomeO2OximetryTest({ oxygenMode: "O2" }));
+    }
+  }
+
+  function homeO2VisibleOximetryTests(oximetry = {}, mode = "") {
+    if (!oximetry.done) return [];
+    const selectedModes = Array.isArray(oximetry.oxygenModes) ? oximetry.oxygenModes : [];
+    if (!selectedModes.length) return [];
+    const indexedTests = (Array.isArray(oximetry.tests) ? oximetry.tests : []).map((test, index) => ({ test, index }));
+    return indexedTests.filter(({ test }) => {
+      if (mode) return selectedModes.includes(mode) && test.oxygenMode === mode;
+      return selectedModes.includes(test.oxygenMode);
+    });
+  }
+
+  function normalizeHomeO2AdlSelection(selection) {
+    const order = BANK.homeO2AdlAssistanceOrder;
+    const values = (Array.isArray(selection) ? selection : []).filter((item) => order.includes(item));
+    if (!values.length || values.includes("Not Applicable")) return ["Not Applicable"];
+    const ordered = values
+      .filter((item, index) => values.indexOf(item) === index)
+      .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    if (ordered.length === 1) return ordered;
+    if (ordered.length === 2 && Math.abs(order.indexOf(ordered[0]) - order.indexOf(ordered[1])) === 1) return ordered;
+    return ordered.slice(-1);
+  }
+
+  function normalizeHomeO2ConsentFunding(value) {
+    const rawValues = Array.isArray(value) ? value : value ? [value] : [];
+    return rawValues
+      .filter((item, index) => BANK.homeO2ConsentFundingOptions.includes(item) && rawValues.indexOf(item) === index)
+      .sort((a, b) => BANK.homeO2ConsentFundingOptions.indexOf(a) - BANK.homeO2ConsentFundingOptions.indexOf(b));
+  }
+
+  function normalizeHomeO2DecisionDeviceChoices(source = {}, legacySource = {}) {
+    const rawValues = Array.isArray(source.deviceChoices) ? source.deviceChoices : [];
+    const values = rawValues.filter((item) => BANK.homeO2DecisionDeviceOptions.includes(item));
+    if (source.portableOxygenConcentrator || legacySource.portableOxygenConcentrator) values.push("Portable Oxygen Concentrator");
+    if (source.conservingDevice || legacySource.conservingDevice) values.push("Conserving Device");
+    if (source.accessoriesNeeded || legacySource.accessoriesNeeded || source.accessories || legacySource.accessories) values.push("Accessories");
+    return values
+      .filter((item, index) => values.indexOf(item) === index)
+      .sort((a, b) => BANK.homeO2DecisionDeviceOptions.indexOf(a) - BANK.homeO2DecisionDeviceOptions.indexOf(b));
+  }
+
+  function normalizeHomeO2AccessoryChoices(value) {
+    const rawValues = Array.isArray(value) ? value : value ? ["Others"] : [];
+    return rawValues
+      .filter((item, index) => BANK.homeO2AccessoryOptions.includes(item) && rawValues.indexOf(item) === index)
+      .sort((a, b) => BANK.homeO2AccessoryOptions.indexOf(a) - BANK.homeO2AccessoryOptions.indexOf(b));
+  }
+
+  function normalizeHomeO2NasalCannulaLengths(value) {
+    const rawValues = Array.isArray(value) ? value : value ? [value] : [];
+    return rawValues
+      .filter((item, index) => BANK.homeO2NasalCannulaLengthOptions.includes(item) && rawValues.indexOf(item) === index)
+      .sort((a, b) => BANK.homeO2NasalCannulaLengthOptions.indexOf(a) - BANK.homeO2NasalCannulaLengthOptions.indexOf(b));
+  }
+
+  function normalizeHomeO2TreatmentChoices(value) {
+    const valid = BANK.homeO2TreatmentOptions.map((option) => typeof option === "string" ? option : option.value);
+    const rawValues = Array.isArray(value) ? value : [];
+    return rawValues.map((item) => item === HOME_O2_HAGO_TREATMENT_LEGACY || item === HOME_O2_HAGO_SUMMARY_LABEL ? HOME_O2_HAGO_TREATMENT : item)
+      .filter((item, index, values) => valid.includes(item) && values.indexOf(item) === index);
+  }
+
+  function normalizeHomeO2TreatmentPlan(value) {
+    const valid = BANK.homeO2TreatmentPlanOptions.map((option) => typeof option === "string" ? option : option.value);
+    const rawValues = Array.isArray(value) ? value : [];
+    return rawValues.map((item) => item === "Pending Home O2 education" ? "Home O2 education" : item)
+      .filter((item, index, values) => valid.includes(item) && values.indexOf(item) === index);
+  }
+
+  function normalizeHomeO2RegimeOption(regime = {}) {
+    const option = regime.option === "Flow regime"
+      ? "Home O2 indicated"
+      : regime.option === "Pending after oximetry test completed"
+        ? "Pending further oximetry test"
+        : regime.option || "";
+    return BANK.homeO2OxygenRegimeOptions.some((item) => item.value === option) ? option : "";
+  }
+
+  function normalizeHomeO2OverallAdl(value) {
+    const values = (Array.isArray(value) ? value : []).filter((item) => BANK.assistanceLevels.includes(item));
+    return values
+      .filter((item, index) => values.indexOf(item) === index)
+      .sort((a, b) => BANK.assistanceLevels.indexOf(a) - BANK.assistanceLevels.indexOf(b));
+  }
+
+  function makeHomeO2AssessmentOximetrySet(source = {}) {
+    const firstActivity = (Array.isArray(source.activities) ? source.activities : []).find(homeO2ActivityHasInput) || {};
+    const status = source.status || firstActivity.status || "Completed";
+    return {
+      flow: source.flow || source.oxygenL || "",
+      status,
+      notCompletedReason: source.notCompletedReason || firstActivity.notCompletedReason || "",
+      adlTask: source.adlTask || firstActivity.name || "",
+      sob: source.sob || firstActivity.sob || firstActivity.dyspnea || "",
+      rest: makeOximetryPoint(source.rest || {}),
+      exertion: makeOximetryPoint(source.exertion || source.immediate || firstActivity.immediate || {}),
+      recovery: makeOximetryPoint(source.recovery || firstActivity.recovery || {})
+    };
+  }
+
+  function homeO2AssessmentSetHasInput(set) {
+    return !!(set && (
+      set.flow ||
+      set.status && set.status !== "Completed" ||
+      set.notCompletedReason ||
+      set.adlTask ||
+      set.sob ||
+      hasOximetrySetInput({
+        rest: set.rest,
+        exertion: set.exertion,
+        recovery: set.recovery
+      })
+    ));
+  }
+
+  function normalizeHomeO2AssessmentOximetryModes(source = {}) {
+    const savedModes = Array.isArray(source.oxygenModes) ? source.oxygenModes : [];
+    const modes = savedModes.filter((mode) => BANK.homeO2OximetryOxygenModes.includes(mode));
+    if (modes.length) return [...new Set(modes)];
+    const derived = [];
+    const addMode = (mode) => {
+      if (BANK.homeO2OximetryOxygenModes.includes(mode) && !derived.includes(mode)) derived.push(mode);
+    };
+    if (homeO2AssessmentSetHasInput(source.roomAir) || homeO2TaskSetHasInput(source.roomAir)) addMode("Room Air");
+    if ((Array.isArray(source.o2Tests) ? source.o2Tests : []).some(homeO2AssessmentSetHasInput)) addMode("O2");
+    (Array.isArray(source.tests) ? source.tests : []).forEach((test) => addMode(normalizeHomeO2TestOxygen(test || {}).mode));
+    (Array.isArray(source.oxygenFlows) ? source.oxygenFlows : []).forEach((flow) => {
+      if (homeO2AssessmentSetHasInput(flow) || homeO2TaskSetHasInput(flow)) addMode("O2");
+    });
+    return derived;
+  }
+
+  function makeHomeO2AssessmentO2Tests(source = {}) {
+    const o2Tests = Array.isArray(source.o2Tests) ? source.o2Tests : [];
+    if (o2Tests.length) return o2Tests.map((test) => makeHomeO2AssessmentOximetrySet(test || {}));
+    const legacyTests = (Array.isArray(source.tests) ? source.tests : [])
+      .filter((test) => normalizeHomeO2TestOxygen(test || {}).mode === "O2")
+      .map((test) => makeHomeO2AssessmentOximetrySet(test || {}));
+    if (legacyTests.length) return legacyTests;
+    const legacyFlows = (Array.isArray(source.oxygenFlows) ? source.oxygenFlows : []).map((flow) => makeHomeO2AssessmentOximetrySet(flow || {}));
+    return legacyFlows.filter(homeO2AssessmentSetHasInput);
+  }
+
+  function ensureHomeO2AssessmentOximetryForModes(oximetry = {}) {
+    oximetry.oxygenModes = Array.isArray(oximetry.oxygenModes)
+      ? oximetry.oxygenModes.filter((mode) => BANK.homeO2OximetryOxygenModes.includes(mode))
+      : [];
+    oximetry.o2Tests = Array.isArray(oximetry.o2Tests) ? oximetry.o2Tests : [];
+    if (oximetry.done && oximetry.oxygenModes.includes("O2") && !oximetry.o2Tests.length) {
+      oximetry.o2Tests.push(makeHomeO2AssessmentOximetrySet());
+    }
+  }
+
+  function makeHomeO2Data(source = {}) {
+    const oximetrySource = source.oximetry || {};
+    const remarksSource = source.remarks || {};
+    const decisionSource = source.decision || {};
+    const data = {
+      overallAdl: normalizeHomeO2OverallAdl(source.overallAdl || source.overallAdlStatus),
+      adlStatus: BANK.homeO2AdlItems.reduce((status, item) => {
+        status[item.key] = normalizeHomeO2AdlSelection(source.adlStatus && source.adlStatus[item.key]);
+        return status;
+      }, {}),
+      oximetry: {
+        done: oximetrySource.done == null ? true : !!oximetrySource.done,
+        oxygenModes: normalizeHomeO2AssessmentOximetryModes(oximetrySource),
+        roomAir: makeHomeO2AssessmentOximetrySet(oximetrySource.roomAir || (oximetrySource.tests || []).find((test) => normalizeHomeO2TestOxygen(test || {}).mode === "Room Air") || {}),
+        o2Tests: makeHomeO2AssessmentO2Tests(oximetrySource),
+        remarks: oximetrySource.remarks || "",
+        regime: {
+          option: normalizeHomeO2RegimeOption(oximetrySource.regime || {}),
+          sleep: oximetrySource.regime && oximetrySource.regime.sleep || "",
+          rest: oximetrySource.regime && oximetrySource.regime.rest || "",
+          exertion: oximetrySource.regime && oximetrySource.regime.exertion || ""
+        }
+      },
+      problem: {
+        choices: Array.isArray(source.problem && source.problem.choices) ? source.problem.choices : []
+      },
+      treatment: {
+        choices: normalizeHomeO2TreatmentChoices(source.treatment && source.treatment.choices),
+        educationStatus: source.treatment && source.treatment.educationStatus || "",
+        educationDate: source.treatment && source.treatment.educationDate || remarksSource.homeO2EducationDate || "",
+        other: source.treatment && source.treatment.other || "",
+        plan: normalizeHomeO2TreatmentPlan(source.treatment && source.treatment.plan),
+        pendingEducationDate: source.treatment && source.treatment.pendingEducationDate || ""
+      },
+      remarks: {
+        breathingEducationDate: remarksSource.breathingEducationDate || "",
+        haGoDate: remarksSource.haGoDate || "",
+        homeO2EducationDate: remarksSource.homeO2EducationDate || ""
+      },
+      decision: {
+        supplier: decisionSource.supplier || remarksSource.supplier || "",
+        model: decisionSource.model || remarksSource.model || "",
+        cylinderSize: BANK.homeO2CylinderSizeOptions.includes(decisionSource.cylinderSize || remarksSource.cylinderSize) ? decisionSource.cylinderSize || remarksSource.cylinderSize : "",
+        cylinderNumber: decisionSource.cylinderNumber || remarksSource.cylinderNumber || "",
+        deviceChoices: normalizeHomeO2DecisionDeviceChoices(decisionSource, remarksSource),
+        portableOxygenConcentratorModel: decisionSource.portableOxygenConcentratorModel || "",
+        conservingDeviceModel: decisionSource.conservingDeviceModel || "",
+        accessories: normalizeHomeO2AccessoryChoices(decisionSource.accessories || remarksSource.accessories),
+        nasalCannulaLengths: normalizeHomeO2NasalCannulaLengths(decisionSource.nasalCannulaLengths),
+        accessoryOther: decisionSource.accessoryOther || (typeof (decisionSource.accessories || remarksSource.accessories) === "string" ? decisionSource.accessories || remarksSource.accessories : ""),
+        deliveryStatus: BANK.homeO2DeliveryStatusOptions.includes(decisionSource.deliveryStatus) ? decisionSource.deliveryStatus : "",
+        deliveryDate: decisionSource.deliveryDate || "",
+        consentSignedBy: BANK.homeO2ConsentSignatoryOptions.includes(decisionSource.consentSignedBy || remarksSource.consentSignedBy) ? decisionSource.consentSignedBy || remarksSource.consentSignedBy : "",
+        consentSignedByOther: decisionSource.consentSignedByOther || remarksSource.consentSignedByOther || "",
+        consentFunding: normalizeHomeO2ConsentFunding(decisionSource.consentFunding || remarksSource.consentFunding)
+      }
+    };
+    ensureHomeO2AssessmentOximetryForModes(data.oximetry);
+    return data;
+  }
+
   function makeFratChecklistState() {
     return BANK.fratChecklist.reduce((state, item) => {
       state[item.key] = "No";
@@ -271,6 +602,7 @@
       period: source.period || "",
       location: source.location || "",
       reason: source.reason || "",
+      reasons: Array.isArray(source.reasons) ? source.reasons : source.reason ? [source.reason] : [],
       reasonOther: source.reasonOther || ""
     };
   }
@@ -298,7 +630,9 @@
         outdoor: { status: "", aid: "", aidOther: "", remarks: "" },
         iadl: "",
         occupationType: "",
-        occupation: ""
+        occupation: "",
+        cognitive: { unremarkable: false, choices: [], remarks: "" },
+        behavioral: { status: "", remarks: "" }
       },
       social: {
         limited: false,
@@ -324,8 +658,9 @@
         },
         cognitive: {
           enabled: false,
-          amt: { unable: false, answers: makeAmtAnswers() },
+          amt: { unable: false, directScore: "", answers: makeAmtAnswers() },
           cdtDone: false,
+          cdtUnable: false,
           cdt: "",
           moca: {
             done: false,
@@ -345,6 +680,7 @@
           },
           impression: ""
         },
+        mood: { choices: [], other: "", gdsPerformed: false, gdsAnswers: {} },
         speech: "",
         speechOther: ""
       },
@@ -390,7 +726,8 @@
           remarks: {},
           done: false
         },
-        showInterpretation: false
+        showInterpretation: false,
+        lawton: { scores: {}, showInterpretation: false, notTest: false }
       },
       fall: {
         risk: "",
@@ -445,8 +782,11 @@
       },
       pressureInjury: makePressureInjuryData(),
       ted: makeTedData(),
+      homeO2: makeHomeO2Data(),
       otComment: {
+        majorObservation: "",
         adlRemark: "",
+        iadlRemark: "",
         cognitiveRemark: "",
         freeText: ""
       },
@@ -464,6 +804,7 @@
       plan: {
         treatmentChoices: [],
         treatmentRemarks: {},
+        treatmentPrograms: {},
         choices: [],
         remarks: {},
         programs: {}
@@ -517,7 +858,7 @@
       if (!stored) stored = [];
       const normalized = stored.map((record) => {
         const data = mergeDeep(blankData(), record.data || {});
-        normalizeStoredData(data);
+        normalizeStoredData(data, record.formType);
         return {
           ...record,
           formType: normalizeFormType(record.formType),
@@ -552,11 +893,22 @@
     }
   }
 
-  function normalizeStoredData(data) {
+  function normalizeStoredData(data, formType = "") {
+    if (data.premorbid.behavioral.status === "Nil") data.premorbid.behavioral.status = "Unremarkable";
+    const cognitive = data.premorbid.cognitive;
+    if (!cognitive.choices.length) {
+      if (cognitive.unremarkable) cognitive.choices.push("Unremarkable");
+      if (cognitive.remarks) cognitive.choices.push("Others");
+    }
+    cognitive.unremarkable = false;
     Object.keys(data.functional.bi || {}).forEach((key) => {
       const item = data.functional.bi[key];
       if (item && item.score === "" && !item.notAssessed) item.notAssessed = true;
     });
+    if (data.social) data.social.financial = [];
+    if (data.problem && ["Nil if medically stable", "Overall nil if medically stable", "Overall nil if medicially stable", "Nil"].includes(data.problem.nilMode)) {
+      data.problem.nilMode = "";
+    }
     if (data.mental && data.mental.cognitive && data.mental.cognitive.amt && data.mental.cognitive.amt.unable == null) {
       data.mental.cognitive.amt.unable = false;
     }
@@ -599,6 +951,7 @@
     data.ted = mergeDeep(makeTedData(), data.ted || {});
     data.ted.physical = mergeDeep(makeTedPhysicalData(), data.ted.physical || {});
     data.ted.physical.powerGroup = mergeDeep(makePowerGroupState(), data.ted.physical.powerGroup || {});
+    data.homeO2 = makeHomeO2Data(data.homeO2 || {});
     data.functional.carerInterview.done = !!data.functional.carerInterview.done;
     syncMocaDerived(data);
     const choiceMap = {
@@ -619,6 +972,10 @@
     data.plan.choices = [...new Set((data.plan.choices || []).map(mapChoice))].filter((value) => value !== "1 to 2 days training in QEH");
     data.plan.treatmentChoices = [...new Set(data.plan.treatmentChoices || [])];
     data.plan.treatmentRemarks = data.plan.treatmentRemarks || {};
+    if (isEmergencyMedicineCase({ formType: normalizeFormType(formType) })) {
+      data.plan.treatmentChoices = [...new Set(data.plan.treatmentChoices.map(emergencyTreatmentLabel))];
+      data.plan.treatmentRemarks = Object.fromEntries(Object.entries(data.plan.treatmentRemarks).map(([key, value]) => [emergencyTreatmentLabel(key), value]));
+    }
     data.recommendation.choices = [...new Set((data.recommendation.choices || []).map(mapChoice))].filter((value) => value !== "1 to 2 days training in QEH");
     data.plan.remarks = remapObject(data.plan.remarks);
     data.plan.programs = remapObject(data.plan.programs);
@@ -871,7 +1228,7 @@
 
   function homeHelpRemarkInputs() {
     const selected = currentCase().data.social.socialServices.homeHelp || [];
-    return ["Meal on wheels", "Personal care", "Household"]
+    return ["Meal on wheels", "Personal care", "Household", "Exercise"]
       .filter((item) => selected.includes(item))
       .map((item) => inputField(`social.socialServices.homeHelpRemarks.${item}`, `${item} remarks`, { placeholder: "Details", span: true }))
       .join("");
@@ -1032,7 +1389,11 @@
   }
 
   function notePartKeysFor(record = currentCase()) {
-    return isMbiCase(record) ? ["common"] : NOTE_PART_KEYS;
+    if (isMbiCase(record)) return ["common"];
+    if (isHomeO2AssessmentCase(record)) return NOTE_PART_KEYS.slice();
+    if (isHomeO2DecisionCase(record)) return ["remarks"];
+    const hasRemarks = isPressureInjuryCase(record) || isTedCase(record);
+    return NOTE_PART_KEYS.filter((key) => key !== "remarks" || hasRemarks);
   }
 
   function formToneClass(formType) {
@@ -1060,6 +1421,16 @@
     return splitFormType(record && record.formType).form === "Fall Assessment";
   }
 
+  function isEmergencyMedicineCase(record = currentCase()) {
+    return splitFormType(record && record.formType).form === "Emergency Medicine";
+  }
+
+  function recommendationsFor(record = currentCase()) {
+    return BANK.recommendations.map((item) => isEmergencyMedicineCase(record) && item.value === "Short course of training in QEH"
+      ? { ...item, value: "Continue 1-2 days ward-based training" }
+      : item);
+  }
+
   function isPressureInjuryCase(record = currentCase()) {
     return splitFormType(record && record.formType).form === "Pressure Injury";
   }
@@ -1069,10 +1440,26 @@
     return form === "DVT Prophylaxis" || form === "DVT prophylaxis" || form === "TED";
   }
 
+  function isHomeO2Case(record = currentCase()) {
+    return isHomeO2AssessmentCase(record) || isHomeO2DecisionCase(record);
+  }
+
+  function isHomeO2AssessmentCase(record = currentCase()) {
+    const form = splitFormType(record && record.formType).form;
+    return form === "Home O2 Assessment" || form === "Home O2";
+  }
+
+  function isHomeO2DecisionCase(record = currentCase()) {
+    const form = splitFormType(record && record.formType).form;
+    return form === "Home O2 Order" || form === "Home O2 Decision";
+  }
+
   function sectionKeysFor(record = currentCase()) {
     if (isMbiCase(record)) return ["mbi"];
     if (isPressureInjuryCase(record)) return ["piMental", "piSkin", "piPhysical", "piProblem", "piPlan"];
     if (isTedCase(record)) return ["tedMental", "tedSkin", "tedPhysical", "tedRisk", "tedPlan"];
+    if (isHomeO2AssessmentCase(record)) return ["homeO2SocialAdl", "homeO2Oximetry", "homeO2Problem", "homeO2Plan"];
+    if (isHomeO2DecisionCase(record)) return ["homeO2Decision"];
     const keys = ["vitals", "social", "mental", "physical", "functional", "fall", "otComment", "problem", "plan"];
     return isPalliativeCase(record) ? [...keys.slice(0, 6), "symptoms", ...keys.slice(6)] : keys;
   }
@@ -1099,7 +1486,12 @@
       tedSkin: "Skin Condition",
       tedPhysical: "Physical and Function",
       tedRisk: "Thrombosis Risk Checklist",
-      tedPlan: "Management and Plan"
+      tedPlan: "Management and Plan",
+      homeO2SocialAdl: "Social History and ADL Status",
+      homeO2Oximetry: "Oximetry test",
+      homeO2Problem: "Problem Identification",
+      homeO2Plan: "Treatment Plan",
+      homeO2Decision: "Home O2 Order"
     };
     return sectionKeysFor(record).map((key) => labels[key]);
   }
@@ -1111,10 +1503,27 @@
     );
   }
 
+  function emergencyTreatmentLabel(value) {
+    return ({
+      "Basic ADL Training": "ADL Training",
+      "Basic ADL maintenance": "ADL maintenance",
+      "Cognitive training": "Cognitive Training",
+      "Orientation training": "Orientation Training",
+      "Home Safety Recommendation / Home visit": "Home Safety Recommendation",
+      "Other": "Others"
+    })[value] || value;
+  }
+
   function completedTreatmentOptions(record = currentCase()) {
-    return BANK.completedTreatmentOptions.filter((item) =>
-      !item.fallOnly || isFallAssessmentCase(record)
-    );
+    const existing = BANK.completedTreatmentOptions.filter((item) => !item.fallOnly || isFallAssessmentCase(record));
+    if (!isEmergencyMedicineCase(record)) return existing;
+    const options = [...existing, ...treatmentPlanOptions(record).filter((item) => item.value !== "Further assessment if stable")];
+    const unique = [...new Map(options.map((item) => {
+      const value = emergencyTreatmentLabel(item.value);
+      return [value, { ...item, value }];
+    })).values()];
+    const first = ["ADL Assessment done", "ADL Training", "ADL maintenance", "Cognitive Assessment done", "Cognitive Training", "Orientation Training"];
+    return [...first.map((value) => unique.find((item) => item.value === value)), ...unique.filter((item) => !first.includes(item.value) && item.value !== "Others"), unique.find((item) => item.value === "Others")];
   }
 
   function patientFactorOptions(record = currentCase()) {
@@ -1218,7 +1627,7 @@
             </div>
             <div class="button-row">
               <button type="button" class="btn secondary" data-action="summary">Summary</button>
-              <button type="button" class="btn secondary" data-action="main-home">Main Home</button>
+              <button type="button" class="btn secondary" data-action="home">Home</button>
             </div>
           </div>
           <nav class="step-strip" aria-label="Assessment sections" style="--section-count: ${h(sections.length)};">
@@ -1271,7 +1680,7 @@
             </div>
             <div class="button-row">
               <button type="button" class="btn secondary" data-action="back-form">Assessment</button>
-              <button type="button" class="btn secondary" data-action="main-home">Main Home</button>
+              <button type="button" class="btn secondary" data-action="home">Home</button>
             </div>
           </div>
         </header>
@@ -1302,12 +1711,15 @@
         ${notePart("Common Assessment", "common", editedNote.common, "tone-1")}
       </div>`;
     }
+    const parts = notePartKeysFor(record);
     return `<div class="note-box summary-box">
       <h2>Generated Documentation</h2>
-      ${notePart("Green box", "greenBox", editedNote.greenBox, "tone-7", { editable: true, maxLength: 250 })}
-      ${notePart("Common Assessment", "common", editedNote.common, "tone-1")}
-      ${notePart("Problem", "problem", editedNote.problem, "tone-8")}
-      ${notePart("Recommendation", "recommendation", editedNote.recommendation, "tone-9")}
+      ${isEmergencyMedicineCase(record) && record.data.mental.mood.gdsPerformed && !calculateGds(record.data.mental.mood).complete ? `<p class="warning" role="status">${h(GDS_COMPLETION_REMINDER)}</p>` : ""}
+      ${parts.includes("greenBox") ? notePart("Green box", "greenBox", editedNote.greenBox, "tone-7", { editable: true, maxLength: 250 }) : ""}
+      ${parts.includes("common") ? notePart("Common Assessment", "common", editedNote.common, "tone-1") : ""}
+      ${parts.includes("problem") ? notePart("Problem", "problem", editedNote.problem, "tone-8") : ""}
+      ${parts.includes("remarks") ? notePart("Remarks", "remarks", editedNote.remarks, "tone-2") : ""}
+      ${parts.includes("recommendation") ? notePart("Recommendation", "recommendation", editedNote.recommendation, "tone-9") : ""}
     </div>`;
   }
 
@@ -1358,7 +1770,12 @@
       tedSkin: renderTedSkin,
       tedPhysical: renderTedPhysical,
       tedRisk: renderTedRisk,
-      tedPlan: renderTedPlan
+      tedPlan: renderTedPlan,
+      homeO2SocialAdl: renderHomeO2SocialAdl,
+      homeO2Oximetry: renderHomeO2Oximetry,
+      homeO2Problem: renderHomeO2Problem,
+      homeO2Plan: renderHomeO2Plan,
+      homeO2Decision: renderHomeO2Decision
     };
     return renderers[sectionKeysFor()[index]]();
   }
@@ -1427,7 +1844,18 @@
             ${choiceGroup("premorbid.occupationType", ["Occupation", "Retired"], "single", { classes: "two" })}
             ${data.premorbid.occupationType === "Occupation" ? `<div class="remark-row">${inputField("premorbid.occupation", "Occupation", { span: true })}</div>` : ""}
           </div>`}
-      </div>`;
+      </div>
+      ${isEmergencyMedicineCase() ? `
+        <div class="group">
+          <h3>Premorbid Cognitive Function</h3>
+          ${choiceGroup("premorbid.cognitive.choices", ["Good", "Fair", "Poor", "Unremarkable", "Others"], "multi", { classes: "five" })}
+          ${data.premorbid.cognitive.choices.includes("Others") ? `<div class="remark-row">${textareaField("premorbid.cognitive.remarks", "Cognitive Function remarks", { span: true, placeholder: "Cognitive function / additional remarks" })}</div>` : ""}
+        </div>
+        <div class="group">
+          <h3>Premorbid Behavioral Problem</h3>
+          ${choiceGroup("premorbid.behavioral.status", ["Unremarkable", "Yes"], "single", { classes: "two" })}
+          ${data.premorbid.behavioral.status === "Yes" ? `<div class="remark-row">${textareaField("premorbid.behavioral.remarks", "Behavioral Problem details", { span: true })}</div>` : ""}
+        </div>` : ""}`;
   }
 
   function renderSocial() {
@@ -1458,13 +1886,9 @@
           </div>
         </div>
         <div class="group">
-          <h3>Financial</h3>
-          ${choiceGroup("social.financial", BANK.financialOptions, "multi")}
-        </div>
-        <div class="group">
           <h3>Social service</h3>
           ${choiceGroup("social.socialServices.choices", BANK.socialServices, "multi")}
-          ${data.social.socialServices.choices.includes("Home Help Service") ? `<div class="remark-row subtle-box"><p class="label">Home Help Service</p>${choiceGroup("social.socialServices.homeHelp", ["Meal on wheels", "Personal care", "Household", "Escort"], "multi", { classes: "four" })}</div>` : ""}
+          ${data.social.socialServices.choices.includes("Home Help Service") ? `<div class="remark-row subtle-box"><p class="label">Home Help Service</p>${choiceGroup("social.socialServices.homeHelp", ["Meal on wheels", "Personal care", "Household", "Escort", "Exercise"], "multi", { classes: "five" })}</div>` : ""}
           <div class="field-grid remark-row">${homeHelpRemarkInputs()}</div>
           <div class="field-grid remark-row">${choiceRemarkInputs(BANK.socialServices, "social.socialServices.choices", "social.socialServices.remarks")}</div>
         </div>
@@ -1479,9 +1903,12 @@
     const data = currentCase().data;
     const amtScore = calculateAmt();
     const fallCase = isFallAssessmentCase();
-    const cognitiveOpen = fallCase || data.mental.cognitive.enabled;
-    const showCdt = !fallCase || data.mental.cognitive.cdtDone;
-    const showMoca = !fallCase || data.mental.cognitive.moca.done;
+    const emergency = isEmergencyMedicineCase();
+    const cognitiveOpen = fallCase || emergency || data.mental.cognitive.enabled;
+    const cdtUnable = emergency && data.mental.cognitive.cdtUnable;
+    const showCdt = (!fallCase || data.mental.cognitive.cdtDone) && !cdtUnable;
+    const showMoca = !(fallCase || emergency) || data.mental.cognitive.moca.done;
+    const amtComplete = !emergency || hasCompletedAmt(data);
     const cdtScore = data.mental.cognitive.cdt;
     const cdtCutoff = cdtInterpretation(cdtScore);
     const moca = data.mental.cognitive.moca;
@@ -1490,6 +1917,7 @@
     const mocaTotal = mocaAutoTotal(moca);
     const mocaPercentile = mocaPercentileLabel(moca);
     const amtUnable = data.mental.cognitive.amt.unable;
+    const notTestLabel = emergency ? "Not test" : "Unable to assess";
     return `
       <div class="group">
         <div class="gcs-row">
@@ -1523,32 +1951,39 @@
       </div>
       <div class="group">
         <h3>Cognitive Assessment</h3>
-        ${fallCase ? `<p class="mini-note">AMT can be entered as a FRAT Cognitive Status reference. Therapist selects the FRAT score manually. CDT and MoCA are optional.</p>` : checkboxField("mental.cognitive.enabled", "Cognitive Assessment performed")}
+        ${emergency ? `<p class="mini-note">AMT and Clock Drawing Test are required. Complete each assessment or select Not test. MoCA is optional.</p>` : fallCase ? `<p class="mini-note">AMT can be entered as a FRAT Cognitive Status reference. Therapist selects the FRAT score manually. CDT and MoCA are optional.</p>` : checkboxField("mental.cognitive.enabled", "Cognitive Assessment performed")}
         ${cognitiveOpen ? `
           <div class="group cognitive-test-group">
             <div class="inline-row cognitive-title-row">
               <h3>AMT</h3>
-              <span class="score-chip ${amtUnable ? "mid" : amtScore > 6 ? "good" : amtScore === 6 ? "mid" : "low"}">${amtUnable ? "Fail to assess" : `${amtScore} / 10`}</span>
-              ${amtUnable ? "" : `<span class="score-chip mid">${h(amtCutoffStatus(amtScore))}</span>`}
-              ${notTestPillField("mental.cognitive.amt.unable", "Unable to assess")}
+              <span class="score-chip ${amtUnable || !amtComplete ? "mid" : amtScore > 6 ? "good" : amtScore === 6 ? "mid" : "low"}">${amtUnable ? notTestLabel : amtComplete ? `${amtScore} / 10` : "pending further assessment"}</span>
+              ${amtUnable || !amtComplete ? "" : `<span class="score-chip mid">${h(amtCutoffStatus(amtScore))}</span>`}
+              ${notTestPillField("mental.cognitive.amt.unable", notTestLabel)}
             </div>
-            ${amtUnable ? `<p class="mini-note">AMT marked as fail to assess.</p>` : `<div class="amt-grid">
+            ${amtUnable ? `<p class="mini-note">AMT marked as ${h(notTestLabel)}.</p>` : `
+              ${emergency ? `<div class="remark-row">
+                <p class="label">Direct AMT score</p>
+                ${choiceGroup("mental.cognitive.amt.directScore", Array.from({ length: 11 }, (_, score) => String(score)), "single", { classes: "eleven cdt-score-grid" })}
+                <p class="mini-note">Tap a total score, or complete the items below. Selecting a total clears item scores; selecting an item returns to item scoring.</p>
+              </div>` : ""}
+              <div class="amt-grid">
               ${BANK.amtItems.map((item) => `
                 <div class="subtle-box amt-card">
                   <p class="label">${h(item.label)}</p>
                   ${choiceGroup(`mental.cognitive.amt.answers.${item.key}`, ["0", "1"], "single", { classes: "two" })}
                 </div>`).join("")}
             </div>`}
-            ${amtUnable ? "" : `<p class="mini-note">${h(amtInterpretation(amtScore))}</p>`}
+            ${amtUnable || !amtComplete ? "" : `<p class="mini-note">${h(amtInterpretation(amtScore))}</p>`}
           </div>
           <div class="group cognitive-test-group">
             <div class="inline-row cognitive-title-row">
               <h3>Clock Drawing Test</h3>
-              ${fallCase ? notTestPillField("mental.cognitive.cdtDone", "Done") : ""}
+              ${emergency ? notTestPillField("mental.cognitive.cdtUnable", "Not test") : fallCase ? notTestPillField("mental.cognitive.cdtDone", "Done") : ""}
               ${showCdt ? `
                 <span class="score-chip" data-cdt-score>${h(cdtScore === "" ? "__" : cdtScore)} / 10</span>
                 <span class="score-chip mid" data-cdt-cutoff>${h(cdtCutoff || "Cut-off pending")}</span>` : ""}
             </div>
+            ${cdtUnable ? `<p class="mini-note">Clock Drawing Test marked as Not test.</p>` : ""}
             ${showCdt ? `<div class="remark-row">
               ${choiceGroup("mental.cognitive.cdt", ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], "single", { classes: "eleven cdt-score-grid" })}
             </div>` : ""}
@@ -1556,7 +1991,7 @@
           <div class="group cognitive-test-group">
             <div class="inline-row cognitive-title-row">
               <h3>MoCA</h3>
-              ${fallCase ? notTestPillField("mental.cognitive.moca.done", "Done") : ""}
+              ${fallCase || emergency ? notTestPillField("mental.cognitive.moca.done", "Done") : ""}
               ${showMoca ? `
                 <span class="score-chip good" data-moca-total>Total score: ${h(mocaTotal === "" ? "__" : mocaTotal)} / 30</span>
                 <span class="score-chip mid" data-moca-percentile>${h(mocaPercentile || "Cut-off pending")}</span>` : ""}
@@ -1577,7 +2012,87 @@
             </div>` : `<p class="mini-note">Select age range and education level before entering MoCA subscores.</p>`}
             ` : ""}
           </div>` : ""}
-      </div>`;
+      </div>
+      ${emergency ? renderEmergencyMood() : ""}`;
+  }
+
+  function renderEmergencyMood() {
+    const mood = currentCase().data.mental.mood;
+    const gds = calculateGds(mood);
+    return `<div class="group">
+      <h3>Mood</h3>
+      ${choiceGroup("mental.mood.choices", ["NAD", "Low", "Neutral", "Good", "Others"], "multi", { classes: "five" })}
+      ${mood.choices.includes("Others") ? `<div class="remark-row">${textareaField("mental.mood.other", "Other mood details", { span: true })}</div>` : ""}
+      <div class="group cognitive-test-group">
+        <div class="inline-row cognitive-title-row">
+          <h3>Geriatric Depression Scale (GDS)</h3>
+          ${notTestPillField("mental.mood.gdsPerformed", "Performed")}
+        </div>
+        ${mood.gdsPerformed ? `<div class="gds-grid remark-row">
+          ${BANK.gdsItems.map((item, index) => `<div class="subtle-box gds-card">
+            <div class="assessment-item-copy"><p class="label">${index + 1}. ${h(item.label)}</p></div>
+            ${choiceGroup(`mental.mood.gdsAnswers.${item.key}`, [{ value: "Yes", label: `是 (${item.yesScore}分)` }, { value: "No", label: `否 (${1 - item.yesScore}分)` }], "single", { classes: "two" })}
+          </div>`).join("")}
+        </div>
+        ${gds.complete ? `<div class="bi-total" aria-live="polite">Total score: ${gds.total}/15</div>` : `<p class="warning" role="status">${h(GDS_COMPLETION_REMINDER)}</p>`}` : ""}
+      </div>
+    </div>`;
+  }
+
+  function calculateGds(mood) {
+    const answered = BANK.gdsItems.filter((item) => ["Yes", "No"].includes(mood.gdsAnswers[item.key]));
+    const total = answered.reduce((sum, item) => sum + (mood.gdsAnswers[item.key] === "Yes" ? item.yesScore : 1 - item.yesScore), 0);
+    return { total, answered: answered.length, complete: answered.length === BANK.gdsItems.length };
+  }
+
+  function calculateLawton(lawton) {
+    if (lawton.notTest) return { total: 0, answered: 0, complete: false, notTest: true };
+    const answered = BANK.lawtonItems.filter((item) => ["0", "1", "2", "3"].includes(String(lawton.scores[item.key])));
+    const total = answered.reduce((sum, item) => sum + Number(lawton.scores[item.key]), 0);
+    return { total, answered: answered.length, complete: answered.length === BANK.lawtonItems.length };
+  }
+
+  function formatLawtonTotal(result) {
+    return result.complete ? `${result.total}/27` : `>= ${result.total}/27, pending further assessment`;
+  }
+
+  function renderLawton() {
+    const lawton = currentCase().data.functional.lawton;
+    const result = calculateLawton(lawton);
+    return `<div class="group">
+      <div class="inline-row assessment-heading">
+        <h3>Chinese Lawton Instrumental Activities of Daily Living Scale (4-point Scale)</h3>
+        ${notTestPillField("functional.lawton.notTest", "Not test")}
+        ${lawton.notTest ? "" : `<button type="button" class="btn secondary" data-action="toggle-lawton-interpretation" aria-expanded="${lawton.showInterpretation}">${lawton.showInterpretation ? "Hide Interpretation" : "Show Interpretation"}</button>`}
+      </div>
+      ${lawton.notTest ? `<p class="mini-note">Lawton: Not test</p>` : `
+      ${lawton.showInterpretation ? `<div class="subtle-box remark-row"><p class="label">Score interpretation</p><ul class="score-interpretation">
+        <li>0 = No assistance required at all</li>
+        <li>1 = Can perform by self, but with difficulties during the process</li>
+        <li>2 = Requires some assistance</li>
+        <li>3 = Cannot perform by self at all</li>
+      </ul></div>` : ""}
+      <div class="lawton-grid remark-row">
+        ${BANK.lawtonItems.map((item) => {
+          const score = String(lawton.scores[item.key] ?? "");
+          const assessed = ["0", "1", "2", "3"].includes(score);
+          const selected = assessed ? score : "NA";
+          return `<div class="bi-cell lawton-card">
+            <div class="bi-cell-header">
+              <div class="bi-title-wrap">
+                <h4>${h(item.label)}</h4>
+                <span class="bi-current-score">${assessed ? `${score}/3` : "Not assessed"}</span>
+              </div>
+            </div>
+            <div class="bi-score-grid lawton-score-grid" role="group" aria-label="${h(item.label)} score">
+              ${["NA", "0", "1", "2", "3"].map((value) => `<button type="button" class="choice bi-choice${selected === value ? " active" : ""}" data-choice-path="functional.lawton.scores.${h(item.key)}" data-choice-value="${value}" data-choice-mode="single" aria-pressed="${selected === value}"><strong>${value}</strong></button>`).join("")}
+            </div>
+            ${lawton.showInterpretation ? `<p class="mini-note lawton-item-interpretation">${h(item.interpretation)}</p>` : ""}
+          </div>`;
+        }).join("")}
+      </div>
+      <div class="bi-total" aria-live="polite">Total score: ${h(formatLawtonTotal(result))}</div>`}
+    </div>`;
   }
 
   function renderGcsFields() {
@@ -1689,10 +2204,10 @@
           </div>
         </div>
       </div>
-      ${isFallAssessmentCase() ? renderFunctionalBalanceAssessment() : ""}
       <div class="group">
         ${textareaField("physical.otherInfo", "Others", { span: true, placeholder: "Additional information" })}
-      </div>`;
+      </div>
+      ${isFallAssessmentCase() ? renderFunctionalBalanceAssessment() : ""}`;
   }
 
   function renderPressureInjuryMental() {
@@ -1927,6 +2442,26 @@
         ${choiceGroup("ted.physical.tactileSensation", BANK.pressureTactileSensationOptions, "single", { classes: "four" })}
       </div>
       <div class="group">
+        <h3>Soft Calf</h3>
+        <div class="field-grid">
+          <div class="subtle-box">
+            <p class="label">Right</p>
+            ${choiceGroup("ted.physical.softCalf.right", ["Yes", "No"], "single", { classes: "two" })}
+          </div>
+          <div class="subtle-box">
+            <p class="label">Left</p>
+            ${choiceGroup("ted.physical.softCalf.left", ["Yes", "No"], "single", { classes: "two" })}
+          </div>
+        </div>
+      </div>
+      <div class="group">
+        <h3>Calf circumference</h3>
+        <div class="field-grid">
+          ${inputField("ted.physical.calfCircumference.right", "Right (cm)", { type: "number", decimal: true, min: 0 })}
+          ${inputField("ted.physical.calfCircumference.left", "Left (cm)", { type: "number", decimal: true, min: 0 })}
+        </div>
+      </div>
+      <div class="group">
         ${textareaField("ted.physical.otherInfo", "Other information", { span: true, placeholder: "Remarks" })}
       </div>`;
   }
@@ -2004,6 +2539,186 @@
     return [...options, ...BANK.tedPlanOptions];
   }
 
+  function renderHomeO2SocialAdl() {
+    return `
+      ${renderSocial()}
+      <div class="group">
+        <h3>Overall ADL status</h3>
+        ${choiceGroup("homeO2.overallAdl", BANK.assistanceLevels, "consecutive", { order: BANK.assistanceLevels })}
+      </div>`;
+  }
+
+  function renderHomeO2Oximetry() {
+    const oximetry = currentCase().data.homeO2.oximetry;
+    const regime = oximetry.regime;
+    const customRegime = regime.option === "Home O2 indicated";
+    const o2Tests = oximetry.o2Tests || [makeHomeO2AssessmentOximetrySet()];
+    return `
+      <div class="group">
+        <h3>Oximetry Test</h3>
+        <div class="subtle-box remark-row">
+          <div class="inline-row home-o2-oximetry-title-row">
+            <p class="label">Oximetry</p>
+            ${notTestPillField("homeO2.oximetry.done", "Done")}
+          </div>
+          ${oximetry.done ? `
+            <div class="remark-row">
+              <p class="label">Oxygen use during oximetry</p>
+              ${choiceGroup("homeO2.oximetry.oxygenModes", BANK.homeO2OximetryOxygenModes, "multi", { classes: "two home-o2-oxygen-use-grid" })}
+            </div>
+            ${oximetry.oxygenModes.includes("Room Air") ? renderHomeO2AssessmentOximetrySet("On Room Air", "homeO2.oximetry.roomAir") : ""}
+            ${oximetry.oxygenModes.includes("O2") ? `
+              <div class="remark-row">
+                <div class="carer-card-header">
+                  <p class="label">O2 flow tests</p>
+                </div>
+                ${o2Tests.map((test, index) => renderHomeO2AssessmentO2Test(test, index, o2Tests.length)).join("")}
+                <div class="button-row palliative-add-entry-row">
+                  <button type="button" class="btn secondary" data-action="add-home-o2-oximetry-test">Add O2 flow</button>
+                </div>
+              </div>` : ""}
+          ` : ""}
+        </div>
+      </div>
+      <div class="group">
+        <h3>Oxygen regime</h3>
+        ${choiceGroup("homeO2.oximetry.regime.option", BANK.homeO2OxygenRegimeOptions, "single", { classes: "three home-o2-regime-grid" })}
+        ${customRegime ? `
+        <div class="home-o2-regime-inputs remark-row">
+          ${inputField("homeO2.oximetry.regime.sleep", "At sleep (L O2)", { placeholder: "e.g. 1" })}
+          ${inputField("homeO2.oximetry.regime.rest", "At rest (L O2)", { placeholder: "e.g. 1" })}
+          ${inputField("homeO2.oximetry.regime.exertion", "On exertion (L O2)", { placeholder: "e.g. 2" })}
+        </div>` : ""}
+        <div class="remark-row">${textareaField("homeO2.oximetry.remarks", "Remarks", { span: true, placeholder: "Other oximetry remarks" })}</div>
+      </div>`;
+  }
+
+  function renderHomeO2AssessmentO2Test(test, index, total) {
+    const base = `homeO2.oximetry.o2Tests.${index}`;
+    return `<div class="subtle-box remark-row">
+      ${total > 1 ? `<div class="button-row home-o2-test-action-row"><button type="button" class="btn danger" data-action="remove-home-o2-oximetry-test" data-test-index="${h(index)}">Remove</button></div>` : ""}
+      ${inputField(`${base}.flow`, "O2 flow L/min", { type: "number", decimal: true, min: 0.5, max: 15, step: 0.5, clamp: true, placeholder: "0.5-15" })}
+      ${renderHomeO2AssessmentOximetrySet("", base, test)}
+    </div>`;
+  }
+
+  function renderHomeO2AssessmentOximetrySet(label, basePath, set = getPath(currentCase().data, basePath) || {}) {
+    const completed = set.status !== "Not completed";
+    return `<div class="subtle-box remark-row">
+      ${label ? `<p class="label">${h(label)}</p>` : ""}
+      <div class="oximetry-grid">
+        ${renderOximetryVitals("At rest", `${basePath}.rest`)}
+        ${renderHomeO2AssessmentExertionBox(basePath, completed)}
+        ${completed ? renderOximetryVitals("At 2 minutes rest", `${basePath}.recovery`) : ""}
+      </div>
+    </div>`;
+  }
+
+  function renderHomeO2AssessmentExertionBox(basePath, completed) {
+    const statusOptions = [
+      { value: "Completed", label: "Complete" },
+      { value: "Not completed", label: "Not Complete" }
+    ];
+    return `<div class="subtle-box home-o2-exertion-box">
+      <div class="home-o2-exertion-header">
+        <p class="label">On exertion</p>
+        ${choiceGroup(`${basePath}.status`, statusOptions, "single", { classes: "two compact home-o2-status-grid" })}
+      </div>
+      <div class="remark-row">
+        ${inputField(`${basePath}.adlTask`, "ADL task", { placeholder: "e.g. bedside transfer" })}
+      </div>
+      ${completed ? `
+        ${inputField(`${basePath}.exertion.sao2`, "SaO2 %", { type: "number", min: 0, max: 100, clamp: true })}
+        <div class="remark-row">${inputField(`${basePath}.exertion.pulse`, "Pulse bpm", { type: "number", min: 0 })}</div>
+        <div class="remark-row">
+        <p class="label">SOB on exertion</p>
+        ${choiceGroup(`${basePath}.sob`, ["Nil", "Mild", "Moderate", "Severe"], "single", { classes: "four" })}
+      </div>` : `<div class="remark-row">${inputField(`${basePath}.notCompletedReason`, "Reason", { span: true, placeholder: "Reason not completed" })}</div>`}
+    </div>`;
+  }
+
+  function renderHomeO2Problem() {
+    return `
+      <div class="group">
+        <h3>Problem Identification</h3>
+        ${choiceGroup("homeO2.problem.choices", BANK.homeO2ProblemOptions, "multi", { classes: "two" })}
+      </div>`;
+  }
+
+  function renderHomeO2Plan() {
+    const data = currentCase().data.homeO2;
+    const educationSelected = data.treatment.choices.includes("Home O2 education");
+    const educationArranged = data.treatment.educationStatus === "Arranged on";
+    const planEducation = data.treatment.plan.includes("Home O2 education");
+    return `
+      <div class="group">
+        <h3>Treatment</h3>
+        ${choiceGroup("homeO2.treatment.choices", BANK.homeO2TreatmentOptions, "multi", { classes: "five home-o2-treatment-grid" })}
+        ${data.treatment.choices.includes(HOME_O2_BREATHING_TREATMENT) ? `<div class="remark-row">${inputField("homeO2.remarks.breathingEducationDate", "Education on Breathing Technique, Handheld Fan and Energy Conservation on", { type: "date", span: true })}</div>` : ""}
+        ${educationSelected ? `<div class="subtle-box remark-row">
+          <p class="label">Home O2 education</p>
+          ${choiceGroup("homeO2.treatment.educationStatus", ["Done", "Arranged on"], "single", { classes: "two" })}
+          ${educationArranged ? `<div class="remark-row">${inputField("homeO2.treatment.educationDate", "On", { type: "date", span: true })}</div>` : ""}
+        </div>` : ""}
+        ${data.treatment.choices.includes(HOME_O2_HAGO_TREATMENT) ? `<div class="remark-row">${inputField("homeO2.remarks.haGoDate", "Prescription of HA Go (Tele information) on", { type: "date", span: true })}</div>` : ""}
+        ${data.treatment.choices.includes("Others") ? `<div class="remark-row">${inputField("homeO2.treatment.other", "Others", { span: true, placeholder: "Treatment details" })}</div>` : ""}
+      </div>
+      <div class="group">
+        <h3>Treatment Plan</h3>
+        ${choiceGroup("homeO2.treatment.plan", BANK.homeO2TreatmentPlanOptions, "multi", { classes: "three" })}
+        ${planEducation ? `<div class="remark-row">${inputField("homeO2.treatment.pendingEducationDate", "On", { type: "date", span: true })}</div>` : ""}
+      </div>
+      `;
+  }
+
+  function renderHomeO2Decision() {
+    const decision = currentCase().data.homeO2.decision;
+    const hasPortableOxygenConcentrator = decision.deviceChoices.includes("Portable Oxygen Concentrator");
+    const hasConservingDevice = decision.deviceChoices.includes("Conserving Device");
+    const hasAccessories = decision.deviceChoices.includes("Accessories");
+    const hasNasalCannula = decision.accessories.includes("Nasal Cannula");
+    const hasAccessoryOther = decision.accessories.includes("Others");
+    return `<div class="group">
+      <h3>Home O2 Order</h3>
+      <div class="field-grid">
+        ${inputField("homeO2.decision.supplier", "Supplier", { span: true, placeholder: "Supplier" })}
+      </div>
+      <div class="field-grid remark-row home-o2-order-model-row">
+        ${inputField("homeO2.decision.model", "Model (Oxygen concentrator)", { placeholder: "Model" })}
+        <div class="field">
+          <p class="label">Cylinder size</p>
+          ${choiceGroup("homeO2.decision.cylinderSize", BANK.homeO2CylinderSizeOptions, "single", { classes: "four compact" })}
+        </div>
+        ${inputField("homeO2.decision.cylinderNumber", "Number of cylinder", { placeholder: "e.g. 1" })}
+      </div>
+      <div class="remark-row home-o2-order-device-row">
+        ${choiceGroup("homeO2.decision.deviceChoices", BANK.homeO2DecisionDeviceOptions, "multi", { classes: "three home-o2-device-grid" })}
+      </div>
+      ${hasPortableOxygenConcentrator ? `<div class="remark-row">${inputField("homeO2.decision.portableOxygenConcentratorModel", "Model:", { span: true, placeholder: "Portable Oxygen Concentrator model" })}</div>` : ""}
+      ${hasConservingDevice ? `<div class="remark-row">${inputField("homeO2.decision.conservingDeviceModel", "Model:", { span: true, placeholder: "Conserving Device model" })}</div>` : ""}
+      ${hasAccessories ? `<div class="remark-row">
+        <p class="label">Accessories</p>
+        ${choiceGroup("homeO2.decision.accessories", BANK.homeO2AccessoryOptions, "multi", { classes: "four home-o2-accessory-grid" })}
+        ${hasNasalCannula ? `<div class="remark-row">${choiceGroup("homeO2.decision.nasalCannulaLengths", BANK.homeO2NasalCannulaLengthOptions, "multi", { classes: "three compact" })}</div>` : ""}
+        ${hasAccessoryOther ? `<div class="remark-row">${inputField("homeO2.decision.accessoryOther", "Others", { span: true, placeholder: "Accessories" })}</div>` : ""}
+      </div>` : ""}
+      <div class="remark-row">
+        <p class="label">Consent form signed by</p>
+        ${choiceGroup("homeO2.decision.consentSignedBy", BANK.homeO2ConsentSignatoryOptions, "single", { classes: "three" })}
+        ${decision.consentSignedBy === "Others" ? `<div class="remark-row">${inputField("homeO2.decision.consentSignedByOther", "Others", { span: true, placeholder: "Name / relationship" })}</div>` : ""}
+      </div>
+      <div class="remark-row">
+        <p class="label">Funding</p>
+        ${choiceGroup("homeO2.decision.consentFunding", BANK.homeO2ConsentFundingOptions, "multi", { classes: "four home-o2-consent-grid" })}
+      </div>
+      <div class="remark-row">
+        <p class="label">Date of Delivery</p>
+        ${choiceGroup("homeO2.decision.deliveryStatus", BANK.homeO2DeliveryStatusOptions, "single", { classes: "two" })}
+        ${decision.deliveryStatus === "Arranged on" ? `<div class="remark-row">${inputField("homeO2.decision.deliveryDate", "Arranged on", { type: "date", span: true })}</div>` : ""}
+      </div>
+    </div>`;
+  }
+
   function renderFunctionalBalanceAssessment() {
     const balance = currentCase().data.physical.functionalBalance;
     return `<div class="group functional-balance-card">
@@ -2057,13 +2772,14 @@
         <div class="bi-grid">
           ${BANK.biRows.flat().map((key) => renderBiCell(key)).join("")}
         </div>
-        <div class="bi-total">Total score: ${h(bi.totalText)} ${bi.level ? `(${h(bi.level)} Level)` : ""}</div>
+        <div class="bi-total">Total score: ${h(bi.totalText)} ${bi.level ? `(${h(bi.level)})` : ""}</div>
       </div>
       <div class="group">
-        <h3>Overall assistance level</h3>
+        <h3>Overall assistance</h3>
         ${choiceGroup("functional.overall", BANK.assistanceLevels, "consecutive", { order: BANK.assistanceLevels })}
         <div class="remark-row">${textareaField("functional.impression", "Impression", { span: true, placeholder: "Free text impression" })}</div>
       </div>
+      ${isEmergencyMedicineCase() ? renderLawton() : ""}
       ${renderCarerInterview()}
       ${isFallAssessmentCase() ? renderHdrsSection() : ""}`;
   }
@@ -2083,7 +2799,7 @@
         <div class="bi-total">Total score: ${h(bi.totalText)}</div>
       </div>
       <div class="group">
-        <h3>Overall assistance level</h3>
+        <h3>Overall assistance</h3>
         ${choiceGroup("functional.overall", BANK.assistanceLevels, "consecutive", { order: BANK.assistanceLevels })}
       </div>`;
   }
@@ -2126,9 +2842,27 @@
         ${item.scores.map((score) => renderBiScoreButton(activeKey, String(score.value), score.value, !state.notAssessed && String(state.score) === String(score.value))).join("")}
       </div>
       ${data.functional.showInterpretation ? renderBiItemInterpretation(activeKey) : ""}
-      ${state.score !== "" && Number(state.score) === 0 && item.extraWhenZero ? `<label class="inline-row remark-row bi-extra-choice"><input type="checkbox" data-bind="functional.bi.${h(activeKey)}.${h(item.extraWhenZero)}"${state[item.extraWhenZero] ? " checked" : ""}> <span>${h(item.extraWhenZero === "foley" ? "Foley" : "Stoma")}</span></label>` : ""}
+      ${state.score !== "" && Number(state.score) === 0 ? renderBiZeroExtraChecks(activeKey, item, state) : ""}
       ${state.score !== "" && Number(state.score) === 0 && item.zeroExtras ? `<div class="bi-extra-row">${item.zeroExtras.map((route) => `<label class="inline-row bi-extra-choice"><input type="checkbox" data-feeding-route="${h(route)}" data-feeding-key="${h(activeKey)}"${state.feedingRoute === route ? " checked" : ""}> <span>${h(route)}</span></label>`).join("")}</div>` : ""}
     </div>`;
+  }
+
+  function biZeroExtraChecks(item) {
+    const choices = [];
+    if (item.extraWhenZero) {
+      choices.push({
+        key: item.extraWhenZero,
+        label: item.extraWhenZero === "foley" ? "Foley" : "Stoma"
+      });
+    }
+    (item.zeroExtraChecks || []).forEach((choice) => choices.push(choice));
+    return choices;
+  }
+
+  function renderBiZeroExtraChecks(key, item, state) {
+    const choices = biZeroExtraChecks(item);
+    if (!choices.length) return "";
+    return `<div class="bi-extra-row">${choices.map((choice) => `<label class="inline-row bi-extra-choice"><input type="checkbox" data-bind="functional.bi.${h(key)}.${h(choice.key)}"${state[choice.key] ? " checked" : ""}> <span>${h(choice.label)}</span></label>`).join("")}</div>`;
   }
 
   function biCurrentScore(key) {
@@ -2188,7 +2922,7 @@
             ${data.fall.factors.includes("Others") ? `<div class="remark-row">${inputField("fall.factorOther", "Other risk factor", { span: true })}</div>` : ""}
           </div>` : ""}
       </div>
-      <div class="group">
+      ${isEmergencyMedicineCase() ? renderFallHistory() : `<div class="group">
         <h3>History of Fall in Recent Year</h3>
         ${choiceGroup("fall.history", ["Yes", "No"], "single", { classes: "two" })}
         ${data.fall.history === "Yes" ? `
@@ -2196,7 +2930,7 @@
             ${inputField("fall.frequency", "Frequency", { type: "number" })}
             ${textareaField("fall.incidentRemarks", "Fall Details", { span: true })}
           </div>` : ""}
-      </div>`;
+      </div>`}`;
   }
 
   function renderDetailedFall() {
@@ -2239,8 +2973,14 @@
           ${locked ? `<p class="mini-note">Automatic High Risk Status selected.</p>` : renderFratOverallChoices(overall)}
         </div>
       </div>
+      ${renderFallHistory("Part 3: History of Fall in Recent Year")}`;
+  }
+
+  function renderFallHistory(title = "History of Fall in Recent Year") {
+    const data = currentCase().data;
+    return `
       <div class="group">
-        <h3>Part 3: History of Fall in Recent Year</h3>
+        <h3>${h(title)}</h3>
         ${choiceGroup("fall.history", ["No", "Yes"], "single", { classes: "two" })}
         ${data.fall.history === "Yes" ? `
           <div class="field-grid remark-row">
@@ -2268,9 +3008,9 @@
         ${inputField(`${base}.location`, "Location", { placeholder: "e.g. toilet" })}
       </div>
       <div class="remark-row">
-        <p class="label">Main reason of fall</p>
-        ${choiceGroup(`${base}.reason`, BANK.fallIncidentReasons, "single")}
-        ${incident.reason === "Other" ? `<div class="remark-row">${inputField(`${base}.reasonOther`, "Reason remarks", { span: true, placeholder: "Specify reason" })}</div>` : ""}
+        <p class="label">${isEmergencyMedicineCase() ? "Reasons for fall (select all that apply)" : "Main reason of fall"}</p>
+        ${choiceGroup(`${base}.${isEmergencyMedicineCase() ? "reasons" : "reason"}`, BANK.fallIncidentReasons, isEmergencyMedicineCase() ? "multi" : "single")}
+        ${(isEmergencyMedicineCase() ? incident.reasons.includes("Other") : incident.reason === "Other") ? `<div class="remark-row">${inputField(`${base}.reasonOther`, "Reason remarks", { span: true, placeholder: "Specify reason" })}</div>` : ""}
       </div>
     </div>`;
   }
@@ -2612,21 +3352,25 @@
   function renderOtComment() {
     const bi = calculateBI();
     const biLinkedText = formatBiLinkedText(bi);
+    const lawton = calculateLawton(currentCase().data.functional.lawton);
     const cognitive = otCommentCognitiveScoreSummary() || "No cognitive score entered";
-    const majorComplaint = currentCase().data.physical.complaint || "No major complaint entered";
     const palliative = palliativeGreenBoxText(currentCase().data);
     const fall = fallGreenBoxText(currentCase().data);
     return `
       <div class="group">
-        <h3>Auto-linked scores</h3>
+        <h3>Observation</h3>
         <div class="subtle-box">
           <div class="ot-comment-score-part">
-            <p><strong>Major complaint:</strong> ${h(majorComplaint)}</p>
+            ${textareaField("otComment.majorObservation", "Major observation", { span: true, placeholder: "Type major observation" })}
           </div>
           <div class="ot-comment-score-part">
             <p><strong>ADL:</strong> ${h(biLinkedText)}</p>
             <div class="remark-row">${inputField("otComment.adlRemark", "ADL remarks", { span: true, placeholder: "Optional" })}</div>
           </div>
+          ${isEmergencyMedicineCase() && lawton.complete ? `<div class="ot-comment-score-part">
+            <p><strong>IADL:</strong> Lawton ${lawton.total}/27</p>
+            <div class="remark-row">${textareaField("otComment.iadlRemark", "IADL remarks", { span: true, placeholder: "Optional" })}</div>
+          </div>` : ""}
           <div class="ot-comment-score-part">
             <p><strong>Cognitive Function:</strong> ${h(cognitive)}</p>
             <div class="remark-row">${inputField("otComment.cognitiveRemark", "Cognitive Function remarks", { span: true, placeholder: "Optional" })}</div>
@@ -2636,21 +3380,14 @@
         </div>
       </div>
       <div class="group">
-        ${textareaField("otComment.freeText", "OT comment free text", { span: true, placeholder: "No word limit" })}
+        ${textareaField("otComment.freeText", "Free text", { span: true, placeholder: "No word limit" })}
       </div>`;
   }
 
   function renderProblem() {
     const data = currentCase().data;
-    const nilOptions = ["Nil if medically stable", "Nil"];
     const patientOptions = patientFactorOptions();
-    const showFactors = !data.problem.nilMode;
     return `
-      <div class="group">
-        <h3>Overall</h3>
-        ${choiceGroup("problem.nilMode", nilOptions, "single", { classes: "two" })}
-      </div>
-      ${showFactors ? `
       <div class="group">
         <h3>Patient Factor</h3>
         ${choiceGroup("problem.patient", patientOptions, "multi")}
@@ -2669,18 +3406,25 @@
       <div class="group">
         ${checkboxField("problem.others", "Other problem")}
         ${data.problem.others ? `<div class="remark-row">${inputField("problem.othersText", "Other problem details", { span: true })}</div>` : ""}
-      </div>` : ""}`;
+      </div>`;
   }
 
   function renderPlanRecommendation() {
     const data = currentCase().data;
     const treatmentOptions = completedTreatmentOptions();
     const planOptions = treatmentPlanOptions();
+    const recommendations = recommendationsFor();
     return `
       <div class="group">
         <h3>Treatment</h3>
-        ${choiceGroup("plan.treatmentChoices", treatmentOptions, "multi", { classes: treatmentOptions.length >= 5 ? "five" : "four" })}
-        <div class="field-grid remark-row">${choiceRemarkInputs(treatmentOptions, "plan.treatmentChoices", "plan.treatmentRemarks")}</div>
+        ${choiceGroup("plan.treatmentChoices", treatmentOptions, "multi", { classes: isEmergencyMedicineCase() ? "emergency-treatment-grid" : treatmentOptions.length >= 5 ? "five" : "four" })}
+        <div class="field-grid remark-row">
+          ${treatmentOptions.filter((item) => data.plan.treatmentChoices.includes(item.value) && item.program).map((item) => `<div class="subtle-box">
+            <p class="label">${h(item.value)}</p>
+            ${choiceGroup(`plan.treatmentPrograms.${item.value}`, ["Department training", "Home program"], "single", { classes: "two" })}
+          </div>`).join("")}
+          ${choiceRemarkInputs(treatmentOptions, "plan.treatmentChoices", "plan.treatmentRemarks")}
+        </div>
       </div>
       <div class="group">
         <h3>Treatment Plan</h3>
@@ -2696,8 +3440,8 @@
       </div>
       <div class="group">
         <h3>Recommendation</h3>
-        ${choiceGroup("recommendation.choices", BANK.recommendations, "multi", { classes: "three" })}
-        <div class="field-grid remark-row">${choiceRemarkInputs(BANK.recommendations, "recommendation.choices", "recommendation.remarks")}</div>
+        ${choiceGroup("recommendation.choices", recommendations, "multi", { classes: "three" })}
+        <div class="field-grid remark-row">${choiceRemarkInputs(recommendations, "recommendation.choices", "recommendation.remarks")}</div>
       </div>`;
   }
 
@@ -2762,16 +3506,19 @@
   function handleWorkAction(action, button) {
     const record = currentCase();
     if (!record) return;
+    if (action === "main-home") {
+      persistCurrent("Saved locally.");
+      window.location.href = "../#shared-history";
+      return;
+    }
     if (action === "home") {
       persistCurrent("Saved locally.");
       currentCaseId = null;
       currentView = "home";
+      if (window.history && window.history.replaceState && window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
       renderHome();
-      return;
-    }
-    if (action === "main-home") {
-      persistCurrent("Saved locally.");
-      window.location.href = "../#shared-history";
       return;
     }
     if (action === "save-case") {
@@ -2821,6 +3568,12 @@
       record.data.mental.orientation.notAssessedHome = next;
       if (next) record.data.mental.orientation.items["Home Address"] = false;
       if (!next) record.data.mental.orientation.items["Home Address"] = true;
+      persistCurrent();
+      renderWork();
+      return;
+    }
+    if (action === "toggle-lawton-interpretation") {
+      record.data.functional.lawton.showInterpretation = !record.data.functional.lawton.showInterpretation;
       persistCurrent();
       renderWork();
       return;
@@ -2879,6 +3632,50 @@
       const index = Number(button.dataset.entryIndex);
       if (list && list.length > 1 && Number.isInteger(index)) {
         list.splice(index, 1);
+        syncEditedNotesWithGenerated(record);
+        persistCurrent();
+        renderWork();
+      }
+      return;
+    }
+    if (action === "add-home-o2-oximetry-test") {
+      const oximetry = record.data.homeO2.oximetry;
+      oximetry.done = true;
+      oximetry.oxygenModes = Array.isArray(oximetry.oxygenModes) ? oximetry.oxygenModes : [];
+      if (!oximetry.oxygenModes.includes("O2")) oximetry.oxygenModes.push("O2");
+      oximetry.o2Tests = Array.isArray(oximetry.o2Tests) ? oximetry.o2Tests : [];
+      oximetry.o2Tests.push(makeHomeO2AssessmentOximetrySet());
+      syncEditedNotesWithGenerated(record);
+      persistCurrent();
+      renderWork();
+      return;
+    }
+    if (action === "remove-home-o2-oximetry-test") {
+      const index = Number(button.dataset.testIndex);
+      const tests = record.data.homeO2.oximetry.o2Tests || [];
+      if (tests.length > 1 && Number.isInteger(index)) {
+        tests.splice(index, 1);
+        syncEditedNotesWithGenerated(record);
+        persistCurrent();
+        renderWork();
+      }
+      return;
+    }
+    if (action === "add-home-o2-test-activity") {
+      const test = record.data.homeO2.oximetry.tests[Number(button.dataset.testIndex)];
+      if (test) {
+        test.activities.push(makeHomeO2Activity("", true));
+        syncEditedNotesWithGenerated(record);
+        persistCurrent();
+        renderWork();
+      }
+      return;
+    }
+    if (action === "remove-home-o2-test-activity") {
+      const test = record.data.homeO2.oximetry.tests[Number(button.dataset.testIndex)];
+      const index = Number(button.dataset.activityIndex);
+      if (test && Number.isInteger(index) && test.activities[index] && test.activities[index].custom) {
+        test.activities.splice(index, 1);
         syncEditedNotesWithGenerated(record);
         persistCurrent();
         renderWork();
@@ -2945,18 +3742,19 @@
       setPath(record.data, path, next);
     } else if (mode === "consecutive") {
       const order = (button.dataset.order || "").split("|").filter(Boolean);
+      const exclusiveValues = (button.dataset.exclusiveValues || "").split("|").filter(Boolean);
       const current = getPath(record.data, path) || [];
-      setPath(record.data, path, nextConsecutiveSelection(current, value, order));
+      setPath(record.data, path, nextConsecutiveSelection(current, value, order, exclusiveValues));
     }
     cleanDependentState(path);
     persistCurrent();
     renderWork();
   }
 
-  function nextConsecutiveSelection(current, value, order) {
-    const exclusive = "Not follow command";
-    if (value === exclusive) return current.includes(value) ? [] : [value];
-    current = current.filter((item) => item !== exclusive);
+  function nextConsecutiveSelection(current, value, order, exclusiveValues = []) {
+    const exclusives = [...new Set(["Not follow command", ...exclusiveValues])];
+    if (exclusives.includes(value)) return current.includes(value) ? [] : [value];
+    current = current.filter((item) => !exclusives.includes(item));
     if (current.includes(value)) return current.filter((item) => item !== value);
     const candidate = [...current, value].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     if (candidate.length === 1) return candidate;
@@ -3039,6 +3837,22 @@
 
   function cleanDependentState(path) {
     const data = currentCase().data;
+    if (path === "premorbid.cognitive.choices") {
+      const cognitive = data.premorbid.cognitive;
+      cognitive.choices = [...cognitive.choices.filter((choice) => choice !== "Others").slice(-1), ...cognitive.choices.filter((choice) => choice === "Others")];
+      cognitive.unremarkable = false;
+      if (!cognitive.choices.includes("Others")) cognitive.remarks = "";
+    }
+    if (path.startsWith("functional.lawton.scores.")) data.functional.lawton.notTest = false;
+    if (path === "premorbid.behavioral.status" && data.premorbid.behavioral.status !== "Yes") data.premorbid.behavioral.remarks = "";
+    if (path === "mental.mood.choices") {
+      const choices = data.mental.mood.choices;
+      const primary = choices.filter((choice) => choice !== "Others").slice(-1);
+      data.mental.mood.choices = [...primary, ...choices.filter((choice) => choice === "Others")];
+      if (!choices.includes("Others")) data.mental.mood.other = "";
+    }
+    if (path === "mental.cognitive.cdtUnable" && data.mental.cognitive.cdtUnable) data.mental.cognitive.cdt = "";
+    if (path === "mental.cognitive.cdt" && data.mental.cognitive.cdt !== "") data.mental.cognitive.cdtUnable = false;
     if (path === "vitals.oxygenMode") {
       if (data.vitals.oxygenMode !== "O2") data.vitals.oxygenL = "";
       if (data.vitals.oxygenMode !== "FiO2") data.vitals.fio2 = "";
@@ -3101,10 +3915,18 @@
       if (hasInput) balance.notApplicable = false;
     }
     if (path === "mental.cognitive.amt.unable") {
-      if (data.mental.cognitive.amt.unable) data.mental.cognitive.amt.answers = makeAmtAnswers();
+      if (data.mental.cognitive.amt.unable) {
+        data.mental.cognitive.amt.answers = makeAmtAnswers();
+        data.mental.cognitive.amt.directScore = "";
+      }
     }
     if (path.startsWith("mental.cognitive.amt.answers.")) {
       data.mental.cognitive.amt.unable = false;
+      data.mental.cognitive.amt.directScore = "";
+    }
+    if (path === "mental.cognitive.amt.directScore" && hasDirectAmtScore(data.mental.cognitive.amt)) {
+      data.mental.cognitive.amt.unable = false;
+      data.mental.cognitive.amt.answers = makeAmtAnswers();
     }
     if (path === "mental.cognitive.cdtDone" && !data.mental.cognitive.cdtDone) {
       data.mental.cognitive.cdt = "";
@@ -3132,10 +3954,10 @@
       data.fall.incidents = [makeFallIncident()];
       data.fall.incidentRemarks = "";
     }
-    const fallIncidentReasonMatch = path.match(/^fall\.incidents\.(\d+)\.reason$/);
+    const fallIncidentReasonMatch = path.match(/^fall\.incidents\.(\d+)\.reasons?$/);
     if (fallIncidentReasonMatch) {
       const incident = data.fall.incidents[Number(fallIncidentReasonMatch[1])];
-      if (incident && incident.reason !== "Other") incident.reasonOther = "";
+      if (incident && !(isEmergencyMedicineCase() ? incident.reasons.includes("Other") : incident.reason === "Other")) incident.reasonOther = "";
     }
     if (path === "problem.nilMode" && data.problem.nilMode) {
       data.problem.patient = [];
@@ -3154,8 +3976,12 @@
     if (path === "problem.others" && data.problem.others) {
       data.problem.nilMode = "";
     }
-    if (path === "plan.treatmentChoices" && !data.plan.treatmentChoices.includes("Other")) {
-      delete data.plan.treatmentRemarks.Other;
+    if (path === "plan.treatmentChoices") {
+      for (const field of ["treatmentRemarks", "treatmentPrograms"]) {
+        Object.keys(data.plan[field]).forEach((key) => {
+          if (!data.plan.treatmentChoices.includes(key)) delete data.plan[field][key];
+        });
+      }
     }
     if (path === "plan.choices") {
       Object.keys(data.plan.remarks || {}).forEach((key) => {
@@ -3182,6 +4008,17 @@
     }
     if (path === "palliative.breathlessness.oxygenModes" && !data.palliative.breathlessness.oxygenModes.includes("O2")) {
       data.palliative.breathlessness.o2Tests = [makePalliativeO2Test()];
+    }
+    if (path === "homeO2.oximetry.done" && !data.homeO2.oximetry.done) {
+      data.homeO2.oximetry.oxygenModes = [];
+    }
+    if (path === "homeO2.oximetry.oxygenModes" || path === "homeO2.oximetry.done") {
+      ensureHomeO2AssessmentOximetryForModes(data.homeO2.oximetry);
+    }
+    const homeO2OximetryTestModeMatch = path.match(/^homeO2\.oximetry\.tests\.(\d+)\.oxygenMode$/);
+    if (homeO2OximetryTestModeMatch) {
+      const test = data.homeO2.oximetry.tests[Number(homeO2OximetryTestModeMatch[1])];
+      if (test && test.oxygenMode !== "O2") test.oxygenL = "";
     }
     if (path === "palliative.pressureInjury.skinConditions") {
       Object.keys(data.palliative.pressureInjury.skinRemarks || {}).forEach((key) => {
@@ -3330,8 +4167,112 @@
     if (path === "ted.management.regimes" && !ted.management.regimes.includes("Others")) {
       ted.management.regimeOther = "";
     }
+    const homeO2 = data.homeO2;
+    if (path === "homeO2.oximetry.regime.option" && homeO2.oximetry.regime.option !== "Home O2 indicated") {
+      homeO2.oximetry.regime.sleep = "";
+      homeO2.oximetry.regime.rest = "";
+      homeO2.oximetry.regime.exertion = "";
+    }
+    const homeO2TestOxygenMatch = path.match(/^homeO2\.oximetry\.tests\.(\d+)\.oxygenMode$/);
+    if (homeO2TestOxygenMatch) {
+      const test = getPath(data, `homeO2.oximetry.tests.${homeO2TestOxygenMatch[1]}`);
+      if (test && test.oxygenMode !== "O2") test.oxygenL = "";
+    }
+    const homeO2ActivityStatusMatch = path.match(/^homeO2\.oximetry\.tests\.(\d+)\.activities\.(\d+)\.status$/);
+    if (homeO2ActivityStatusMatch) {
+      const activity = getPath(data, `homeO2.oximetry.tests.${homeO2ActivityStatusMatch[1]}.activities.${homeO2ActivityStatusMatch[2]}`);
+      if (activity) {
+        if (activity.status === "Completed") {
+          activity.notCompletedReason = "";
+        } else if (activity.status === "Not completed") {
+          clearHomeO2ActivityMeasurements(activity);
+        } else {
+          activity.notCompletedReason = "";
+          clearHomeO2ActivityMeasurements(activity);
+        }
+      }
+    }
+    const homeO2AssessmentStatusMatch = path.match(/^homeO2\.oximetry\.(roomAir|o2Tests\.\d+)\.status$/);
+    if (homeO2AssessmentStatusMatch) {
+      const set = getPath(data, `homeO2.oximetry.${homeO2AssessmentStatusMatch[1]}`);
+      if (set) {
+        if (set.status === "Not completed") {
+          set.exertion = makeOximetryPoint();
+          set.recovery = makeOximetryPoint();
+          set.sob = "";
+        } else {
+          set.notCompletedReason = "";
+        }
+      }
+    }
+    if (path === "homeO2.treatment.choices" && !homeO2.treatment.choices.includes("Others")) {
+      homeO2.treatment.other = "";
+    }
+    if (path === "homeO2.treatment.choices") {
+      syncHomeO2RemarkDatesFromTreatment(homeO2, currentCase());
+      if (!homeO2.treatment.choices.includes("Home O2 education")) {
+        homeO2.treatment.educationStatus = "";
+        homeO2.treatment.educationDate = "";
+      }
+    }
+    if (path === "homeO2.treatment.educationStatus" && homeO2.treatment.educationStatus !== "Arranged on") {
+      homeO2.treatment.educationDate = "";
+    }
+    if (path === "homeO2.treatment.plan" && !homeO2.treatment.plan.includes("Home O2 education")) {
+      homeO2.treatment.pendingEducationDate = "";
+    }
+    if (path === "homeO2.decision.deviceChoices") {
+      if (!homeO2.decision.deviceChoices.includes("Portable Oxygen Concentrator")) {
+        homeO2.decision.portableOxygenConcentratorModel = "";
+      }
+      if (!homeO2.decision.deviceChoices.includes("Conserving Device")) {
+        homeO2.decision.conservingDeviceModel = "";
+      }
+      if (!homeO2.decision.deviceChoices.includes("Accessories")) {
+        homeO2.decision.accessories = [];
+        homeO2.decision.nasalCannulaLengths = [];
+        homeO2.decision.accessoryOther = "";
+      }
+    }
+    if (path === "homeO2.decision.accessories") {
+      if (!homeO2.decision.accessories.includes("Nasal Cannula")) {
+        homeO2.decision.nasalCannulaLengths = [];
+      }
+      if (!homeO2.decision.accessories.includes("Others")) {
+        homeO2.decision.accessoryOther = "";
+      }
+    }
+    if (path === "homeO2.decision.deliveryStatus" && homeO2.decision.deliveryStatus !== "Arranged on") {
+      homeO2.decision.deliveryDate = "";
+    }
+    if (path === "homeO2.decision.consentSignedBy" && homeO2.decision.consentSignedBy !== "Others") {
+      homeO2.decision.consentSignedByOther = "";
+    }
     syncMocaDerived(data);
     syncEditedNotesWithGenerated(currentCase());
+  }
+
+  function syncHomeO2RemarkDatesFromTreatment(homeO2, record) {
+    const choices = homeO2.treatment.choices || [];
+    const date = record && record.assessmentDate || todayISO();
+    if (choices.includes(HOME_O2_BREATHING_TREATMENT) && !homeO2.remarks.breathingEducationDate) {
+      homeO2.remarks.breathingEducationDate = date;
+    } else if (!choices.includes(HOME_O2_BREATHING_TREATMENT)) {
+      homeO2.remarks.breathingEducationDate = "";
+    }
+    if (choices.includes(HOME_O2_HAGO_TREATMENT) && !homeO2.remarks.haGoDate) {
+      homeO2.remarks.haGoDate = date;
+    } else if (!choices.includes(HOME_O2_HAGO_TREATMENT)) {
+      homeO2.remarks.haGoDate = "";
+    }
+  }
+
+  function clearHomeO2ActivityMeasurements(activity) {
+    activity.beginning = makeOximetryPoint();
+    activity.dyspnea = "";
+    activity.immediate = makeOximetryPoint();
+    activity.recovery = makeOximetryPoint();
+    activity.assistance = "";
   }
 
   function syncPendingAssessmentSection(path, section, basePath, keys) {
@@ -3670,20 +4611,25 @@
     return calculateAmtFromData(currentCase().data);
   }
 
+  function hasDirectAmtScore(amt) {
+    return amt.directScore !== "" && amt.directScore != null && Number.isInteger(Number(amt.directScore)) && Number(amt.directScore) >= 0 && Number(amt.directScore) <= 10;
+  }
+
   function calculateAmtFromData(data) {
     const amt = data.mental.cognitive.amt;
     if (amt.unable) return 0;
+    if (hasDirectAmtScore(amt)) return Number(amt.directScore);
     return Object.values(amt.answers).reduce((sum, value) => sum + (String(value) === "1" ? 1 : 0), 0);
   }
 
   function hasAmtInput(amtOrAnswers) {
     const amt = amtOrAnswers && amtOrAnswers.answers ? amtOrAnswers : { unable: false, answers: amtOrAnswers || {} };
-    return !!amt.unable || Object.values(amt.answers).some((value) => value !== "" && value != null);
+    return !!amt.unable || hasDirectAmtScore(amt) || Object.values(amt.answers).some((value) => value !== "" && value != null);
   }
 
   function hasCompletedAmt(data) {
     const amt = data.mental.cognitive.amt;
-    return !!amt.unable || BANK.amtItems.every((item) => amt.answers[item.key] !== "" && amt.answers[item.key] != null);
+    return !!amt.unable || hasDirectAmtScore(amt) || BANK.amtItems.every((item) => amt.answers[item.key] !== "" && amt.answers[item.key] != null);
   }
 
   function amtInterpretation(score) {
@@ -3987,13 +4933,10 @@
     const map = {
       Independent: "Independent",
       Supervision: "Supervision",
-      "Mild Assistance": "Mild assist",
-      "Moderate Assistance": "Moderate assist",
-      "Maximal Assistance": "Maximal assist",
       Dependent: "Dependent"
     };
-    const parts = String(level).split(" to ").map((part) => map[part] || part.replace(/ Assistance$/i, " assist"));
-    return `${parts.join(" to ")} level`;
+    const parts = String(level).split(" to ").map((part) => map[part] || part);
+    return parts.join(" to ");
   }
 
   function formatBiLinkedText(bi) {
@@ -4009,23 +4952,29 @@
     const label = key === "mobility" ? "Mobility/Wheelchair" : item.label;
     if (state.notAssessed || state.score === "") return `${label}: not assessed`;
     let extra = "";
-    if (Number(state.score) === 0 && item.extraWhenZero && state[item.extraWhenZero]) extra = ` (${item.extraWhenZero})`;
+    const zeroExtraLabels = Number(state.score) === 0
+      ? biZeroExtraChecks(item).filter((choice) => state[choice.key]).map((choice) => choice.label)
+      : [];
+    if (zeroExtraLabels.length) extra = ` (${commaList(zeroExtraLabels)})`;
     if (Number(state.score) === 0 && item.zeroExtras && state.feedingRoute) extra = ` (${state.feedingRoute})`;
     return `${label}: ${state.score}/${item.max}${extra}`;
   }
 
   function cognitiveScoreSummary() {
     const mental = currentCase().data.mental;
-    if (!mental.cognitive.enabled && !isFallAssessmentCase()) return "";
+    if (isEmergencyMedicineCase()) return emergencyCognitiveScoreSummary(mental);
+    if (!mental.cognitive.enabled && !isFallAssessmentCase() && !isEmergencyMedicineCase()) return "";
     const parts = [];
-    if (hasAmtInput(mental.cognitive.amt)) {
+    if (!hasCompletedAmt({ mental })) {
+      parts.push("AMT: pending");
+    } else {
       const amtScore = calculateAmt();
       parts.push(mental.cognitive.amt.unable ? "AMT: Fail to assess" : `AMT ${amtScore}/10 (${amtCutoffStatus(amtScore)})`);
     }
     if ((!isFallAssessmentCase() || mental.cognitive.cdtDone) && mental.cognitive.cdt !== "") parts.push(`CDT ${mental.cognitive.cdt}/10 (${cdtInterpretation(mental.cognitive.cdt)})`);
     const mocaTotal = mocaAutoTotal(mental.cognitive.moca);
     const mocaPercentile = mocaPercentileLabel(mental.cognitive.moca);
-    if ((!isFallAssessmentCase() || mental.cognitive.moca.done) && mocaTotal !== "") parts.push(`MoCA ${mocaTotal}/30${mocaPercentile ? ` (${mocaPercentile})` : ""}`);
+    if ((!(isFallAssessmentCase() || isEmergencyMedicineCase()) || mental.cognitive.moca.done) && mocaTotal !== "") parts.push(`MoCA ${mocaTotal}/30${mocaPercentile ? ` (${mocaPercentile})` : ""}`);
     return parts.join("; ");
   }
 
@@ -4035,9 +4984,12 @@
 
   function conciseCognitiveScoreSummary() {
     const mental = currentCase().data.mental;
-    if (!mental.cognitive.enabled && !isFallAssessmentCase()) return "";
+    if (isEmergencyMedicineCase()) return emergencyCognitiveScoreSummary(mental);
+    if (!mental.cognitive.enabled && !isFallAssessmentCase() && !isEmergencyMedicineCase()) return "";
     const parts = [];
-    if (hasAmtInput(mental.cognitive.amt)) {
+    if (!hasCompletedAmt({ mental })) {
+      parts.push("AMT: pending");
+    } else {
       parts.push(mental.cognitive.amt.unable ? "AMT: Fail to assess" : `AMT ${calculateAmt()}/10`);
     }
     if ((!isFallAssessmentCase() || mental.cognitive.cdtDone) && mental.cognitive.cdt !== "") {
@@ -4045,7 +4997,7 @@
     }
     const mocaTotal = mocaAutoTotal(mental.cognitive.moca);
     const mocaPercentile = mocaPercentileLabel(mental.cognitive.moca);
-    if ((!isFallAssessmentCase() || mental.cognitive.moca.done) && mocaTotal !== "") {
+    if ((!(isFallAssessmentCase() || isEmergencyMedicineCase()) || mental.cognitive.moca.done) && mocaTotal !== "") {
       parts.push(`MoCA ${mocaTotal}/30${mocaPercentile ? ` (${mocaPercentile})` : ""}`);
     }
     return parts.join("; ");
@@ -4087,11 +5039,26 @@
           d.ted.physical.powerGroup.power.leftLl) &&
           d.ted.physical.functionStatus &&
           d.ted.physical.sensation.length &&
-          d.ted.physical.tactileSensation);
+          d.ted.physical.tactileSensation &&
+          d.ted.physical.softCalf.right &&
+          d.ted.physical.softCalf.left &&
+          d.ted.physical.calfCircumference.right &&
+          d.ted.physical.calfCircumference.left);
       case "tedRisk":
         return !!(d.ted.risk.patient.length || d.ted.risk.admission.length);
       case "tedPlan":
         return !!(d.ted.management.tx.length || d.ted.management.plan.length);
+      case "homeO2SocialAdl":
+        return (d.social.limited || !!(d.social.living.choices.length && d.social.homeEnv && d.social.bathing.length && d.social.bathBy && d.social.socialServices.choices.length && d.social.assistiveDevices.choices.length)) &&
+          d.homeO2.overallAdl.length > 0;
+      case "homeO2Oximetry":
+        return !!(formatHomeO2Oximetry(d) || formatHomeO2OxygenRegime(d.homeO2.oximetry.regime));
+      case "homeO2Problem":
+        return d.homeO2.problem.choices.length > 0;
+      case "homeO2Plan":
+        return !!(d.homeO2.treatment.choices.length || d.homeO2.treatment.plan.length);
+      case "homeO2Decision":
+        return !!(d.homeO2.decision.supplier || d.homeO2.decision.model || d.homeO2.decision.cylinderSize || d.homeO2.decision.consentSignedBy || d.homeO2.decision.consentFunding.length);
       case "mbi":
         return BANK.biOrder.every((key) => {
           const activeKey = key === "mobility" ? d.functional.mobilityMode : key;
@@ -4102,9 +5069,10 @@
         return !!(d.vitals.bpSys && d.vitals.bpDia && d.vitals.pulse && d.vitals.spo2 && d.vitals.oxygenMode) &&
           (d.premorbid.limited || !!(d.premorbid.basic.choices.length && d.premorbid.walk.status && d.premorbid.outdoor.status && d.premorbid.iadl && d.premorbid.occupationType));
       case "social":
-        return d.social.limited || !!(d.social.living.choices.length && d.social.homeEnv && d.social.bathing.length && d.social.bathBy && d.social.financial.length && d.social.socialServices.choices.length && d.social.assistiveDevices.choices.length);
+        return d.social.limited || !!(d.social.living.choices.length && d.social.homeEnv && d.social.bathing.length && d.social.bathBy && d.social.socialServices.choices.length && d.social.assistiveDevices.choices.length);
       case "mental":
-        return !!(d.mental.consciousness.choices.length && hasCommandInput(d.mental.command) && (d.mental.orientation.unable || true) && d.mental.speech);
+        return !!(d.mental.consciousness.choices.length && hasCommandInput(d.mental.command) && d.mental.speech) &&
+          (!isEmergencyMedicineCase() || (hasCompletedAmt(d) && (d.mental.cognitive.cdtUnable || d.mental.cognitive.cdt !== "") && (!d.mental.mood.gdsPerformed || calculateGds(d.mental.mood).complete)));
       case "physical":
         return !!((d.physical.powerGroup.pending || d.physical.powerGroup.limbMovement || (d.physical.powerGroup.tone && d.physical.powerGroup.coordination)) &&
           (d.physical.balance.sitting.pending || d.physical.balance.sitting.levels.length) &&
@@ -4118,7 +5086,8 @@
           const activeKey = key === "mobility" ? d.functional.mobilityMode : key;
           const item = d.functional.bi[activeKey];
           return item.notAssessed || item.score !== "";
-        }) && d.functional.overall.length > 0 && (!isPalliativeCase() || !!formatPpsValue(d.functional.pps));
+        }) && d.functional.overall.length > 0 && (!isPalliativeCase() || !!formatPpsValue(d.functional.pps)) &&
+          (!isEmergencyMedicineCase() || d.functional.lawton.notTest || BANK.lawtonItems.every((item) => ["NA", "0", "1", "2", "3"].includes(String(d.functional.lawton.scores[item.key]))));
       case "fall":
         if (isFallAssessmentCase()) {
           return BANK.fratScoreItems.every((item) => !!d.fall.frat.scores[item.key]) && !!d.fall.history;
@@ -4149,7 +5118,8 @@
         greenBox: formatPressureInjuryGreenBox(record.data),
         common: formatPressureInjuryCommon(record.data),
         problem: formatPressureInjuryProblem(record.data),
-        recommendation: formatPressureInjuryRecommendation(record.data)
+        recommendation: formatPressureInjuryRecommendation(record.data),
+        remarks: formatPressureInjuryRemarks(record)
       });
     }
 
@@ -4158,7 +5128,24 @@
         greenBox: formatTedGreenBox(record.data),
         common: formatTedCommon(record.data),
         problem: formatTedProblem(record.data),
-        recommendation: formatTedRecommendation(record.data)
+        recommendation: formatTedRecommendation(record.data),
+        remarks: formatTedRemarks(record)
+      });
+    }
+
+    if (isHomeO2AssessmentCase(record)) {
+      return cleanSummaryNote({
+        greenBox: formatHomeO2GreenBox(record.data),
+        common: formatHomeO2Common(record.data),
+        problem: formatHomeO2Problem(record.data),
+        recommendation: formatHomeO2Recommendation(record.data),
+        remarks: formatHomeO2Remarks(record.data)
+      });
+    }
+
+    if (isHomeO2DecisionCase(record)) {
+      return cleanSummaryNote({
+        remarks: formatHomeO2DecisionRemarks(record.data)
       });
     }
 
@@ -4237,6 +5224,21 @@
       if (management.deviceAction === "Measurement taken for the device") return `Measurement taken for ${label}${forText}.`;
       return `${label}${forText}.`;
     }).join(" ");
+  }
+
+  function formInputDateLabel(record) {
+    return formatDate(record && record.assessmentDate) || "__";
+  }
+
+  function formatPressureInjuryRemarks(record) {
+    const management = record.data.pressureInjury.management;
+    if (management.devicePrescription !== "Prescription of pressure relieving device" || !management.devices.length) return "";
+    const date = formInputDateLabel(record);
+    return management.devices.map((device) => {
+      const label = pressureDeviceLabel(device, management);
+      const regime = commaList(pressureRegimeLabels(management, device)) || "__";
+      return label ? `${label} was fitted on ${date} with ${regime}` : "";
+    }).filter(Boolean).join("\n");
   }
 
   function formatPressureInjuryCommon(data) {
@@ -4390,6 +5392,19 @@
     return stocking ? `${stocking} prescribed.` : "";
   }
 
+  function tedRegimeLabels(management) {
+    return (management.regimes || []).map((item) => item === "Others" && management.regimeOther ? management.regimeOther : item).filter(Boolean);
+  }
+
+  function formatTedRemarks(record) {
+    const management = record.data.ted.management;
+    if (!management.tx.includes("Compression stocking prescribed")) return "";
+    const stocking = tedStockingSummaryLabel(management);
+    if (!stocking) return "";
+    const regime = commaList(tedRegimeLabels(management)) || "__";
+    return `${stocking} was fitted on ${formInputDateLabel(record)} with ${regime}`;
+  }
+
   function formatTedCommon(data) {
     return [
       formatPressureInjuryMental(data),
@@ -4445,8 +5460,22 @@
       lines.push(`Sensation: ${sensation.join("; ")}.`);
     }
     if (physical.tactileSensation) lines.push(`Tactile sensation: ${physical.tactileSensation}.`);
+    const softCalf = formatTedSoftCalf(physical.softCalf);
+    if (softCalf) lines.push(softCalf);
+    const calfCircumference = formatTedCalfCircumference(physical.calfCircumference);
+    if (calfCircumference) lines.push(calfCircumference);
     if (physical.otherInfo) lines.push(`Others: ${withSentencePeriod(physical.otherInfo)}`);
     return lines.length ? `Physical and Function:\n${lines.join("\n")}` : "";
+  }
+
+  function formatTedSoftCalf(softCalf = {}) {
+    if (!softCalf.right && !softCalf.left) return "";
+    return `Soft Calf: Right: ${softCalf.right || "__"}; Left: ${softCalf.left || "__"}.`;
+  }
+
+  function formatTedCalfCircumference(calf = {}) {
+    if (!calf.right && !calf.left) return "";
+    return `Calf circumference: Right: ${calf.right || "__"} cm; Left: ${calf.left || "__"} cm.`;
   }
 
   function formatTedRisk(data) {
@@ -4473,7 +5502,7 @@
       treatmentLines.push("Compression stocking prescribed");
       const stocking = tedStockingSummaryLabel(management);
       if (stocking) treatmentLines.push(`- Type of stocking: ${stocking}`);
-      const regimes = (management.regimes || []).map((item) => item === "Others" && management.regimeOther ? management.regimeOther : item);
+      const regimes = tedRegimeLabels(management);
       if (regimes.length) treatmentLines.push(`- Regime: ${commaList(regimes)}`);
       if (management.education) treatmentLines.push("- Patient / Carer Education with pamphlet provided");
     }
@@ -4485,6 +5514,270 @@
     if (treatmentLines.length) lines.push(`Treatment:\n${treatmentLines.join("\n")}`);
     if (planLines.length) lines.push(`Treatment Plan:\n${commaList(planLines)}`);
     return lines.join("\n\n");
+  }
+
+  function formatHomeO2GreenBox(data) {
+    const regime = formatHomeO2OxygenRegime(data.homeO2.oximetry.regime);
+    const plan = formatHomeO2TreatmentPlanItems(data.homeO2.treatment);
+    return [
+      regime ? `Oxygen regime: ${regime}` : "",
+      plan.length ? `Treatment plan: ${sentenceList(plan)}` : ""
+    ].filter(Boolean).join("\n");
+  }
+
+  function formatHomeO2Common(data) {
+    const social = stripGeneratedSectionTitle(formatSocial(data), "Social History and Home Environment");
+    const adl = formatHomeO2OverallAdl(data);
+    const oximetry = formatHomeO2Oximetry(data);
+    return [
+      `Social History and Home Environment\n${social || "Pending input."}`,
+      `Overall ADL status\n${adl || "Pending input."}`,
+      `Oximetry Test\n${oximetry || "Pending input."}`
+    ].join("\n\n");
+  }
+
+  function stripGeneratedSectionTitle(text, title) {
+    const value = String(text || "");
+    const prefix = `${title}:\n`;
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value;
+  }
+
+  function formatHomeO2OverallAdl(data) {
+    const overall = formatConsecutive(data.homeO2.overallAdl || []);
+    return overall ? `Overall ADL status: ${overall.toLowerCase()}` : "";
+  }
+
+  function formatHomeO2Oximetry(data) {
+    const oximetry = data.homeO2.oximetry;
+    if (!oximetry.done) return "";
+    const blocks = [];
+    if ((oximetry.oxygenModes || []).includes("Room Air")) {
+      const summary = formatHomeO2AssessmentOximetrySet("On Room Air", oximetry.roomAir || {});
+      if (summary) blocks.push(summary);
+    }
+    if ((oximetry.oxygenModes || []).includes("O2")) {
+      (oximetry.o2Tests || []).forEach((test) => {
+        const summary = formatHomeO2AssessmentOximetrySet(`On ${formatHomeO2FlowLabel(test.flow)}O2`, test);
+        if (summary) blocks.push(summary);
+      });
+    }
+    const regime = formatHomeO2OxygenRegime(oximetry.regime);
+    if (regime) blocks.push(`Oxygen Regime: ${regime}.`);
+    if (oximetry.remarks) blocks.push(`Remarks: ${oximetry.remarks}.`);
+    return blocks.join("\n\n");
+  }
+
+  function formatHomeO2AssessmentOximetrySet(title, set) {
+    if (!homeO2AssessmentSetHasInput(set)) return "";
+    const adlTask = set.adlTask || "__";
+    const lines = [
+      `${title}:`,
+      `- At rest ${formatHomeO2OximetryPoint(set.rest)};`
+    ];
+    if (set.status === "Not completed") {
+      lines.push(`- On exertion (${adlTask}), not completed${set.notCompletedReason ? ` due to ${set.notCompletedReason}` : ""};`);
+    } else {
+      lines.push(`- On exertion (${adlTask}), ${formatHomeO2OximetryPoint(set.exertion)}; ${set.sob || "__"} SOB on exertion;`);
+      lines.push(`- After 2 minutes rest ${formatHomeO2OximetryPoint(set.recovery)}`);
+    }
+    return lines.join("\n");
+  }
+
+  function homeO2TaskSetHasInput(set) {
+    return !!(set && (set.oxygenMode || set.oxygenL || set.oxygenUse) || hasOximetrySetInput(set && { rest: set.rest }) || (set && set.activities || []).some(homeO2ActivityHasInput));
+  }
+
+  function homeO2ActivityHasInput(activity) {
+    return !!(activity && (
+      activity.status ||
+      activity.notCompletedReason ||
+      activity.dyspnea ||
+      activity.assistance ||
+      hasOximetrySetInput({
+        rest: activity.beginning,
+        exertion: activity.immediate,
+        recovery: activity.recovery
+      }) ||
+      (activity.custom && activity.name)
+    ));
+  }
+
+  function formatHomeO2ActivitySummary(activity) {
+    if (!homeO2ActivityHasInput(activity)) return "";
+    const name = activity.name || "Other activity";
+    if (activity.status === "Not completed") {
+      return `- ${name}: Not completed${activity.notCompletedReason ? ` due to ${activity.notCompletedReason}` : ""}.`;
+    }
+    if (activity.status !== "Completed") return `- ${name}: Pending completion status.`;
+    return [
+      `- ${name}:`,
+      `  Beginning: ${formatHomeO2OximetryPoint(activity.beginning)};`,
+      `  Dyspneic Level: ${activity.dyspnea || "__"};`,
+      `  Immediate Post-Activity: ${formatHomeO2OximetryPoint(activity.immediate)};`,
+      `  Recovery Post 2 Minutes: ${formatHomeO2OximetryPoint(activity.recovery)}.`,
+      `  Level of assistance: ${activity.assistance ? activity.assistance.toLowerCase() : "__"}.`
+    ].join("\n");
+  }
+
+  function formatHomeO2OximetryPoint(point = {}) {
+    return `SaO2 ${formatValueWithUnit(point.sao2, "%")}, pulse ${formatValueWithUnit(point.pulse, "bpm")}`;
+  }
+
+  function formatValueWithUnit(value, unit) {
+    const text = String(value || "").trim();
+    if (!text) return "__";
+    if (unit === "%" && text.includes("%")) return text;
+    if (unit === "bpm" && /[a-z]/i.test(text)) return text;
+    return unit === "%" ? `${text}%` : `${text} ${unit}`;
+  }
+
+  function formatHomeO2FlowLabel(value) {
+    const text = String(value || "").trim().replace(/\s*(o2|oxygen)\s*$/i, "").trim();
+    if (!text) return "__L";
+    const normalized = text.match(/^(.+?)\s*l(?:\/min)?$/i);
+    if (normalized) return `${normalized[1].trim()}L`;
+    return `${text}L`;
+  }
+
+  function formatHomeO2TestLabel(test = {}) {
+    if (test.oxygenMode === "Room Air") return "On Room Air";
+    if (test.oxygenMode === "O2") return `On ${formatHomeO2LitresValue(test.oxygenL)} litres of O2`;
+    const text = homeO2LegacyOxygenText(test);
+    if (!text) return "Oxygen use not specified";
+    if (/^\d+(?:\.\d+)?\s*(?:l(?:\/min)?)?$/i.test(text)) return `On ${formatHomeO2LitresValue(text)} litres of O2`;
+    return /^on\b/i.test(text) ? text : `On ${text}`;
+  }
+
+  function formatHomeO2LitresValue(value) {
+    const text = String(value || "")
+      .replace(/\s*(o2|oxygen)\s*$/i, "")
+      .replace(/\s*l(?:itres?|\/min)?\s*$/i, "")
+      .trim();
+    return text || "__";
+  }
+
+  function formatHomeO2OxygenRegime(regime = {}) {
+    if (regime.option === "Pending further oximetry test" || regime.option === "Not indicated for Home O2 at the moment") return regime.option;
+    if (regime.option === "Home O2 indicated") {
+      const sleep = formatHomeO2FlowLabel(regime.sleep);
+      const rest = formatHomeO2FlowLabel(regime.rest);
+      const exertion = formatHomeO2FlowLabel(regime.exertion);
+      if (sleep === rest) return `${sleep} O2 at sleep, at rest; ${exertion} O2 on exertion`;
+      return `${sleep} O2 at sleep; ${rest} O2 at rest; ${exertion} O2 on exertion`;
+    }
+    return "";
+  }
+
+  function formatHomeO2Problem(data) {
+    const choices = data.homeO2.problem.choices || [];
+    return choices.length ? commaList(choices) : "Pending input.";
+  }
+
+  function formatHomeO2Recommendation(data) {
+    const treatment = formatHomeO2TreatmentItems(data.homeO2.treatment);
+    const plan = formatHomeO2TreatmentPlanItems(data.homeO2.treatment);
+    return [
+      "Treatment:",
+      treatment.length ? sentenceList(treatment) : "Pending input.",
+      "",
+      "Treatment plan:",
+      plan.length ? sentenceList(plan) : "Pending input."
+    ].join("\n");
+  }
+
+  function formatHomeO2TreatmentItems(treatment) {
+    return (treatment.choices || []).map((item) => {
+      if (item === "Others") return treatment.other;
+      if (item === "Home O2 education") {
+        if (treatment.educationStatus === "Done") return "Home O2 education done";
+        if (treatment.educationStatus === "Arranged on") {
+          return treatment.educationDate ? `Home O2 education arranged on ${formatInputDate(treatment.educationDate)}` : "Home O2 education arranged";
+        }
+      }
+      return item;
+    }).filter(Boolean);
+  }
+
+  function formatHomeO2TreatmentPlanItems(treatment) {
+    return (treatment.plan || []).map((item) => {
+      if (item === "Home O2 education") {
+        return treatment.pendingEducationDate ? `Pending Home O2 education on ${formatInputDate(treatment.pendingEducationDate)}` : "Pending Home O2 education";
+      }
+      return item;
+    }).filter(Boolean);
+  }
+
+  function formatHomeO2Remarks(data) {
+    const remarks = data.homeO2.remarks;
+    return [
+      `Education on Breathing technique, Handheld fan and energy conservation on ${formatInputDate(remarks.breathingEducationDate) || "__"}`,
+      `Home O2 education arranged on ${formatInputDate(data.homeO2.treatment.educationDate) || "__"}`,
+      `${HOME_O2_HAGO_SUMMARY_LABEL} on ${formatInputDate(remarks.haGoDate) || "__"}`
+    ].join("\n");
+  }
+
+  function formatHomeO2DecisionRemarks(data) {
+    const decision = data.homeO2.decision;
+    return [
+      `Supplier: ${decision.supplier || "__"}`,
+      `Model (Oxygen concentrator): ${formatHomeO2ModelSummary(decision)}`,
+      `Consent form signed by ${formatHomeO2ConsentSignedBy(decision)}`,
+      formatHomeO2ConsentFunding(decision.consentFunding) || "Self paid / DA / CSSA / Funding support",
+      formatHomeO2DeliverySummary(decision)
+    ].filter(Boolean).join("\n");
+  }
+
+  function formatHomeO2ModelSummary(decision) {
+    const parts = [decision.model || "__"];
+    const cylinder = formatHomeO2CylinderSummary(decision);
+    if (cylinder) parts.push(cylinder);
+    if ((decision.deviceChoices || []).includes("Portable Oxygen Concentrator")) {
+      parts.push(`Portable Oxygen Concentrator${decision.portableOxygenConcentratorModel ? ` (${decision.portableOxygenConcentratorModel})` : ""}`);
+    }
+    if ((decision.deviceChoices || []).includes("Conserving Device")) {
+      parts.push(`Conserving Device${decision.conservingDeviceModel ? ` (${decision.conservingDeviceModel})` : ""}`);
+    }
+    if ((decision.deviceChoices || []).includes("Accessories")) {
+      parts.push(`Accessories: ${formatHomeO2Accessories(decision) || "__"}`);
+    }
+    return parts.join(" + ");
+  }
+
+  function formatHomeO2Accessories(decision) {
+    return (decision.accessories || []).map((item) => {
+      if (item === "Nasal Cannula") {
+        return `Nasal Cannula${decision.nasalCannulaLengths && decision.nasalCannulaLengths.length ? ` (${decision.nasalCannulaLengths.join(" / ")})` : ""}`;
+      }
+      if (item === "Others") return decision.accessoryOther || "Others";
+      return item;
+    }).filter(Boolean).join(" / ");
+  }
+
+  function formatHomeO2DeliverySummary(decision) {
+    if (decision.deliveryStatus === "Pending arrangement") return "Date of Delivery: Pending arrangement";
+    if (decision.deliveryStatus === "Arranged on") return `Date of Delivery: arranged on ${formatInputDate(decision.deliveryDate) || "__"}`;
+    return "";
+  }
+
+  function formatHomeO2CylinderSummary(remarks) {
+    if (!remarks.cylinderSize && !remarks.cylinderNumber) return "";
+    const size = remarks.cylinderSize || "__";
+    const count = remarks.cylinderNumber || "__";
+    return `${size}-size cylinder (${count} ${String(count) === "1" ? "cylinder" : "cylinders"})`;
+  }
+
+  function formatHomeO2ConsentSignedBy(remarks) {
+    if (remarks.consentSignedBy === "Others") return remarks.consentSignedByOther || "others";
+    return remarks.consentSignedBy ? remarks.consentSignedBy.toLowerCase() : "__";
+  }
+
+  function formatHomeO2ConsentFunding(value) {
+    return normalizeHomeO2ConsentFunding(value).join(" / ");
+  }
+
+  function formatInputDate(value) {
+    if (!value) return "";
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? formatDate(value) : value;
   }
 
   function formatVitals(data) {
@@ -4518,7 +5811,11 @@
 
   function formatPremorbid(data) {
     const p = data.premorbid;
-    if (p.limited) return "Premorbid ADL: limited information from patient.";
+    const emergencyDetails = isEmergencyMedicineCase() ? [
+      p.cognitive.choices.length ? `Cognitive Function: ${p.cognitive.choices.map((choice) => choice === "Others" && p.cognitive.remarks ? p.cognitive.remarks : choice).join("; ")}` : "",
+      p.behavioral.status ? `Behavioral Problem: ${p.behavioral.status}${p.behavioral.status === "Yes" && p.behavioral.remarks ? `; ${p.behavioral.remarks}` : ""}` : ""
+    ].filter(Boolean) : [];
+    if (p.limited) return ["Premorbid ADL: limited information from patient.", ...emergencyDetails.map(withSentencePeriod)].join("\n");
     const firstLine = [];
     if (p.basic.choices.length) firstLine.push(`Basic ADL: ${joinList(formatWithRemarks(p.basic.choices, p.basic.remarks))}`);
     const indoor = formatPremorbidMobility("Indoor mobility", p.walk);
@@ -4529,7 +5826,7 @@
     if (p.iadl) secondLine.push(`IADL: ${p.iadl}`);
     if (p.occupationType === "Retired") secondLine.push("Occupation: retired");
     if (p.occupationType === "Occupation" && p.occupation) secondLine.push(`Occupation: ${p.occupation}`);
-    const lines = [firstLine.join("    "), secondLine.join("    ")].filter(Boolean).map(withSentencePeriod);
+    const lines = [firstLine.join("    "), secondLine.join("    "), ...emergencyDetails].filter(Boolean).map(withSentencePeriod);
     return lines.length ? `Premorbid ADL:\n${lines.join("\n")}` : "";
   }
 
@@ -4555,7 +5852,6 @@
     }
     const bathing = formatBathingSummary(s);
     if (bathing) lines.push(bathing);
-    if (s.financial.length) lines.push(`Financial: ${s.financial.join(", ")}.`);
     if (s.socialServices.choices.length) {
       const services = s.socialServices.choices.map((item) => formatSocialServiceSummary(item, s.socialServices));
       if (s.socialServices.choices.includes("Home Help Service") && s.socialServices.homeHelp.length) {
@@ -4596,7 +5892,7 @@
 
   function formatBathingSummary(s) {
     const parts = [];
-    if (s.bathing.length) parts.push(`Bathing: ${joinList(s.bathing)}`);
+    if (s.bathing.length) parts.push(joinList(s.bathing));
     if (s.bathBy) {
       if (s.bathBy === "Sit on") {
         parts.push(`Sit on${s.bathByRemark ? ` ${s.bathByRemark}` : ""}`);
@@ -4604,7 +5900,7 @@
         parts.push(s.bathBy);
       }
     }
-    return parts.length ? `${parts.join(". ")}.` : "";
+    return parts.length ? `Bathing: ${parts.join(". ")}.` : "";
   }
 
   function formatSocialServiceSummary(item, socialServices) {
@@ -4636,9 +5932,13 @@
     }
     const blocks = [];
     if (lines.length) blocks.push(`Mental Function:\n${lines.filter(Boolean).join("\n")}`);
-    if (m.cognitive.enabled || isFallAssessmentCase()) {
+    if (m.cognitive.enabled || isFallAssessmentCase() || isEmergencyMedicineCase()) {
       const cognitive = formatCognitive(m);
       if (cognitive) blocks.push(`Cognitive Assessment:\n${cognitive}`);
+    }
+    if (isEmergencyMedicineCase()) {
+      const mood = formatEmergencyMood(m.mood);
+      if (mood) blocks.push(mood);
     }
     return blocks.join("\n\n");
   }
@@ -4680,22 +5980,24 @@
   }
 
   function formatCognitive(mental) {
+    if (isEmergencyMedicineCase()) return formatEmergencyCognitive(mental);
     const c = mental.cognitive;
     const lines = [];
-    if (hasAmtInput(c.amt)) {
-      if (c.amt.unable) {
-        lines.push("Abbreviated Mental Test (AMT): Fail to assess.");
-      } else {
-      const score = c.amt.unable ? 0 : Object.values(c.amt.answers).filter((v) => String(v) === "1").length;
-      lines.push(`Abbreviated Mental Test (AMT): ${score}/10${c.amt.unable ? " (unable to assess)" : ""} (cut off <6 indicated further evaluations for possibility of cognitive impairment)`);
+    if (!hasCompletedAmt({ mental })) {
+      lines.push("AMT: pending.");
+      if (hasAmtInput(c.amt)) lines.push(formatAmtSubscores(c.amt));
+    } else if (c.amt.unable) {
+      lines.push("Abbreviated Mental Test (AMT): Fail to assess.");
+    } else {
+      const score = Object.values(c.amt.answers).filter((v) => String(v) === "1").length;
+      lines.push(`Abbreviated Mental Test (AMT): ${score}/10 (cut off <6 indicated further evaluations for possibility of cognitive impairment)`);
       lines.push(formatAmtSubscores(c.amt));
-      }
     }
     if ((!isFallAssessmentCase() || c.cdtDone) && c.cdt !== "") lines.push(`Clock Drawing Test (CDT): ${c.cdt}/10 (cut off 3/4; Lower score indicated higher cognitive function).`);
     const moca = c.moca;
     const mocaTotal = mocaAutoTotal(moca);
     const mocaPercentile = mocaPercentileLabel(moca);
-    if ((!isFallAssessmentCase() || moca.done) && (mocaTotal !== "" || mocaPercentile)) {
+    if ((!(isFallAssessmentCase() || isEmergencyMedicineCase()) || moca.done) && (mocaTotal !== "" || mocaPercentile)) {
       const headline = [`HK-Montreal Cognitive Assessment (MoCA): ${mocaTotal || "__"}/30`];
       if (mocaPercentile) headline.push(mocaPercentile);
       lines.push(`${headline.join(", ")}.`);
@@ -4705,6 +6007,54 @@
     }
     if (c.impression) lines.push(`Impression: ${c.impression}.`);
     return lines.join("\n");
+  }
+
+  function formatEmergencyCognitive(mental) {
+    const c = mental.cognitive;
+    const answered = BANK.amtItems.filter((item) => ["0", "1"].includes(String(c.amt.answers[item.key]))).length;
+    const score = calculateAmtFromData({ mental });
+    const amt = c.amt.unable ? "Not test" : hasCompletedAmt({ mental }) ? `${score}/10 (cut off <6 indicated further evaluations for possibility of cognitive impairment)` : "pending";
+    const cdt = c.cdtUnable ? "Not test" : c.cdt === "" ? "Pending assessment" : `${c.cdt}/10 (cut off 3/4; Lower score indicated higher cognitive function)`;
+    const lines = [amt === "pending" ? "AMT: pending." : `Abbreviated Mental Test (AMT): ${amt}.`];
+    if (!c.amt.unable && !hasDirectAmtScore(c.amt) && answered) lines.push(formatAmtSubscores(c.amt));
+    lines.push(`Clock Drawing Test (CDT): ${cdt}.`);
+    if (c.moca.done) {
+      const total = mocaAutoTotal(c.moca);
+      const percentile = mocaPercentileLabel(c.moca);
+      lines.push(`HK-Montreal Cognitive Assessment (MoCA): ${total === "" ? "__" : total}/30${percentile ? `, ${percentile}` : ""}.`);
+      lines.push(BANK.mocaSubscales.map((item) => `${item.label}: ${c.moca.subscales[item.key] === "" ? "__" : c.moca.subscales[item.key]}/${item.max}`).join("; "));
+      if (c.impression) lines.push(`Impression: ${c.impression}.`);
+    }
+    return lines.join("\n");
+  }
+
+  function emergencyCognitiveScoreSummary(mental) {
+    const c = mental.cognitive;
+    const score = calculateAmtFromData({ mental });
+    const parts = [c.amt.unable ? "AMT: Not test" : hasCompletedAmt({ mental }) ? `AMT ${score}/10` : "AMT: pending",
+      c.cdtUnable ? "CDT: Not test" : c.cdt !== "" ? `CDT ${c.cdt}/10` : "CDT: pending"];
+    const moca = mocaAutoTotal(c.moca);
+    if (c.moca.done && moca !== "") parts.push(`MoCA ${moca}/30`);
+    return parts.join("; ");
+  }
+
+  function formatEmergencyMood(mood) {
+    const parts = [];
+    const choices = mood.choices.map((choice) => choice === "Others" && mood.other ? mood.other : choice);
+    if (choices.length) parts.push(`Mood: ${choices.join("; ")}`);
+    if (mood.gdsPerformed) {
+      const score = calculateGds(mood);
+      parts.push(`Geriatric Depression Scale (GDS): ${score.complete ? `${score.total}/15 (score >8 suggestive suffering from Depression)` : "not yet completed; please answer all 15 questions"}`);
+    }
+    return parts.join("; ");
+  }
+
+  function formatLawton(lawton) {
+    if (lawton.notTest) return "";
+    const score = calculateLawton(lawton);
+    const total = formatLawtonTotal(score);
+    const items = BANK.lawtonItems.map((item) => `${item.label}: ${["0", "1", "2", "3"].includes(String(lawton.scores[item.key])) ? `${lawton.scores[item.key]}/3` : "not assessed"}`);
+    return `Chinese Lawton Instrumental Activities of Daily Living Scale (4-point Scale): ${total}.\n${items.slice(0, 3).join("  ")}\n${items.slice(3, 6).join("  ")}\n${items.slice(6).join("  ")}`;
   }
 
   function formatAmtSubscores(amt) {
@@ -4750,15 +6100,17 @@
     if (p.hearing.status) lines.push(`Hearing: ${p.hearing.status}${p.hearing.status === "Impaired" && p.hearing.side ? ` (${p.hearing.side})` : ""}.`);
     if (p.pressure.status) lines.push(`Pressure Injury: ${p.pressure.status}${p.pressure.status === "Yes" && p.pressure.site ? `, site: ${p.pressure.site}` : ""}.`);
     if (p.contracture.status) lines.push(`Contracture: ${p.contracture.status}${p.contracture.status === "Yes" && p.contracture.site ? `, site: ${p.contracture.site}` : ""}.`);
-    const functionalBalance = formatFunctionalBalance(p.functionalBalance);
-    if (functionalBalance) lines.push(functionalBalance);
     if (p.otherInfo) lines.push(`Others: ${withSentencePeriod(p.otherInfo)}`);
-    return lines.length ? `Physical Assessment:\n${lines.join("\n")}` : "";
+    const blocks = [];
+    if (lines.length) blocks.push(`Physical Assessment:\n${lines.join("\n")}`);
+    const functionalBalance = formatFunctionalBalance(p.functionalBalance);
+    if (functionalBalance) blocks.push(functionalBalance);
+    return blocks.join("\n\n");
   }
 
   function formatFunctionalBalance(balance) {
     if (!balance) return "";
-    if (balance.notApplicable) return "Functional Balance Assessment: not applicable.";
+    if (balance.notApplicable) return "";
     const hasInput = !!(balance.singleLegLeft || balance.singleLegRight || balance.tug || balance.reachTrial1 || balance.reachTrial2);
     if (!hasInput) return "";
     const lines = [];
@@ -4839,7 +6191,8 @@
     if (!hasFunctionalInput) return "";
     const lines = [];
     if (isPalliativeCase() && ppsText) lines.push(`PPS: ${ppsText}%.`);
-    lines.push(`Modified Barthel Index (MBI): ${bi.totalText}${bi.level ? ` (${bi.level} Level)` : ""}.`);
+    const biLevel = formatBiLevelLabel(bi.level);
+    lines.push(`Modified Barthel Index (MBI): ${bi.totalText}${biLevel ? ` (${biLevel})` : ""}.`);
     const row1 = BANK.biRows[0].map(biLineFor).filter(Boolean).join("  ");
     const row2 = BANK.biRows[1].map(biLineFor).filter(Boolean).join("  ");
     if (row1) lines.push(row1);
@@ -4847,6 +6200,10 @@
     if (!isPalliativeCase() && ppsText) lines.push(`PPS: ${ppsText}%.`);
     if (functional.impression) lines.push(`Impression: ${functional.impression}.`);
     if (hdrs) lines.push(`\nHome Discharge Readiness Assessment (HDRS)\n${hdrs}`);
+    if (isEmergencyMedicineCase()) {
+      const lawton = formatLawton(functional.lawton);
+      if (lawton) lines.push(`\n${lawton}`);
+    }
     return `Functional Assessment:\n${lines.join("\n")}`;
   }
 
@@ -4893,7 +6250,11 @@
         if (f.frequency) line += `; frequency: ${f.frequency}`;
       }
       lines.push(`${line}.`);
-      if (f.history === "Yes" && f.incidentRemarks) lines.push(`Fall Details: ${f.incidentRemarks}.`);
+      if (f.history === "Yes" && isEmergencyMedicineCase()) {
+        const incidents = (f.incidents || []).filter(fallIncidentHasInput).map(formatFallIncidentSummary);
+        if (incidents.length) lines.push(`Fall Details:\n${incidents.join("\n")}`);
+      }
+      if (f.history === "Yes" && f.incidentRemarks) lines.push(`${isEmergencyMedicineCase() ? "Additional fall details / remarks" : "Fall Details"}: ${f.incidentRemarks}.`);
     }
     return lines.length ? `Fall Assessment:\n${lines.join("\n")}` : "";
   }
@@ -4935,6 +6296,7 @@
     if (f.history) {
       const historyLines = [];
       let history = `History of Fall in Recent Year: ${f.history}`;
+      if (f.history === "Yes" && f.frequency) history += `; frequency: ${f.frequency}`;
       historyLines.push(history);
       const incidents = (f.incidents || []).filter(fallIncidentHasInput).map(formatFallIncidentSummary);
       if (f.history === "Yes" && incidents.length) historyLines.push(`Fall Details:\n${incidents.join("\n")}`);
@@ -4945,17 +6307,18 @@
   }
 
   function fallIncidentHasInput(incident) {
-    return !!(incident && (incident.period || incident.location || incident.reason || incident.reasonOther));
+    return !!(incident && (incident.period || incident.location || incident.reason || (incident.reasons || []).length || incident.reasonOther));
   }
 
   function fallIncidentReasonText(incident) {
     if (!incident) return "";
+    if (isEmergencyMedicineCase()) return (incident.reasons || []).map((reason) => reason === "Other" ? incident.reasonOther || "Other" : reason).join(", ");
     if (incident.reason === "Other") return incident.reasonOther || "";
     return incident.reason || "";
   }
 
   function formatFallIncidentSummary(incident) {
-    return `${incident.period || "__"}, location: ${incident.location || "__"}; Main reason of fall: ${fallIncidentReasonText(incident) || "__"}`;
+    return `${incident.period || "__"}, location: ${incident.location || "__"}; ${isEmergencyMedicineCase() ? "Reasons for fall" : "Main reason of fall"}: ${fallIncidentReasonText(incident) || "__"}`;
   }
 
   function formatHdrsSummary(hdrs, data) {
@@ -5168,7 +6531,7 @@
     const fall = fallGreenBoxText(data);
     if (fall) lines.push(`Fall Risk: ${fall}`);
     const palliative = palliativeGreenBoxText(data);
-    if (palliative) lines.push(`Palliative Care: ${palliative}`);
+    if (palliative) lines.push(palliative);
     const recommendation = formatRecommendationBrief(data);
     if (recommendation) lines.push(`Suggestion: ${recommendation}`);
     return lines.join("\n");
@@ -5186,9 +6549,13 @@
 
   function formatOtComment(data) {
     const lines = [];
-    if (data.physical.complaint) lines.push(`Major complaint: ${data.physical.complaint}.`);
+    if (data.otComment.majorObservation) lines.push(`Major observation: ${data.otComment.majorObservation}.`);
     const adlRemark = data.otComment.adlRemark ? ` ${data.otComment.adlRemark}.` : "";
     lines.push(`ADL: ${formatBiLinkedText(calculateBI())}.${adlRemark}`);
+    const lawton = calculateLawton(data.functional.lawton);
+    if (isEmergencyMedicineCase() && lawton.complete) {
+      lines.push(`IADL: Lawton ${lawton.total}/27.${data.otComment.iadlRemark ? ` ${data.otComment.iadlRemark}.` : ""}`);
+    }
     const cognitive = otCommentCognitiveScoreSummary();
     if (cognitive) {
       const cognitiveRemark = data.otComment.cognitiveRemark ? ` ${data.otComment.cognitiveRemark}.` : "";
@@ -5210,7 +6577,6 @@
 
   function formatProblem(data) {
     const p = data.problem;
-    if (p.nilMode) return `${p.nilMode}.`;
     const lines = [
       factorLine("Patient Factor", p.patient, p.patientOther),
       factorLine("Environmental Factor", p.environmental, p.environmentalOther),
@@ -5245,7 +6611,9 @@
     return (data.plan.treatmentChoices || []).filter((item) => allowedTreatment.includes(item)).map((item) => {
       const remark = data.plan.treatmentRemarks && data.plan.treatmentRemarks[item];
       if (item === "Other" || item === "Others") return remark || "";
-      return item;
+      const program = data.plan.treatmentPrograms[item];
+      const details = [program, remark].filter(Boolean).join("; ");
+      return details ? `${item} (${details})` : item;
     }).filter(Boolean);
   }
 
@@ -5307,19 +6675,17 @@
   app.addEventListener("change", handleChange);
 
   loadCases();
-  const launchParams = new URLSearchParams(window.location.search);
-  const launchCaseId = launchParams.get("case");
-  if (launchCaseId && cases.some((record) => record.id === launchCaseId)) {
-    currentCaseId = launchCaseId;
-    currentSection = 0;
+  const requestedCaseId = new URLSearchParams(window.location.search).get("case");
+  if (requestedCaseId && cases.some((record) => record.id === requestedCaseId)) {
+    currentCaseId = requestedCaseId;
     currentView = "form";
-    statusMessage = AUTOSAVE_LABEL;
+    currentSection = 0;
     renderWork();
   } else {
     renderHome();
   }
 
-  if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
+  if (!window.OT_STANDALONE && "serviceWorker" in navigator && window.location.protocol !== "file:") {
     navigator.serviceWorker.register("./sw.js").catch(() => {
       statusMessage = "Offline install support could not start in this browser.";
       refreshStatus();

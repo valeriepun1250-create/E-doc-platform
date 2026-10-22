@@ -4,7 +4,7 @@
 // it is reverted — which is why the edits are stored on the record rather than being
 // recomputed.
 
-import { goHome, goMainHome, render } from "../render.js";
+import { goHome, render } from "../render.js";
 import { copyButton, el } from "../dom.js";
 import { buildOrthoDaySummary } from "../forms/ortho-day.js";
 import { formParts, formTypeOf } from "../forms/registry.js";
@@ -36,7 +36,7 @@ export function renderSummary() {
     el("div", { class: "topbar" },
       el("div", { class: "topbar-title" }, "Assessment Summary"),
       el("button", { class: "topbar-action", onclick: () => { State.view = "form"; render(); } }, "Assessment"),
-      el("button", { class: "topbar-action", onclick: goMainHome }, "Main Home")
+      el("button", { class: "topbar-action", onclick: goHome }, "Home")
     )
   );
 

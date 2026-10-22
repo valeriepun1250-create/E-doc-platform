@@ -117,7 +117,16 @@
   const loadOrthoHistory = () => {
     try {
       const data = JSON.parse(localStorage.getItem(ORTHO_HISTORY_KEY) || '{}');
-      return data && typeof data === 'object' && !Array.isArray(data) ? Object.values(data) : [];
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+      const now = Date.now();
+      const kept = Object.fromEntries(Object.entries(data).filter(([, item]) => {
+        const created = Date.parse(item && item.createdAt || '');
+        return !Number.isFinite(created) || now - created < EXPIRY_MS;
+      }));
+      if (Object.keys(kept).length !== Object.keys(data).length) {
+        localStorage.setItem(ORTHO_HISTORY_KEY, JSON.stringify(kept));
+      }
+      return Object.values(kept);
     } catch { return []; }
   };
 

@@ -7,7 +7,7 @@
 // is migrated on the way in.
 
 import { el } from "./dom.js";
-import { State, Storage } from "./state.js";
+import { isExpiredAssessment, State, Storage } from "./state.js";
 import { today } from "./util.js";
 
 // The envelope is what lets an import refuse a file that is not ours, and gives a
@@ -40,7 +40,7 @@ export function exportAssessments() {
 export function planImport(incoming) {
   const plan = { added: [], updated: [], unchanged: [] };
   Object.values(incoming || {}).forEach(rec => {
-    if (!rec || !rec.id) return;
+    if (!rec || !rec.id || isExpiredAssessment(rec)) return;
     const mine = State.assessments[rec.id];
     if (!mine) plan.added.push(rec);
     else if (new Date(rec.updatedAt) > new Date(mine.updatedAt)) plan.updated.push(rec);

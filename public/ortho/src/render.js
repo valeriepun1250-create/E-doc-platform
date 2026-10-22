@@ -10,7 +10,7 @@
 // whole graph has evaluated. Do not turn them into const arrow functions — that would
 // replace hoisting with a temporal dead zone and break the cycle at load time.
 
-import { State } from "./state.js";
+import { expireAssessments, State } from "./state.js";
 import { isMonthPrecision } from "./util.js";
 import { renderForm } from "./views/form.js";
 import { renderHome } from "./views/home.js";
@@ -20,6 +20,9 @@ import { renderSummary } from "./views/summary.js";
 export function goHome() {
   State.view = "home";
   State.currentId = null;
+  if (window.history && window.history.replaceState && window.location && window.location.search) {
+    window.history.replaceState(null, "", window.location.pathname);
+  }
   render();
 }
 
@@ -48,6 +51,7 @@ export function goSummary() {
 
 // ── Root render dispatcher ─────────────────────────────────────────────────
 export function render() {
+  expireAssessments();
   const root = document.getElementById("root");
   root.innerHTML = "";
 

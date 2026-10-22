@@ -9,7 +9,6 @@
   const ACTIVE_SESSION_KEY = 'edoc_active_session_v1';
   const FORMS_DIR = window.EDOC_FORMS_DIR || 'forms/';
   const ASSETS_DIR = window.EDOC_ASSETS_DIR || 'images/';
-  const MAIN_HOME_URL = window.EDOC_MAIN_HOME_URL || '';
   const displayFormTitle = form => {
     const title = String(form && form.title || 'Assessment');
     return title.startsWith('[') ? title : `[${form.specialty}] ${title}`;
@@ -684,6 +683,7 @@
     const formQuestions = flattenQuestions(form);
     let missingRequired = { headerIds: new Set(), itemIdsByQuestion: new Map() };
     const persistBeforeLeaving = () => {
+      if (state.view !== 'fill') return;
       persistActiveSession();
       flushDraftAutosave();
     };
@@ -953,8 +953,7 @@
 
     const autosaveAndBrowse = () => {
       flushDraftAutosave();
-      if (MAIN_HOME_URL) window.location.href = MAIN_HOME_URL;
-      else setView('browse');
+      setView('browse');
     };
 
     app.querySelector('.back').onclick = autosaveAndBrowse;
@@ -1255,6 +1254,7 @@
     const { form, answers, entry, returnToFill } = arg || {};
     if (!form || !answers) { setView('browse'); return; }
     const persistReportSession = () => {
+      if (state.view !== 'report') return;
       activeSession.save({
         view: 'report',
         formId: form.id,
@@ -1313,8 +1313,7 @@
           entry.editedParts = { ...editedParts };
           history.update(entry.id, entry);
         }
-        if (MAIN_HOME_URL) window.location.href = MAIN_HOME_URL;
-        else setView('browse');
+        setView('browse');
       };
     }
 
@@ -1470,6 +1469,7 @@
     renderOtCommentBox();
     renderPart('Common Assessment', parts.common, '(no assessment notes filled in)', 'common');
     renderPart('Problem Identification', parts.problem, '', 'problem');
+    if (parts.remarks) renderPart('Remarks', parts.remarks, '', 'remarks');
     renderPart('Recommendation', parts.recommendation, '', 'recommendation');
     if (Number.isFinite(arg && arg.scrollY)) {
       requestAnimationFrame(() => window.scrollTo({ top: arg.scrollY }));
@@ -2900,7 +2900,6 @@
               percent.value = '';
             }
             detail.style.display = cell.grade === '1' ? '' : 'none';
-            if (cell.grade === '1') direction.focus();
             save();
           };
           select.onchange = syncGrade;
@@ -6259,10 +6258,33 @@
       return normalizeReportSymbols(out.join('\n').trim());
     };
 
+    const initialRecommendation = compose(blocks.filter(isRecommend), false);
+    // TED stocking and heel-protector fitting are device remarks rather than
+    // recommendations. Keep them out of the Recommendation box for the NS initial
+    // assessment and show a Remarks box only when one of those statements exists.
+    const isNsInitial = form && form.id === 'ns-initial-assessment.json';
+    let recommendation = initialRecommendation;
+    let remarks = '';
+    if (isNsInitial) {
+      const remarkLines = [];
+      const keptLines = [];
+      initialRecommendation.split('\n').forEach(line => {
+        const text = line.trim();
+        if (/^Bilateral TED stocking size .+ given on .+, for post-op use\.$/i.test(text)
+          || /^Bilateral heel protector fit(?: on .+)?\.$/i.test(text)) {
+          remarkLines.push(text);
+        } else {
+          keptLines.push(line);
+        }
+      });
+      recommendation = keptLines.join('\n').trim();
+      remarks = remarkLines.join('\n');
+    }
     return {
       common: compose(blocks.filter(b => !isProblem(b) && !isRecommend(b)), true),
       problem: compose(blocks.filter(isProblem), false),
-      recommendation: compose(blocks.filter(isRecommend), false),
+      recommendation,
+      remarks,
     };
   }
 

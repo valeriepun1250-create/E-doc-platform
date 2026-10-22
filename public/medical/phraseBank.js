@@ -71,6 +71,9 @@
       label: "Bladder",
       max: 10,
       extraWhenZero: "foley",
+      zeroExtraChecks: [
+        { key: "bilateralPcn", label: "Bilateral PCN" }
+      ],
       scores: [
         { value: 0, label: "Incontinent, dependent in bladder management" },
         { value: 2, label: "Incontinent but able to assist with device" },
@@ -195,7 +198,7 @@
   ];
 
   const specialties = ["Medical"];
-  const assessmentForms = ["ADL Initial", "Fall Assessment", "Palliative Care", "Pressure Injury", "DVT Prophylaxis", "MBI"];
+  const assessmentForms = ["ADL Initial", "Emergency Medicine", "Fall Assessment", "Palliative Care", "Pressure Injury", "DVT Prophylaxis", "Home O2 Assessment", "Home O2 Order", "MBI"];
   const formTypes = specialties.flatMap((specialty) => assessmentForms.map((form) => `[${specialty}] ${form}`));
 
   const mocaAgeRanges = [
@@ -236,6 +239,130 @@
   ];
 
   const bank = {
+    gdsItems: [
+  {
+    "key": "q1",
+    "label": "你對生活基本感到滿意嗎？",
+    "yesScore": 0
+  },
+  {
+    "key": "q2",
+    "label": "你有沒有放棄了很多過往常常參與的活動和興趣嗎？",
+    "yesScore": 1
+  },
+  {
+    "key": "q3",
+    "label": "你感到自己的生活空虛嗎？",
+    "yesScore": 1
+  },
+  {
+    "key": "q4",
+    "label": "你常常感到生活沉悶嗎？",
+    "yesScore": 1
+  },
+  {
+    "key": "q5",
+    "label": "你大部分時間心情都是好嗎？",
+    "yesScore": 0
+  },
+  {
+    "key": "q6",
+    "label": "你擔心有些不幸的事將會在你身上發生嗎？",
+    "yesScore": 1
+  },
+  {
+    "key": "q7",
+    "label": "你大部分時間都是快樂嗎？",
+    "yesScore": 0
+  },
+  {
+    "key": "q8",
+    "label": "你是否感到缺乏幫助？",
+    "yesScore": 1
+  },
+  {
+    "key": "q9",
+    "label": "你是否寧願留在家中，也不願出外做些新的事？",
+    "yesScore": 1
+  },
+  {
+    "key": "q10",
+    "label": "你是否覺得你比一般老人家有更多記憶力的問題？",
+    "yesScore": 1
+  },
+  {
+    "key": "q11",
+    "label": "你生存到現在覺得美好嗎？",
+    "yesScore": 0
+  },
+  {
+    "key": "q12",
+    "label": "你是否覺得自己現時毫無價值？",
+    "yesScore": 1
+  },
+  {
+    "key": "q13",
+    "label": "你是否感到精力充沛？",
+    "yesScore": 0
+  },
+  {
+    "key": "q14",
+    "label": "你是否覺得你現時的處境沒有希望？",
+    "yesScore": 1
+  },
+  {
+    "key": "q15",
+    "label": "你是否覺得大部分人的景況比你好？",
+    "yesScore": 1
+  }
+],
+    lawtonItems: [
+  {
+    "key": "telephone",
+    "label": "Use of telephone",
+    "interpretation": "包括找電話號碼、打及接聽電話"
+  },
+  {
+    "key": "transportation",
+    "label": "Transportation",
+    "interpretation": "包括自己上到正確的車，比車錢/買車票，上/落車（假設必須要搭交通工具去一個遠的地方，例如探朋友 / 睇醫生）"
+  },
+  {
+    "key": "shopping",
+    "label": "Shopping",
+    "interpretation": "包括自己選貨品、給錢和拿回家（假設必須要到附近商店買食物或日用品）"
+  },
+  {
+    "key": "mealPreparation",
+    "label": "Meal Preparation",
+    "interpretation": "包括自己想吃甚麼、準備材料、煮熟食物及放入碗碟中（假設你必須要自己準備兩餐）"
+  },
+  {
+    "key": "housework",
+    "label": "Housework",
+    "interpretation": "包括簡單家務（如抹檯、收拾床鋪、洗碗）及較重的家務（如抹地/抹窗）（假設你必須要自己做家務）"
+  },
+  {
+    "key": "handyman",
+    "label": "Handyman Work",
+    "interpretation": "例如換燈泡、維修檯及上緊螺絲等（假設你必須要自己做）"
+  },
+  {
+    "key": "laundry",
+    "label": "Laundry",
+    "interpretation": "包括清洗及曬自己衫、被、床單等（假設你必須要洗自己的衫、被、床單等）"
+  },
+  {
+    "key": "medication",
+    "label": "Medication Management",
+    "interpretation": "包括能依照指示在正確的時間內服用正確的份量（假設你必須要自己塗藥油或吃藥）"
+  },
+  {
+    "key": "money",
+    "label": "Money Management",
+    "interpretation": "包括日常金錢的找贖、交租金/水電費及到銀行提款（假設你必須要買東西、自己交租金/水電費及需要將錢放進銀行）"
+  }
+],
     specialties,
     assessmentForms,
     formTypes,
@@ -560,15 +687,15 @@
       { value: "Others", remark: "Details" }
     ],
     recommendations: [
-      { value: "Functionally fit home", exclusive: true },
-      { value: "Home with carer/maid/supervision from", exclusive: true, remark: "Who?" },
+      { value: "Functionally fit home" },
+      { value: "Home with carer/maid/supervision from", remark: "Who?" },
       { value: "Short course of training in QEH" },
       { value: "Convalescent rehabilitation" },
       { value: "Refer to occupational therapy department out-patient department for", remark: "ADL / Cognitive / Hand Function, etc." },
       { value: "Community OT service (COT)" },
       { value: "GDH" },
       { value: "Refer ICDS for", remark: "Details" },
-      { value: "For medical stabilization", exclusive: true },
+      { value: "For medical stabilization" },
       { value: "Others", remark: "Details" }
     ],
     carerInterviewTopics: [
@@ -748,7 +875,7 @@
       { value: "Commercial type TED stocking" },
       { value: "Tailor made stocking" }
     ],
-    tedStockingSizes: ["XS", "S", "M", "L"],
+    tedStockingSizes: ["XS", "S", "M", "L", "1", "2"],
     tedRegimeOptions: [
       { value: "Post-operation" },
       { value: "Bed rest" },
@@ -757,6 +884,126 @@
     tedPlanOptions: [
       { value: "Continue limb maintenance" },
       { value: "Review upon request" }
+    ],
+    homeO2AdlItems: [
+      { key: "bedMobility", label: "Bed Mobility", summaryLabel: "Bed mobility" },
+      { key: "transfer", label: "Transfer", summaryLabel: "Transfer" },
+      { key: "feeding", label: "Feeding", summaryLabel: "Feeding" },
+      { key: "dressing", label: "Dressing", summaryLabel: "Dressing" },
+      { key: "grooming", label: "Grooming", summaryLabel: "Grooming" },
+      { key: "toileting", label: "Toileting", summaryLabel: "Toileting" },
+      { key: "bathing", label: "Bathing", summaryLabel: "Bathing" },
+      { key: "iadl", label: "IADL", summaryLabel: "IADL" },
+      { key: "outdoor", label: "Outdoor", summaryLabel: "Outdoor" },
+      { key: "work", label: "Work", summaryLabel: "Work" }
+    ],
+    homeO2AdlAssistanceLevels: [
+      ...assistanceLevels,
+      { value: "Not Applicable", label: "Not Applicable", exclusive: true }
+    ],
+    homeO2AdlAssistanceOrder: [
+      ...assistanceLevels,
+      "Not Applicable"
+    ],
+    homeO2DefaultActivities: [
+      "Bed mobility",
+      "Dressing (Sitting)",
+      "Ambulation (2 minutes)"
+    ],
+    homeO2OximetryOxygenModes: [
+      "Room Air",
+      "O2"
+    ],
+    homeO2DyspneaLevels: [
+      "Nil",
+      "Only chest discomfort",
+      "Mild",
+      "Moderate",
+      "Maximal",
+      "Very severe"
+    ],
+    homeO2ActivityAssistanceLevels: [
+      "Independent",
+      "Supervision",
+      "Mild Assistance",
+      "Moderate Assistance",
+      "Dependent"
+    ],
+    homeO2OxygenRegimeOptions: [
+      { value: "Pending further oximetry test" },
+      { value: "Not indicated for Home O2 at the moment" },
+      { value: "Home O2 indicated" }
+    ],
+    homeO2ProblemOptions: [
+      { value: "Breathlessness symptoms" },
+      { value: "O2 dependent" }
+    ],
+    homeO2TreatmentOptions: [
+      { value: "Home O2 Assessment done" },
+      { value: "Education on Breathing Technique, Handheld Fan and Energy Conservation" },
+      { value: "Home O2 education" },
+      { value: "HaGO Tele-information prescribed" },
+      { value: "Others", remark: true }
+    ],
+    homeO2TreatmentPlanOptions: [
+      { value: "Home O2 review" },
+      { value: "Home O2 education" },
+      { value: "Pending Home O2 arrangement" }
+    ],
+    homeO2ConsentFundingOptions: [
+      "Self paid",
+      "DA",
+      "CSSA",
+      "Funding support"
+    ],
+    homeO2DecisionDeviceOptions: [
+      "Portable Oxygen Concentrator",
+      "Conserving Device",
+      "Accessories"
+    ],
+    homeO2AccessoryOptions: [
+      "Nasal Cannula",
+      "Mask",
+      "Humidifier",
+      "Others"
+    ],
+    homeO2NasalCannulaLengthOptions: [
+      "7ft",
+      "16ft",
+      "25ft"
+    ],
+    homeO2DeliveryStatusOptions: [
+      "Pending arrangement",
+      "Arranged on"
+    ],
+    homeO2CylinderSizeOptions: [
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    homeO2ConsentSignatoryOptions: [
+      "Patient",
+      "Family",
+      "Others"
+    ],
+    homeO2UseOptions: [
+      "STOT",
+      "Palliative use"
+    ],
+    homeO2ReferralStatuses: [
+      "Referred",
+      "Declined referral"
+    ],
+    homeO2ReferralDestinations: [
+      "OPD",
+      "EMV"
+    ],
+    homeO2MonitoringReferralOptions: [
+      "3-month Home Oxygen Therapy Review",
+      "ICM-OT",
+      "CGAT",
+      "EMV"
     ]
   };
 

@@ -1,7 +1,7 @@
 // The form view: a topbar, section tabs, and whichever renderer the form's `kind`
 // selects — the schema engine for a schema form, a hand-written one for a coded form.
 
-import { goHome, goMainHome, goSummary, render } from "../render.js";
+import { goHome, goSummary, render } from "../render.js";
 import { el } from "../dom.js";
 import { renderOrthoDayForm } from "../forms/ortho-day.js";
 import { FORM_TYPES, formSections } from "../forms/registry.js";
@@ -27,7 +27,7 @@ export function renderForm() {
           (a.label || "—") + "  ·  " + fmtDate(a.date))
       ),
       el("button", { class: "topbar-action", onclick: goSummary }, "Summary"),
-      el("button", { class: "topbar-action", onclick: goMainHome }, "Main Home")
+      el("button", { class: "topbar-action", onclick: goHome }, "Home")
     )
   );
 

@@ -37,6 +37,9 @@
   --shadow: 0 14px 34px rgba(28, 53, 45, 0.11);
   --radius: 8px;
   --font: "Aptos", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --content-max: 1260px;
+  --control-height: 44px;
+  font-size: 16px;
 }
 
 * {
@@ -53,7 +56,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.45;
 }
 
@@ -73,7 +76,7 @@ button {
 }
 
 .home-shell {
-  width: min(1260px, calc(100vw - 28px));
+  width: min(var(--content-max), calc(100vw - 28px));
   margin: 0 auto;
   padding: 18px 0 36px;
 }
@@ -189,7 +192,7 @@ h3 {
 }
 
 .case-create-grid .field {
-  grid-template-rows: auto 44px;
+  grid-template-rows: auto var(--control-height);
 }
 
 .label-action-row {
@@ -203,7 +206,7 @@ h3 {
 
 .create-case-field .btn {
   min-width: 108px;
-  min-height: 44px;
+  min-height: var(--control-height);
 }
 
 .text-btn {
@@ -273,7 +276,7 @@ textarea {
 
 input,
 select {
-  min-height: 44px;
+  min-height: var(--control-height);
 }
 
 input[type="checkbox"] {
@@ -685,7 +688,7 @@ textarea:focus {
 }
 
 .header-inner {
-  width: min(1260px, calc(100vw - 20px));
+  width: min(var(--content-max), calc(100vw - 20px));
   margin: 0 auto;
   padding: 7px 0;
   display: grid;
@@ -707,7 +710,7 @@ textarea:focus {
 }
 
 .step-strip {
-  width: min(1260px, calc(100vw - 20px));
+  width: min(var(--content-max), calc(100vw - 20px));
   margin: 0 auto;
   padding: 0 0 7px;
   display: grid;
@@ -747,7 +750,7 @@ textarea:focus {
 }
 
 .work-main {
-  width: min(1260px, calc(100vw - 20px));
+  width: min(var(--content-max), calc(100vw - 20px));
   margin: 0 auto;
   padding: 14px 0 86px;
   display: grid;
@@ -892,7 +895,7 @@ textarea:focus {
 }
 
 .choice-grid.compact .choice {
-  min-height: 44px;
+  min-height: var(--control-height);
   padding: 7px 9px;
 }
 
@@ -946,7 +949,7 @@ textarea:focus {
 .vital-signs-row .field,
 .vital-grid-three .field,
 .oxygen-grid-three .field {
-  grid-template-rows: auto 44px;
+  grid-template-rows: auto var(--control-height);
 }
 
 .vital-oxygen-detail.empty {
@@ -954,7 +957,7 @@ textarea:focus {
 }
 
 .empty-input-slot {
-  min-height: 44px;
+  min-height: var(--control-height);
 }
 
 .oxygen-use-field {
@@ -966,7 +969,7 @@ textarea:focus {
 }
 
 .oxygen-use-field .choice {
-  min-height: 44px;
+  min-height: var(--control-height);
   padding: 5px 4px;
   text-align: center;
   font-size: 0.82rem;
@@ -985,7 +988,7 @@ textarea:focus {
 }
 
 .gcs-row .field {
-  grid-template-rows: auto 44px;
+  grid-template-rows: auto var(--control-height);
 }
 
 .amt-grid {
@@ -1220,7 +1223,7 @@ textarea:focus {
 }
 
 .symptom-choice-grid .choice {
-  min-height: 44px;
+  min-height: var(--control-height);
   justify-content: flex-start;
   text-align: left;
 }
@@ -1289,6 +1292,256 @@ textarea:focus {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
+}
+
+.home-o2-adl-list,
+.home-o2-test-list,
+.home-o2-activity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.home-o2-adl-row,
+.home-o2-test-set,
+.home-o2-test-card,
+.home-o2-activity-card {
+  background: #fff;
+}
+
+.home-o2-adl-row .label,
+.home-o2-activity-card .label {
+  margin-bottom: 8px;
+}
+
+.choice-grid.home-o2-assistance-grid {
+  grid-template-columns: repeat(7, minmax(124px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.choice-grid.home-o2-dyspnea-grid,
+.choice-grid.home-o2-activity-assistance-grid {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.choice-grid.home-o2-dyspnea-grid {
+  grid-template-columns: repeat(6, minmax(124px, 1fr));
+}
+
+.choice-grid.home-o2-activity-assistance-grid {
+  grid-template-columns: repeat(5, minmax(124px, 1fr));
+}
+
+.choice-grid.home-o2-treatment-grid {
+  grid-template-columns: repeat(5, minmax(138px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.home-o2-assistance-grid .choice,
+.home-o2-dyspnea-grid .choice,
+.home-o2-activity-assistance-grid .choice,
+.home-o2-oxygen-use-grid .choice,
+.home-o2-treatment-grid .choice,
+.home-o2-regime-grid .choice {
+  min-height: 46px;
+  overflow-wrap: anywhere;
+}
+
+.home-o2-test-action-row {
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.home-o2-oximetry-control {
+  background: #fff;
+}
+
+.home-o2-oximetry-title-row {
+  justify-content: space-between;
+}
+
+.home-o2-oxygen-use-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.65fr) minmax(120px, 0.35fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.home-o2-oxygen-use-row > .field {
+  grid-template-rows: auto 46px;
+}
+
+.home-o2-measure-list {
+  display: grid;
+  gap: 8px;
+}
+
+.home-o2-test-subtitle {
+  margin: 0 0 10px;
+}
+
+.home-o2-flow-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #253430;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.home-o2-flow-input {
+  flex: 0 0 96px;
+  width: 96px;
+  min-height: 38px;
+  text-align: center;
+}
+
+.home-o2-adl-task-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(180px, 0.3fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.home-o2-exertion-box {
+  display: grid;
+  gap: 10px;
+}
+
+.home-o2-exertion-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 10px;
+}
+
+.home-o2-exertion-header .label {
+  margin: 0;
+}
+
+.home-o2-exertion-header .choice-grid {
+  flex: 0 0 auto;
+}
+
+.home-o2-measure-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.22fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.home-o2-measure-row > .label {
+  margin: 0 0 11px;
+}
+
+.home-o2-measure-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-o2-choice-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.22fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.home-o2-choice-row > .label {
+  margin: 11px 0 0;
+}
+
+.home-o2-measure-fields .field,
+.home-o2-regime-inputs .field {
+  grid-template-rows: auto var(--control-height);
+}
+
+.home-o2-activity-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.home-o2-activity-header .label {
+  margin: 0;
+}
+
+.home-o2-activity-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.choice-grid.home-o2-status-grid {
+  grid-template-columns: repeat(2, max-content);
+  gap: 6px;
+  width: auto;
+}
+
+.home-o2-status-grid .choice {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.home-o2-consent-field {
+  align-self: end;
+}
+
+.choice-grid.home-o2-consent-grid {
+  gap: 8px;
+}
+
+.home-o2-order-model-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.choice-grid.home-o2-device-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-o2-order-device-row {
+  margin-top: 18px;
+}
+
+.choice-grid.home-o2-accessory-grid {
+  grid-template-columns: repeat(4, minmax(132px, 1fr));
+}
+
+.home-o2-consent-grid .choice {
+  min-height: var(--control-height);
+  padding: 10px 11px;
+}
+
+.home-o2-remarks-template h3 {
+  margin-bottom: 12px;
+}
+
+.choice-grid.home-o2-monitoring-referral-grid {
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.home-o2-monitoring-referral-grid .choice {
+  min-height: 46px;
+}
+
+.home-o2-regime-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .pressure-device-prescription .choice {
@@ -1692,7 +1945,7 @@ textarea:focus {
 }
 
 .hdrs-linked-field {
-  min-height: 44px;
+  min-height: var(--control-height);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-soft);
@@ -1832,7 +2085,7 @@ textarea:focus {
 }
 
 .summary-main {
-  width: min(1260px, calc(100vw - 20px));
+  width: min(var(--content-max), calc(100vw - 20px));
   margin: 0 auto;
   padding: 14px 0 86px;
 }
@@ -1933,7 +2186,7 @@ textarea:focus {
 }
 
 .footer-inner {
-  width: min(1260px, calc(100vw - 20px));
+  width: min(var(--content-max), calc(100vw - 20px));
   margin: 0 auto;
   padding: 8px 0;
   display: flex;
@@ -2005,7 +2258,7 @@ textarea:focus {
 }
 
 @media (max-width: 760px) {
-  body {
+  :root {
     font-size: 15px;
   }
 
@@ -2025,23 +2278,31 @@ textarea:focus {
     padding: 13px;
   }
 
-  .main-home-link {
-    position: static;
-    min-height: 38px;
-    min-width: 118px;
-    margin-bottom: 14px;
-    padding: 7px 12px;
-    border-width: 2px;
-    border-radius: 10px;
-    font-size: 1rem;
-  }
-
   .field-grid,
   .choice-grid.one,
   .choice-grid.three,
   .choice-grid.two,
   .choice-grid.five,
   .choice-grid.six,
+  .choice-grid.home-o2-assistance-grid,
+  .choice-grid.home-o2-dyspnea-grid,
+  .choice-grid.home-o2-activity-assistance-grid,
+  .choice-grid.home-o2-oxygen-use-grid,
+  .choice-grid.home-o2-treatment-grid,
+  .choice-grid.home-o2-regime-grid,
+  .choice-grid.home-o2-consent-grid,
+  .choice-grid.home-o2-device-grid,
+  .choice-grid.home-o2-accessory-grid,
+  .choice-grid.home-o2-monitoring-referral-grid,
+  .home-o2-order-model-row,
+  .home-o2-oxygen-use-row,
+  .home-o2-oxygen-flow-row,
+  .home-o2-measure-row,
+  .home-o2-measure-fields,
+  .home-o2-adl-task-row,
+  .home-o2-choice-row,
+  .home-o2-activity-header,
+  .home-o2-regime-inputs,
   .orientation-grid,
   .orientation-home,
   .carer-summary,
@@ -2055,6 +2316,10 @@ textarea:focus {
   .case-create-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
+  }
+
+  .home-o2-activity-header-actions {
+    justify-content: flex-start;
   }
 
   .case-create-grid .field:first-child {
@@ -2182,4 +2447,129 @@ textarea:focus {
 
 .choice-grid.pressure-plan-grid {
   grid-template-columns: repeat(5, minmax(148px, 1fr));
+}
+
+/* Let the workspace grow with larger displays while preserving its proportions. */
+@media (min-width: 1400px) {
+  :root {
+    --content-max: 1540px;
+    --control-height: 46px;
+    font-size: 17px;
+  }
+
+  .home-shell {
+    padding-top: 22px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+
+  .section-panel,
+  .note-box {
+    padding: 16px;
+  }
+
+  .work-main,
+  .summary-main {
+    gap: 16px;
+    padding-top: 16px;
+  }
+
+  .field-grid,
+  .vital-signs-row,
+  .vital-grid-three,
+  .oxygen-grid-three {
+    gap: 14px;
+  }
+
+  .choice-grid {
+    gap: 9px;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 11px 12px;
+  }
+
+  .step {
+    min-height: 50px;
+  }
+}
+
+@media (min-width: 1800px) {
+  :root {
+    --content-max: 1760px;
+    --control-height: 48px;
+    font-size: 18px;
+  }
+
+  .home-header {
+    padding: 32px 28px;
+  }
+
+  .panel {
+    padding: 26px;
+  }
+
+  .section-panel,
+  .note-box {
+    padding: 18px;
+  }
+
+  .work-main,
+  .summary-main {
+    gap: 18px;
+    padding-top: 18px;
+  }
+
+  .field-grid,
+  .vital-signs-row,
+  .vital-grid-three,
+  .oxygen-grid-three {
+    gap: 16px;
+  }
+
+  .choice-grid {
+    gap: 10px;
+  }
+
+  .step {
+    min-height: 52px;
+  }
+}
+
+
+/* Emergency Medicine assessments reuse the existing form controls. */
+.assessment-heading { justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.assessment-heading h3 { flex: 1 1 280px; }
+.gds-grid, .lawton-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.gds-card { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 360px); align-items: center; gap: 18px; }
+.gds-card .choice-grid { margin: 0; }
+.assessment-item-copy { min-width: 0; }
+.assessment-item-copy .mini-note { margin: 8px 0 0; }
+.gds-card .label { margin: 0; }
+.score-interpretation { margin: 8px 0 0; padding-left: 22px; line-height: 1.7; }
+@media (max-width: 760px) { .gds-card { grid-template-columns: minmax(0, 1fr); gap: 10px; } }
+
+.lawton-card .bi-title-wrap { flex-wrap: wrap; }
+.lawton-score-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.lawton-item-interpretation { margin: 0; }
+
+/* Keep each Emergency Medicine treatment trio together. */
+.choice-grid.emergency-treatment-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.emergency-treatment-grid .choice { min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 760px) {
+  .main-home-link {
+    position: static;
+    min-height: 38px;
+    min-width: 118px;
+    margin-bottom: 14px;
+    padding: 7px 12px;
+    border-width: 2px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
 }

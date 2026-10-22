@@ -392,6 +392,8 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   background: #f5faf7;
   color: #11654c;
   text-decoration: none;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .work-top-actions .back.work-top-btn:hover {
@@ -506,6 +508,8 @@ button.subtle:hover { background: var(--surface-tint); color: var(--fg); }
   border: 1.5px solid #9bb8ae;
   background: #f5faf7;
   color: #11654c;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .summary-shell {

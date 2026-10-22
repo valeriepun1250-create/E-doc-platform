@@ -16,7 +16,7 @@ const setStore = obj => { State.assessments = JSON.parse(JSON.stringify(obj)); }
 const getStore = () => JSON.parse(JSON.stringify(State.assessments));
 const rec = (id, updatedAt, extra) => Object.assign(
   { id, label: id, formType: "ghf_initial", date: "2026-09-10", updatedAt,
-    createdAt: updatedAt, od_summaryEdits: {} }, extra || {});
+    createdAt: new Date().toISOString(), od_summaryEdits: {} }, extra || {});
 // The stub environment is shared, so each group starts from a clean one.
 const reset = () => { env.alerts = []; env.confirms = true; env.downloaded = null; env.store = {}; };
 
@@ -202,7 +202,32 @@ console.log("\n6. Nothing to do, and declining");
      JSON.stringify(Object.keys(getStore())));
 }
 
-console.log("\n7. The buttons are on the History card");
+console.log("\n7. Seven-day retention starts at creation");
+{
+  reset();
+  const age = ms => new Date(Date.now() - ms).toISOString();
+  const day = 24 * 60 * 60 * 1000;
+  const records = {
+    fresh: rec("fresh", age(day), { createdAt: age(6 * day) }),
+    edited: rec("edited", age(1000), { createdAt: age(8 * day) }),
+    undated: rec("undated", age(day), { createdAt: "" })
+  };
+  Storage.save(records);
+  const kept = Storage.load();
+  ok("recent creation remains", !!kept.fresh);
+  ok("recent edits do not extend retention", !kept.edited);
+  ok("unknown creation date remains", !!kept.undated);
+  ok("expired record is removed from localStorage",
+     !JSON.parse(env.store[app.STORAGE_KEY]).edited);
+
+  setStore({});
+  const plan = run("importAssessments", JSON.stringify({ app: "ortho-ot", schema: 1,
+    assessments: { fresh: records.fresh, edited: records.edited } }));
+  ok("import skips expired records", plan.added.length === 1 &&
+     !!State.assessments.fresh && !State.assessments.edited);
+}
+
+console.log("\n8. The buttons are on the History card");
 {
   reset(); setStore({});
   const home = renderHome();
