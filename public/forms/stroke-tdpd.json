@@ -448,7 +448,7 @@
             "mode": "max",
             "totalMax": 30,
             "width": "full",
-            "breakdownItemsPerLine": 4,
+            "breakdownItemsPerLine": 5,
             "breakdownSep": "   ",
             "customReport": "essential_tremor_moca",
             "headerInputs": [
@@ -476,7 +476,7 @@
             "items": [
               {
                 "id": "executive_function",
-                "label": "Executive Function",
+                "label": "Visuospatial / Executive",
                 "max": 5
               },
               {
@@ -520,9 +520,9 @@
             "hideInForm": true,
             "options": [
               ">16th percentile",
-              "<=16th percentile: DSM-5 minor NCD",
-              "<=7th percentile: Petersen MCI",
-              "<=2nd percentile: DSM-5 major NCD"
+              "≤16th percentile",
+              "≤7th percentile",
+              "≤2nd percentile"
             ],
             "hideInReport": true
           },

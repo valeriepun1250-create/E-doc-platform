@@ -332,6 +332,7 @@
     return '>12';
   };
   const mocaEducationYears = value => {
+    if (value === undefined || value === null || value === '') return null;
     const years = Number(value);
     return Number.isFinite(years) && years >= 0 ? years : null;
   };
@@ -1021,22 +1022,10 @@
           && answers.moca_education !== '';
         const mocaStarted = hasAnySubScoreInput(mocaQ, answers.moca) ||
           !!answers.moca_age_cluster || hasMocaEducation;
-        const mocaMissing = [];
-        if (mocaStarted && !answers.moca_age_cluster) {
-          result.headerIds.add('moca_age_cluster');
-          mocaMissing.push({ id: 'moca_age_cluster', label: 'Age' });
-        }
-        if (mocaStarted && !hasMocaEducation) {
-          result.headerIds.add('moca_education');
-          mocaMissing.push({ id: 'moca_education', label: 'Education' });
-        }
         const mocaItemMissing = mocaStarted ? subScoreMissingItems(mocaQ, answers.moca) : [];
-        mocaMissing.push(...mocaItemMissing);
         if (mocaStarted && mocaItemMissing.length) {
           result.itemIdsByQuestion.set('moca', new Set(mocaItemMissing.map(item => item.id)));
-        }
-        if (mocaStarted && mocaMissing.length) {
-          missing.push(`MoCA: ${mocaMissing.map(item => item.label).join(', ')}`);
+          missing.push(`MoCA: ${mocaItemMissing.map(item => item.label).join(', ')}`);
         }
       }
 
@@ -5260,15 +5249,8 @@
     },
 
     essential_tremor_moca(q, a, allQs, answers) {
-      if (isEmptyAnswer(q, a)) return null;
-      const lines = ['Cognitive assessment:', `HK-Montreal Cognitive Assessment (MoCA): ${formatAnswer(q, a)}`];
-      const bandQ = allQs.moca_band;
-      if (bandQ && !isEmptyAnswer(bandQ, answers.moca_band)) {
-        lines[1] += ` (${formatAnswer(bandQ, answers.moca_band)})`;
-      }
-      const breakdown = subScoreBreakdownLines(q, a, undefined, answers);
-      if (breakdown.length) lines.push(...breakdown);
-      return lines.join('\n');
+      const mocaReport = this.moca_full(q, a, allQs, answers);
+      return mocaReport ? `Cognitive assessment:\n${mocaReport}` : null;
     },
 
     essential_tremor_power(q, a) {
@@ -6578,6 +6560,7 @@
       const c = (h.answers && h.answers.__case) || {};
       const dateLabel = (c.assessmentDate ? fmtDate(c.assessmentDate, { long: true }) : fmtDate(h.savedAt, { long: true }));
       const primaryName = c.caseId || h.formTitle || 'Untitled case';
+      const specialtyTag = h.formId === 'surgical-eras-assessment.json' ? 'Surgical' : (h.specialty || 'Case');
       const formChipClass = h.formId
         ? `history-form-chip form-${String(h.formId).replace(/[^a-z0-9_-]/gi, '-').toLowerCase()}`
         : 'history-form-chip';
@@ -6586,7 +6569,7 @@
         el('span', { class: 'history-date' }, [dateLabel]),
       ]);
       const detailRow = el('div', { class: 'history-detail' }, [
-        el('span', { class: 'badge ' + (h.specialty || 'Case') }, [h.specialty || 'Case']),
+        el('span', { class: 'badge ' + specialtyTag }, [specialtyTag]),
         summary,
         el('span', { class: formChipClass }, [h.formTitle]),
         h.draft ? el('span', { class: 'badge draft-badge' }, ['Draft']) : null,
