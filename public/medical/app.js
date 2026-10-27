@@ -1594,12 +1594,16 @@
       <div class="history-row">
         <span class="history-pill specialty-pill specialty-${h(classSlug(form.specialty))}">${h(form.specialty || "General")}</span>
         <div class="history-main">
-          <strong>${h(record.wardBed || "Untitled case")}</strong>
+          <div class="history-name-row">
+            <strong>${h(record.wardBed || "Untitled case")}</strong>
+            <button type="button" class="history-rename-icon" data-action="rename-case-inline" data-case-id="${h(record.id)}" title="Rename case" aria-label="Rename case">&#9998;</button>
+          </div>
           <div class="history-date">${h(formatDate(record.assessmentDate))}</div>
         </div>
         <span class="history-pill form-pill form-${h(classSlug(form.form))}">${h(form.form)}</span>
         <div class="history-actions">
           <button type="button" class="btn primary" data-action="open-case" data-case-id="${h(record.id)}">Open</button>
+          <button type="button" class="btn secondary" data-action="export-case-pdf" data-case-id="${h(record.id)}" title="Export assessment as PDF">Export</button>
           <button type="button" class="btn danger" data-action="delete-case" data-case-id="${h(record.id)}">Delete</button>
         </div>
       </div>
@@ -3493,6 +3497,45 @@
       currentView = "form";
       statusMessage = AUTOSAVE_LABEL;
       renderWork();
+      return;
+    }
+    if (action === "rename-case-inline") {
+      const record = cases.find((item) => item.id === button.dataset.caseId);
+      if (!record) return;
+      const row = button.closest('.history-name-row');
+      if (!row) return;
+      import("../inline-rename.js").then(({ startInlineRename }) => startInlineRename(row, record.wardBed || "", async name => {
+        record.wardBed = name;
+        saveCases();
+        renderHome();
+      }));
+      return;
+    }
+    if (action === "export-case-pdf") {
+      const record = cases.find((item) => item.id === button.dataset.caseId);
+      if (!record) return;
+      button.disabled = true;
+      button.textContent = "Exporting...";
+      const previousId = currentCaseId;
+      currentCaseId = record.id;
+      (async () => {
+        try {
+          const exportRecord = { ...record, noteEdits: { ...record.noteEdits }, noteEditBases: { ...record.noteEditBases } };
+          syncEditedNotesWithGenerated(exportRecord);
+          const note = cleanSummaryNote({ ...generateNote(exportRecord), ...exportRecord.noteEdits });
+          const titles = { greenBox: "Green box", common: "Common Assessment", problem: "Problem", remarks: "Remarks", recommendation: "Recommendation" };
+          const sections = notePartKeysFor(exportRecord).map((key) => ({ title: titles[key], text: note[key] }));
+          currentCaseId = previousId;
+          const { downloadAssessmentPdf } = await import("../pdf-export.js");
+          downloadAssessmentPdf({ name: record.wardBed, formTitle: splitFormType(record.formType).form, date: formatDate(record.assessmentDate), sections });
+        } catch (error) {
+          alert(`PDF export failed: ${error.message}`);
+        } finally {
+          currentCaseId = previousId;
+          button.disabled = false;
+          button.textContent = "Export";
+        }
+      })();
       return;
     }
     if (action === "delete-case") {
@@ -6675,8 +6718,21 @@
   app.addEventListener("change", handleChange);
 
   loadCases();
-  const requestedCaseId = new URLSearchParams(window.location.search).get("case");
-  if (requestedCaseId && cases.some((record) => record.id === requestedCaseId)) {
+  const params = new URLSearchParams(window.location.search);
+  const requestedCaseId = params.get("case");
+  if (params.get("pdfExport") === "1" && window.parent !== window) {
+    const record = cases.find((item) => item.id === requestedCaseId);
+    let sections = null;
+    if (record) {
+      currentCaseId = record.id;
+      const exportRecord = { ...record, noteEdits: { ...record.noteEdits }, noteEditBases: { ...record.noteEditBases } };
+      syncEditedNotesWithGenerated(exportRecord);
+      const note = cleanSummaryNote({ ...generateNote(exportRecord), ...exportRecord.noteEdits });
+      const titles = { greenBox: "Green box", common: "Common Assessment", problem: "Problem", remarks: "Remarks", recommendation: "Recommendation" };
+      sections = notePartKeysFor(exportRecord).map((key) => ({ title: titles[key], text: note[key] }));
+    }
+    window.parent.postMessage({ type: "edoc-pdf-report", id: requestedCaseId, sections }, window.location.origin);
+  } else if (requestedCaseId && cases.some((record) => record.id === requestedCaseId)) {
     currentCaseId = requestedCaseId;
     currentView = "form";
     currentSection = 0;

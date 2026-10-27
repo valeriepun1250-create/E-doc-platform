@@ -1,4 +1,4 @@
-const CACHE_NAME = "ortho-v86";
+const CACHE_NAME = "ortho-v90";
 const FILES = [
   "./",
   "index.html",
@@ -51,7 +51,7 @@ self.addEventListener("fetch", e => {
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return resp;
-      }).catch(() => cached);
+      }).catch(() => e.request.mode === "navigate" ? caches.match("index.html") : cached);
     })
   );
 });

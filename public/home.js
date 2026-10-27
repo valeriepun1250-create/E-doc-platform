@@ -220,6 +220,73 @@
     return `ns/?${params.toString()}`;
   };
 
+  const exportReport = async (item, button) => {
+    button.disabled = true;
+    button.textContent = 'Exporting...';
+    const frame = document.createElement('iframe');
+    frame.hidden = true;
+    frame.setAttribute('aria-hidden', 'true');
+    const url = new URL(openHistoryUrl(item), window.location.href);
+    url.searchParams.set('pdfExport', '1');
+    const reportPromise = new Promise((resolve, reject) => {
+      const cleanup = () => {
+        window.removeEventListener('message', onMessage);
+        clearTimeout(timeout);
+        frame.remove();
+      };
+      const onMessage = event => {
+        if (event.origin !== window.location.origin || event.source !== frame.contentWindow) return;
+        if (!event.data || event.data.type !== 'edoc-pdf-report') return;
+        cleanup();
+        if (event.data.id !== item.id || !Array.isArray(event.data.sections)) {
+          reject(new Error('The saved report could not be loaded.'));
+        } else {
+          resolve(event.data.sections);
+        }
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('The report took too long to load.'));
+      }, 20000);
+      window.addEventListener('message', onMessage);
+      frame.src = url.href;
+      document.body.appendChild(frame);
+    });
+    try {
+      const sections = await reportPromise;
+      const { downloadAssessmentPdf } = await import('./pdf-export.js');
+      downloadAssessmentPdf({ name: item.primaryName, formTitle: item.formTitle, date: formatDate(item.date), sections });
+    } catch (error) {
+      alert(`PDF export failed: ${error.message}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Export';
+    }
+  };
+
+  const renameCase = (item, name) => {
+    if (item.source === 'medical') {
+      const entries = loadMedicalHistory();
+      const entry = entries.find(record => record.id === item.id);
+      if (!entry) return;
+      entry.wardBed = name;
+      saveMedicalHistory(entries);
+    } else if (item.source === 'ortho') {
+      const entries = loadOrthoHistory();
+      const entry = entries.find(record => record.id === item.id);
+      if (!entry) return;
+      entry.label = name;
+      localStorage.setItem(ORTHO_HISTORY_KEY, JSON.stringify(Object.fromEntries(entries.map(record => [record.id, record]))));
+    } else {
+      const entries = loadNsHistory();
+      const entry = entries.find(record => record.id === item.id);
+      if (!entry) return;
+      entry.answers = { ...entry.answers, __case: { ...(entry.answers && entry.answers.__case), caseId: name } };
+      saveNsHistory(entries);
+    }
+    renderHistory();
+  };
+
   const renderHistory = () => {
     historyList.innerHTML = '';
     const items = loadCombinedHistory();
@@ -233,10 +300,21 @@
         ? `history-form-chip form-${String(item.formId).replace(/[^a-z0-9_-]/gi, '-').toLowerCase()}`
         : 'history-form-chip';
 
+      const nameRow = el('div', { class: 'history-name-row' }, [
+        el('strong', { class: 'case-name' }, [item.primaryName]),
+      ]);
+      const edit = el('button', {
+        type: 'button', class: 'history-rename-icon', title: 'Rename case', 'aria-label': 'Rename case',
+        onclick: async () => {
+          const { startInlineRename } = await import('./inline-rename.js');
+          startInlineRename(nameRow, item.primaryName, name => renameCase(item, name));
+        },
+      }, ['\u270e']);
+      nameRow.appendChild(edit);
       const detailRow = el('div', { class: 'history-detail' }, [
         el('span', { class: 'badge ' + (item.specialty || 'Case') }, [item.specialty || 'Case']),
         el('div', { class: 'history-summary' }, [
-          el('strong', { class: 'case-name' }, [item.primaryName]),
+          nameRow,
           el('span', { class: 'history-date' }, [formatDate(item.date)]),
         ]),
         el('span', { class: formChipClass }, [item.formTitle || 'Assessment']),
@@ -246,6 +324,12 @@
 
       const buttons = el('div', { class: 'card-actions home-history-actions' }, [
         el('a', { class: 'home-open-btn home-open-link', href: openHistoryUrl(item) }, ['Open']),
+        el('button', {
+          type: 'button',
+          class: 'home-export-btn',
+          title: 'Export assessment as PDF',
+          onclick: event => exportReport(item, event.currentTarget),
+        }, ['Export']),
         el('button', {
           type: 'button',
           class: 'home-delete-btn',

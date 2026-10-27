@@ -6564,8 +6564,22 @@
       const formChipClass = h.formId
         ? `history-form-chip form-${String(h.formId).replace(/[^a-z0-9_-]/gi, '-').toLowerCase()}`
         : 'history-form-chip';
-      const summary = el('div', { class: 'history-summary' }, [
+      const nameRow = el('div', { class: 'history-name-row' }, [
         el('strong', { class: 'case-name' }, [primaryName]),
+      ]);
+      nameRow.appendChild(el('button', {
+        type: 'button', class: 'history-rename-icon', title: 'Rename case', 'aria-label': 'Rename case',
+        onclick: async () => {
+          const { startInlineRename } = await import('../inline-rename.js');
+          startInlineRename(nameRow, c.caseId || '', name => {
+            h.answers = { ...h.answers, __case: { ...c, caseId: name } };
+            history.update(h.id, { answers: h.answers });
+            renderHistoryList(list);
+          });
+        },
+      }, ['\u270e']));
+      const summary = el('div', { class: 'history-summary' }, [
+        nameRow,
         el('span', { class: 'history-date' }, [dateLabel]),
       ]);
       const detailRow = el('div', { class: 'history-detail' }, [
@@ -6588,6 +6602,40 @@
           onclick: () => setView('fill', h),
         }, ['Open']));
       }
+      buttons.appendChild(el('button', {
+        class: 'home-export-btn',
+        title: 'Export assessment as PDF',
+        onclick: async event => {
+          const button = event.currentTarget;
+          button.disabled = true;
+          button.textContent = 'Exporting...';
+          try {
+            const form = await loadForm(h.formId);
+            let sections;
+            if (h.customText && !h.editedParts && h.report) {
+              sections = [{ title: 'Saved report (edited)', text: normalizeClipboardText(h.report) }];
+            } else {
+              const parts = buildReportParts(form, h.answers);
+              const edits = h.editedParts || {};
+              const section = (title, key, generated) => ({ title, text: normalizeClipboardText(edits[key] !== undefined ? edits[key] : generated) });
+              sections = [
+                section('Green Box', 'ot_comment_extract', buildOtCommentExtract(form, h.answers)),
+                section('Common Assessment', 'common', parts.common),
+                section('Problem Identification', 'problem', parts.problem),
+                ...(parts.remarks ? [section('Remarks', 'remarks', parts.remarks)] : []),
+                section('Recommendation', 'recommendation', parts.recommendation),
+              ];
+            }
+            const { downloadAssessmentPdf } = await import('../pdf-export.js');
+            downloadAssessmentPdf({ name: primaryName, formTitle: h.formTitle, date: dateLabel, sections });
+          } catch (error) {
+            alert(`PDF export failed: ${error.message}`);
+          } finally {
+            button.disabled = false;
+            button.textContent = 'Export';
+          }
+        },
+      }, ['Export']));
       buttons.appendChild(el('button', {
         class: 'home-delete-btn',
         onclick: () => {
@@ -6640,6 +6688,32 @@
   async function boot() {
     const params = new URLSearchParams(window.location.search);
     const historyId = params.get('history');
+    if (params.get('pdfExport') === '1' && window.parent !== window) {
+      const entry = history.load().find(item => item.id === historyId);
+      let sections = null;
+      if (entry && entry.answers) {
+        const form = await loadForm(entry.formId);
+        if (entry.customText && !entry.editedParts && entry.report) {
+          sections = [{ title: 'Saved report (edited)', text: normalizeClipboardText(entry.report) }];
+        } else {
+          const parts = buildReportParts(form, entry.answers);
+          const edits = entry.editedParts || {};
+          const section = (title, key, generated) => ({
+            title,
+            text: normalizeClipboardText(edits[key] !== undefined ? edits[key] : generated),
+          });
+          sections = [
+            section('Green Box', 'ot_comment_extract', buildOtCommentExtract(form, entry.answers)),
+            section('Common Assessment', 'common', parts.common),
+            section('Problem Identification', 'problem', parts.problem),
+            ...(parts.remarks ? [section('Remarks', 'remarks', parts.remarks)] : []),
+            section('Recommendation', 'recommendation', parts.recommendation),
+          ];
+        }
+      }
+      window.parent.postMessage({ type: 'edoc-pdf-report', id: historyId, sections }, window.location.origin);
+      return;
+    }
     if (historyId) {
       const entry = history.load().find(item => item.id === historyId);
       if (entry) {

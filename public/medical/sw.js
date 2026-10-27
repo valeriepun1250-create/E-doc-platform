@@ -1,4 +1,4 @@
-const CACHE_NAME = "ot-documentation-v117";
+const CACHE_NAME = "ot-documentation-v121";
 const OFFLINE_FILES = [
   "./",
   "./index.html",
@@ -35,7 +35,7 @@ self.addEventListener("fetch", (event) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
-      }).catch(() => caches.match("./index.html"));
+      }).catch(() => event.request.mode === "navigate" ? caches.match("./index.html") : undefined);
     })
   );
 });

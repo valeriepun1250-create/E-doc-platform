@@ -7,8 +7,9 @@
 import { goForm, render } from "../render.js";
 import { describeImport, exportAssessments, importAssessments } from "../backup.js";
 import { el } from "../dom.js";
-import { FORM_TYPES } from "../forms/registry.js";
-import { State, createAssessment, deleteAssessment } from "../state.js";
+import { FORM_TYPES, formParts } from "../forms/registry.js";
+import { State, Storage, createAssessment, deleteAssessment, summaryPartText } from "../state.js";
+import { buildSummary } from "./summary.js";
 import { fmtDateLong, today } from "../util.js";
 
 // ── Home ───────────────────────────────────────────────────────────────────
@@ -129,15 +130,45 @@ export function renderHistoryRow(a) {
   const openBtn = el("button", { class: "btn btn-primary btn-sm" }, "Open");
   openBtn.addEventListener("click", () => goForm(a.id));
 
+  const nameRow = el("div", { class: "history-name-row" },
+    el("div", { class: "history-label" }, a.label || "(No label)"));
+  const renameBtn = el("button", { class: "history-rename-icon", title: "Rename case", "aria-label": "Rename case" }, "\u270e");
+  renameBtn.addEventListener("click", async () => {
+    const { startInlineRename } = await import("../../../inline-rename.js");
+    startInlineRename(nameRow, a.label || "", async name => {
+      a.label = name;
+      Storage.save(State.assessments);
+      render();
+    });
+  });
+  nameRow.appendChild(renameBtn);
+
+  const pdfBtn = el("button", { class: "btn btn-secondary btn-sm", title: "Export assessment as PDF" }, "Export");
+  pdfBtn.addEventListener("click", async () => {
+    pdfBtn.disabled = true;
+    pdfBtn.textContent = "Exporting...";
+    try {
+      const generated = buildSummary(a);
+      const sections = formParts(a).map(part => ({ title: part.title, text: summaryPartText(a, generated, part.key) }));
+      const { downloadAssessmentPdf } = await import("../../../pdf-export.js");
+      downloadAssessmentPdf({ name: a.label || "Ortho assessment", formTitle: ft.name, date: fmtDateLong(a.date), sections });
+    } catch (error) {
+      alert(`PDF export failed: ${error.message}`);
+    } finally {
+      pdfBtn.disabled = false;
+      pdfBtn.textContent = "Export";
+    }
+  });
+
   const delBtn = el("button", { class: "btn btn-outline-danger btn-sm" }, "Delete");
   delBtn.addEventListener("click", () => deleteAssessment(a.id));
 
   return el("div", { class: "history-row" },
     el("span", { class: "history-cat" }, ft.category),
     el("div", { class: "history-main" },
-      el("div", { class: "history-label" }, a.label || "(No label)"),
+      nameRow,
       el("div", { class: "history-date" }, fmtDateLong(a.date))),
     el("span", { class: "history-form" }, ft.name),
-    el("div", { class: "history-actions" }, openBtn, delBtn)
+    el("div", { class: "history-actions" }, openBtn, pdfBtn, delBtn)
   );
 }
