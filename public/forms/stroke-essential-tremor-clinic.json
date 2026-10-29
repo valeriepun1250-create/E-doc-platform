@@ -1525,7 +1525,7 @@
               { "id": "work_finances", "label": "Work and Finances" },
               { "id": "hobbies", "label": "Hobbies and Leisure", "numeratorLabel": "/12", "percentDenominator": 12 },
               { "id": "physical", "label": "Physical", "numeratorLabel": "/36", "percentDenominator": 36 },
-              { "id": "psychosocial", "label": "Psychosocial", "numeratorLabel": "/32", "percentDenominator": 32 }
+              { "id": "psychosocial", "label": "Psychosocial", "numeratorLabel": "/36", "percentDenominator": 36 }
             ],
             "rows": [
               { "id": "qq1", "number": 1, "label": "我的頭抖影響了我與他人溝通的能力。", "domain": "communication" },
@@ -1556,7 +1556,7 @@
               { "id": "qq26", "number": 26, "label": "由於頭抖，我感到孤立或孤獨。", "domain": "psychosocial" },
               { "id": "qq27", "number": 27, "label": "由於頭抖，我擔心未來。", "domain": "psychosocial" },
               { "id": "qq28", "number": 28, "label": "我感到緊張或焦慮。", "domain": "psychosocial" },
-              { "id": "qq29", "number": 29, "label": "由於頭抖，我飲酒的頻率比我預計的高。", "domain": "psychosocial", "excludeFromScore": true },
+              { "id": "qq29", "number": 29, "label": "由於頭抖，我飲酒的頻率比我預計的高。", "domain": "psychosocial" },
               { "id": "qq30", "number": 30, "label": "由於頭抖，我很難集中精神。", "domain": "psychosocial" }
             ]
           }

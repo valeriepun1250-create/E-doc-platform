@@ -1,4 +1,4 @@
-const CACHE_NAME = "ortho-v90";
+const CACHE_NAME = "ortho-v91";
 const FILES = [
   "./",
   "index.html",
@@ -19,6 +19,7 @@ const FILES = [
   "src/views/form.js",
   "src/views/home.js",
   "src/views/summary.js",
+  "../pdf-export.js?v=20261030-1",
   "manifest.json",
   "icon-192.png",
   "icon-512.png"

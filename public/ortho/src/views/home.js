@@ -150,7 +150,6 @@ export function renderHistoryRow(a) {
     try {
       const generated = buildSummary(a);
       const sections = formParts(a).map(part => ({ title: part.title, text: summaryPartText(a, generated, part.key) }));
-      const { downloadAssessmentPdf } = await import("../../../pdf-export.js");
       downloadAssessmentPdf({ name: a.label || "Ortho assessment", formTitle: ft.name, date: fmtDateLong(a.date), sections });
     } catch (error) {
       alert(`PDF export failed: ${error.message}`);

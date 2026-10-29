@@ -1,9 +1,10 @@
-const CACHE_NAME = "ot-documentation-v121";
+const CACHE_NAME = "ot-documentation-v122";
 const OFFLINE_FILES = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
+  "../pdf-export.js?v=20261030-1",
   "./phraseBank.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",

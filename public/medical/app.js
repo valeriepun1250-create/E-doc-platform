@@ -3526,7 +3526,6 @@
           const titles = { greenBox: "Green box", common: "Common Assessment", problem: "Problem", remarks: "Remarks", recommendation: "Recommendation" };
           const sections = notePartKeysFor(exportRecord).map((key) => ({ title: titles[key], text: note[key] }));
           currentCaseId = previousId;
-          const { downloadAssessmentPdf } = await import("../pdf-export.js");
           downloadAssessmentPdf({ name: record.wardBed, formTitle: splitFormType(record.formType).form, date: formatDate(record.assessmentDate), sections });
         } catch (error) {
           alert(`PDF export failed: ${error.message}`);

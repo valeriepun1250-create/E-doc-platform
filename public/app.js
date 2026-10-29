@@ -1852,6 +1852,20 @@
           const lab = el('label', { for: id });
           const r = el('input', { type: 'radio', name: q.id, id });
           if (cur === v) r.checked = true;
+          if (ctx && ctx.formId === 'ns-initial-assessment.json') {
+            let wasChecked = false;
+            r.addEventListener('pointerdown', () => { wasChecked = r.checked; });
+            lab.addEventListener('click', event => {
+              if (!(event.target === r ? wasChecked : r.checked)) return;
+              event.preventDefault();
+              queueMicrotask(() => {
+                r.checked = false;
+                syncCheckedOptionClasses(wrap);
+              });
+              set('');
+              wasChecked = false;
+            });
+          }
           r.onchange = () => set(v);
           lab.appendChild(r);
           lab.appendChild(document.createTextNode(v));
@@ -1905,6 +1919,21 @@
           const row = el('label', { for: id });
           const r = el('input', { type: 'radio', name: q.id, id });
           if (curVal === opt.value) r.checked = true;
+          if (ctx && ctx.formId === 'ns-initial-assessment.json') {
+            let wasChecked = false;
+            r.addEventListener('pointerdown', () => { wasChecked = r.checked; });
+            row.addEventListener('click', event => {
+              if (!(event.target === r ? wasChecked : r.checked)) return;
+              event.preventDefault();
+              queueMicrotask(() => {
+                r.checked = false;
+                syncCheckedOptionClasses(wrap);
+                syncMultipleChoiceExpansion();
+              });
+              set('');
+              wasChecked = false;
+            });
+          }
           r.onchange = () => {
             if (opt.subOptions) set({ value: opt.value, sub: [], other: '' });
             else if (opt.detail) set({ value: opt.value, detail: detailInp ? detailInp.value : '' });
@@ -2033,6 +2062,22 @@
           const row = el('label', { for: id, class: 'other-row' });
           const r = el('input', { type: 'radio', name: q.id, id });
           if (otherActive) r.checked = true;
+          if (ctx && ctx.formId === 'ns-initial-assessment.json') {
+            let wasChecked = false;
+            r.addEventListener('pointerdown', () => { wasChecked = r.checked; });
+            row.addEventListener('click', event => {
+              if (event.target === txt || !(event.target === r ? wasChecked : r.checked)) return;
+              event.preventDefault();
+              queueMicrotask(() => {
+                r.checked = false;
+                syncCheckedOptionClasses(wrap);
+                syncMultipleChoiceExpansion();
+              });
+              txt.value = '';
+              set('');
+              wasChecked = false;
+            });
+          }
           row.appendChild(r);
           row.appendChild(document.createTextNode('Other: '));
           const txt = makeOtherTextControl(otherActive ? cur : '', q.otherPlaceholder ?? 'please specify', () => {
@@ -3135,9 +3180,10 @@
             const b = el('button', { type: 'button' }, [String(i)]);
             if (curObj[side] === i) b.classList.add('sel');
             b.onclick = () => {
-              curObj[side] = i;
+              if (curObj[side] === i) delete curObj[side];
+              else curObj[side] = i;
               buttons.forEach(c => c.classList.remove('sel'));
-              b.classList.add('sel');
+              if (curObj[side] === i) b.classList.add('sel');
               fire();
             };
             btnRow.appendChild(b);
@@ -6626,7 +6672,6 @@
                 section('Recommendation', 'recommendation', parts.recommendation),
               ];
             }
-            const { downloadAssessmentPdf } = await import('../pdf-export.js');
             downloadAssessmentPdf({ name: primaryName, formTitle: h.formTitle, date: dateLabel, sections });
           } catch (error) {
             alert(`PDF export failed: ${error.message}`);

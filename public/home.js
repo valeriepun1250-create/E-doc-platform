@@ -254,7 +254,6 @@
     });
     try {
       const sections = await reportPromise;
-      const { downloadAssessmentPdf } = await import('./pdf-export.js');
       downloadAssessmentPdf({ name: item.primaryName, formTitle: item.formTitle, date: formatDate(item.date), sections });
     } catch (error) {
       alert(`PDF export failed: ${error.message}`);

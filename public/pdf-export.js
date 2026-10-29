@@ -134,7 +134,7 @@ function reportPages(report) {
   return pages;
 }
 
-export function downloadAssessmentPdf(report) {
+function downloadAssessmentPdf(report) {
   if (!Array.isArray(report.sections)) throw new Error('Report content is unavailable.');
   const blob = pdfBytes(reportPages(report));
   const name = String(report.name || 'assessment').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '').slice(0, 70) || 'assessment';
@@ -147,3 +147,5 @@ export function downloadAssessmentPdf(report) {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
+
+window.downloadAssessmentPdf = downloadAssessmentPdf;
