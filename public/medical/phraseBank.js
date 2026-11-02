@@ -664,6 +664,7 @@
       { value: "Cognitive Assessment done" },
       { value: "Fall Assessment done", fallOnly: true },
       { value: "Heel protectors fitted" },
+      { value: "TED stocking fitted", adlAndFallOnly: true },
       { value: "Other", remark: "Details" }
     ],
     treatmentPlan: [
@@ -771,6 +772,12 @@
       { value: "NAD", exclusive: true },
       { value: "Pain", remark: "Present in" },
       { value: "Numbness", remark: "Present in" }
+    ],
+    tedSensationOptions: [
+      { value: "NAD", exclusive: true },
+      { value: "Pain", remark: "Present in" },
+      { value: "Numbness", remark: "Present in" },
+      { value: "Failed to assess", exclusive: true }
     ],
     pressureTactileSensationOptions: [
       "Intact",

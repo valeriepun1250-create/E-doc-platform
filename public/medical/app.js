@@ -586,6 +586,7 @@
       mbi: "",
       moca: "",
       aphasiaNoCognitiveDysfunction: false,
+      dischargeDestination: "",
       scores: BANK.hdrsItems.reduce((scores, item) => {
         scores[item.key] = "";
         return scores;
@@ -686,6 +687,7 @@
       },
       physical: {
         complaint: "",
+        pain: { choices: [], remarks: {} },
         powerGroup: makePowerGroupState(),
         balance: {
           sitting: { pending: false, pendingReason: "", levels: [] },
@@ -698,8 +700,8 @@
           ambulation: { pending: false, pendingReason: "", levels: [], aidRemark: "" },
           notTestReason: ""
         },
-        visual: { status: "", side: "" },
-        hearing: { status: "", side: "" },
+        visual: { status: "", side: "", remarks: "" },
+        hearing: { status: "", side: "", remarks: "" },
         pressure: { status: "", site: "" },
         contracture: { status: "", site: "" },
         otherInfo: "",
@@ -805,6 +807,9 @@
         treatmentChoices: [],
         treatmentRemarks: {},
         treatmentPrograms: {},
+        heelProtectorRegimes: [],
+        heelProtectorRegimeRemarks: {},
+        tedStocking: { size: "", regimes: [], regimeOther: "" },
         choices: [],
         remarks: {},
         programs: {}
@@ -1392,8 +1397,20 @@
     if (isMbiCase(record)) return ["common"];
     if (isHomeO2AssessmentCase(record)) return NOTE_PART_KEYS.slice();
     if (isHomeO2DecisionCase(record)) return ["remarks"];
-    const hasRemarks = isPressureInjuryCase(record) || isTedCase(record);
+    const hasRemarks = isPressureInjuryCase(record) || isTedCase(record) || hasHeelProtectorsFitted(record) || hasTedStockingFitted(record);
     return NOTE_PART_KEYS.filter((key) => key !== "remarks" || hasRemarks);
+  }
+
+  function hasHeelProtectorsFitted(record) {
+    return sectionKeysFor(record).includes("plan") && record.data.plan.treatmentChoices.includes("Heel protectors fitted");
+  }
+
+  function supportsTedStockingFitting(record) {
+    return ["ADL Initial", "Fall Assessment"].includes(splitFormType(record && record.formType).form);
+  }
+
+  function hasTedStockingFitted(record) {
+    return supportsTedStockingFitting(record) && record.data.plan.treatmentChoices.includes("TED stocking fitted");
   }
 
   function formToneClass(formType) {
@@ -1515,7 +1532,10 @@
   }
 
   function completedTreatmentOptions(record = currentCase()) {
-    const existing = BANK.completedTreatmentOptions.filter((item) => !item.fallOnly || isFallAssessmentCase(record));
+    const existing = BANK.completedTreatmentOptions.filter((item) =>
+      (!item.fallOnly || isFallAssessmentCase(record)) &&
+      (!item.adlAndFallOnly || supportsTedStockingFitting(record))
+    );
     if (!isEmergencyMedicineCase(record)) return existing;
     const options = [...existing, ...treatmentPlanOptions(record).filter((item) => item.value !== "Further assessment if stable")];
     const unique = [...new Map(options.map((item) => {
@@ -1917,7 +1937,6 @@
     const cdtCutoff = cdtInterpretation(cdtScore);
     const moca = data.mental.cognitive.moca;
     const mocaAgeSelected = !!moca.ageRange;
-    const mocaReady = !!(moca.ageRange && moca.education);
     const mocaTotal = mocaAutoTotal(moca);
     const mocaPercentile = mocaPercentileLabel(moca);
     const amtUnable = data.mental.cognitive.amt.unable;
@@ -2001,19 +2020,19 @@
                 <span class="score-chip mid" data-moca-percentile>${h(mocaPercentile || "Cut-off pending")}</span>` : ""}
             </div>
             ${showMoca ? `<div class="remark-row">
-              <p class="label">Age range</p>
+              <p class="mini-note">Age range and education level are optional. Enter subscores below; select both to generate the cut-off.</p>
+              <p class="label">Age range (optional)</p>
               ${choiceGroup("mental.cognitive.moca.ageRange", BANK.mocaAgeRanges, "single", { classes: "three" })}
             </div>
             ${mocaAgeSelected ? `<div class="remark-row">
-              <p class="label">Education level (years)</p>
+              <p class="label">Education level (years, optional)</p>
               ${choiceGroup("mental.cognitive.moca.education", mocaEducationOptions(moca.ageRange), "single", { classes: moca.ageRange === ">=80" ? "two" : "five" })}
             </div>` : ""}
-            ${mocaReady ? `
             ${mocaCutoffPills(moca)}
             <div class="moca-subscale-grid remark-row">
               ${BANK.mocaSubscales.map((item) => mocaSubscale(item.key, item.label, item.max)).join("")}
               ${textareaField("mental.cognitive.impression", "Impression", { span: true, placeholder: "Clinical impression" })}
-            </div>` : `<p class="mini-note">Select age range and education level before entering MoCA subscores.</p>`}
+            </div>
             ` : ""}
           </div>` : ""}
       </div>
@@ -2142,14 +2161,15 @@
 
   function renderPhysical() {
     const data = currentCase().data;
-      const group = data.physical.powerGroup;
-      return `
+    const group = data.physical.powerGroup;
+    const emergency = isEmergencyMedicineCase();
+    return `
         <div class="group">
         ${textareaField("physical.complaint", "Major complaint", { span: true, placeholder: "Optional complaint" })}
       </div>
       <div class="group">
         <div class="part-title-row">
-          <h3>Power, Tone and Coordination</h3>
+          <h3>${emergency ? "Power and Coordination" : "Power, Tone and Coordination"}</h3>
           ${choiceGroup("physical.powerGroup.limbMovement", BANK.pressurePowerMovementOptions, "single", { classes: "two compact subtle-limb-movement" })}
         </div>
         ${group.limbMovement ? "" : `
@@ -2159,17 +2179,22 @@
             ${inputField("physical.powerGroup.power.rightLl", "Right LL")}
             ${inputField("physical.powerGroup.power.leftLl", "Left LL")}
           </div>
-          <div class="group">
+          ${emergency ? "" : `<div class="group">
             <h3>Tone</h3>
             ${choiceGroup("physical.powerGroup.tone", ["NAD", "Others"], "single", { classes: "two" })}
             ${group.tone === "Others" ? `<div class="remark-row">${inputField("physical.powerGroup.toneOther", "Tone remarks", { span: true })}</div>` : ""}
-          </div>
+          </div>`}
           <div class="group">
             <h3>Coordination</h3>
             ${choiceGroup("physical.powerGroup.coordination", ["NAD", "Others"], "single", { classes: "two" })}
             ${group.coordination === "Others" ? `<div class="remark-row">${inputField("physical.powerGroup.coordinationOther", "Coordination remarks", { span: true })}</div>` : ""}
           </div>`}
       </div>
+      ${emergency ? `<div class="group">
+        <h3>Pain</h3>
+        ${choiceGroup("physical.pain.choices", BANK.pressureSensationOptions, "multi", { classes: "three" })}
+        <div class="field-grid remark-row">${choiceRemarkInputs(BANK.pressureSensationOptions, "physical.pain.choices", "physical.pain.remarks")}</div>
+      </div>` : ""}
       <div class="group">
         <h3>Balance</h3>
         ${renderPendingConsecutive("Sitting", "physical.balance.sitting", BANK.balanceLevels, { hidePendingReason: true })}
@@ -2187,13 +2212,15 @@
         <h3>Sensory</h3>
         <div class="subtle-box">
           <p class="label">Visual</p>
-          ${choiceGroup("physical.visual.status", ["Normal", "Impaired", "Blind", "Fail to assess"], "single")}
+          ${choiceGroup("physical.visual.status", ["Normal", "Impaired", "Blind", "Fail to assess", "Others"], "single", { classes: "five" })}
           ${data.physical.visual.status === "Impaired" ? `<div class="remark-row">${choiceGroup("physical.visual.side", BANK.bodySides, "single", { classes: "three" })}</div>` : ""}
+          ${data.physical.visual.status === "Others" ? `<div class="remark-row">${inputField("physical.visual.remarks", "Vision remarks", { span: true, placeholder: "Remarks" })}</div>` : ""}
         </div>
         <div class="subtle-box remark-row">
           <p class="label">Hearing</p>
-          ${choiceGroup("physical.hearing.status", ["Normal", "Impaired", "Deaf", "Fail to assess"], "single", { classes: "four" })}
+          ${choiceGroup("physical.hearing.status", ["Normal", "Impaired", "Deaf", "Fail to assess", "Others"], "single", { classes: "five" })}
           ${data.physical.hearing.status === "Impaired" ? `<div class="remark-row">${choiceGroup("physical.hearing.side", BANK.bodySides, "single", { classes: "three" })}</div>` : ""}
+          ${data.physical.hearing.status === "Others" ? `<div class="remark-row">${inputField("physical.hearing.remarks", "Hearing remarks", { span: true, placeholder: "Remarks" })}</div>` : ""}
         </div>
         <div class="field-grid remark-row">
           <div class="subtle-box">
@@ -2438,8 +2465,8 @@
       </div>
       <div class="group">
         <h3>Sensation</h3>
-        ${choiceGroup("ted.physical.sensation", BANK.pressureSensationOptions, "multi", { classes: "three" })}
-        <div class="field-grid remark-row">${choiceRemarkInputs(BANK.pressureSensationOptions, "ted.physical.sensation", "ted.physical.sensationRemarks")}</div>
+        ${choiceGroup("ted.physical.sensation", BANK.tedSensationOptions, "multi", { classes: "four" })}
+        <div class="field-grid remark-row">${choiceRemarkInputs(BANK.tedSensationOptions, "ted.physical.sensation", "ted.physical.sensationRemarks")}</div>
       </div>
       <div class="group">
         <h3>Tactile sensation</h3>
@@ -2931,7 +2958,7 @@
         ${choiceGroup("fall.history", ["Yes", "No"], "single", { classes: "two" })}
         ${data.fall.history === "Yes" ? `
           <div class="field-grid remark-row">
-            ${inputField("fall.frequency", "Frequency", { type: "number" })}
+            ${inputField("fall.frequency", "Frequency", { placeholder: "e.g. twice in the past month" })}
             ${textareaField("fall.incidentRemarks", "Fall Details", { span: true })}
           </div>` : ""}
       </div>`}`;
@@ -2988,7 +3015,7 @@
         ${choiceGroup("fall.history", ["No", "Yes"], "single", { classes: "two" })}
         ${data.fall.history === "Yes" ? `
           <div class="field-grid remark-row">
-            ${inputField("fall.frequency", "Frequency", { type: "number" })}
+            ${inputField("fall.frequency", "Frequency", { placeholder: "e.g. twice in the past month" })}
           </div>
           <div class="fall-incident-list remark-row">
             ${(data.fall.incidents || [makeFallIncident()]).map((incident, index, list) => renderFallIncident(incident, index, list.length)).join("")}
@@ -3042,7 +3069,8 @@
             <strong>${h(result.total || "__")} / 15</strong>
           </div>
           <span class="score-chip ${result.level ? "good" : "mid"}">${h(result.level ? `Level ${result.level} ${result.levelLabel}` : "Readiness pending")}</span>
-        </div>` : ""}
+        </div>
+        <div class="remark-row">${inputField("fall.hdrs.dischargeDestination", "Potential discharge destination", { span: true, placeholder: "e.g. home with carer / OAH / convalescent" })}</div>` : ""}
     </div>`;
   }
 
@@ -3354,8 +3382,7 @@
   }
 
   function renderOtComment() {
-    const bi = calculateBI();
-    const biLinkedText = formatBiLinkedText(bi);
+    const biLinkedText = otCommentAdlSummary(currentCase().data);
     const lawton = calculateLawton(currentCase().data.functional.lawton);
     const cognitive = otCommentCognitiveScoreSummary() || "No cognitive score entered";
     const palliative = palliativeGreenBoxText(currentCase().data);
@@ -3364,9 +3391,6 @@
       <div class="group">
         <h3>Observation</h3>
         <div class="subtle-box">
-          <div class="ot-comment-score-part">
-            ${textareaField("otComment.majorObservation", "Major observation", { span: true, placeholder: "Type major observation" })}
-          </div>
           <div class="ot-comment-score-part">
             <p><strong>ADL:</strong> ${h(biLinkedText)}</p>
             <div class="remark-row">${inputField("otComment.adlRemark", "ADL remarks", { span: true, placeholder: "Optional" })}</div>
@@ -3429,6 +3453,20 @@
           </div>`).join("")}
           ${choiceRemarkInputs(treatmentOptions, "plan.treatmentChoices", "plan.treatmentRemarks")}
         </div>
+        ${hasHeelProtectorsFitted(currentCase()) ? `<div class="subtle-box remark-row">
+          <p class="label">Heel protector wearing regime</p>
+          ${choiceGroup("plan.heelProtectorRegimes", BANK.pressureRegimeOptions, "multi", { classes: "six" })}
+          <div class="field-grid remark-row">${choiceRemarkInputs(BANK.pressureRegimeOptions, "plan.heelProtectorRegimes", "plan.heelProtectorRegimeRemarks")}</div>
+        </div>` : ""}
+        ${hasTedStockingFitted(currentCase()) ? `<div class="subtle-box remark-row">
+          <p class="label">TED stocking size</p>
+          ${choiceGroup("plan.tedStocking.size", BANK.tedStockingSizes, "single", { classes: "six" })}
+          <div class="remark-row">
+            <p class="label">TED stocking wearing regime</p>
+            ${choiceGroup("plan.tedStocking.regimes", BANK.tedRegimeOptions, "multi", { classes: "three" })}
+            ${data.plan.tedStocking.regimes.includes("Others") ? `<div class="remark-row">${inputField("plan.tedStocking.regimeOther", "Other wearing regime", { span: true })}</div>` : ""}
+          </div>
+        </div>` : ""}
       </div>
       <div class="group">
         <h3>Treatment Plan</h3>
@@ -3879,6 +3917,14 @@
 
   function cleanDependentState(path) {
     const data = currentCase().data;
+    for (const key of ["visual", "hearing"]) {
+      if (path === `physical.${key}.status` && data.physical[key].status !== "Others") data.physical[key].remarks = "";
+    }
+    if (path === "physical.pain.choices") {
+      Object.keys(data.physical.pain.remarks).forEach((key) => {
+        if (!data.physical.pain.choices.includes(key)) delete data.physical.pain.remarks[key];
+      });
+    }
     if (path === "premorbid.cognitive.choices") {
       const cognitive = data.premorbid.cognitive;
       cognitive.choices = [...cognitive.choices.filter((choice) => choice !== "Others").slice(-1), ...cognitive.choices.filter((choice) => choice === "Others")];
@@ -4019,11 +4065,26 @@
       data.problem.nilMode = "";
     }
     if (path === "plan.treatmentChoices") {
+      if (!data.plan.treatmentChoices.includes("Heel protectors fitted")) {
+        data.plan.heelProtectorRegimes = [];
+        data.plan.heelProtectorRegimeRemarks = {};
+      }
+      if (!data.plan.treatmentChoices.includes("TED stocking fitted")) {
+        data.plan.tedStocking = { size: "", regimes: [], regimeOther: "" };
+      }
       for (const field of ["treatmentRemarks", "treatmentPrograms"]) {
         Object.keys(data.plan[field]).forEach((key) => {
           if (!data.plan.treatmentChoices.includes(key)) delete data.plan[field][key];
         });
       }
+    }
+    if (path === "plan.heelProtectorRegimes") {
+      Object.keys(data.plan.heelProtectorRegimeRemarks).forEach((key) => {
+        if (!data.plan.heelProtectorRegimes.includes(key)) delete data.plan.heelProtectorRegimeRemarks[key];
+      });
+    }
+    if (path === "plan.tedStocking.regimes" && !data.plan.tedStocking.regimes.includes("Others")) {
+      data.plan.tedStocking.regimeOther = "";
     }
     if (path === "plan.choices") {
       Object.keys(data.plan.remarks || {}).forEach((key) => {
@@ -5020,8 +5081,15 @@
     return parts.join("; ");
   }
 
+  function otCommentAdlSummary(data) {
+    return [formatBiLinkedText(calculateBI()), data.functional.impression ? `Impression: ${data.functional.impression}` : ""].filter(Boolean).join("; ");
+  }
+
   function otCommentCognitiveScoreSummary() {
-    return conciseCognitiveScoreSummary();
+    const cognitive = currentCase().data.mental.cognitive;
+    const active = cognitive.enabled || isFallAssessmentCase() || isEmergencyMedicineCase();
+    const impression = active && cognitive.impression ? `Impression: ${cognitive.impression}` : "";
+    return [conciseCognitiveScoreSummary(), impression].filter(Boolean).join("; ");
   }
 
   function conciseCognitiveScoreSummary() {
@@ -5116,13 +5184,14 @@
         return !!(d.mental.consciousness.choices.length && hasCommandInput(d.mental.command) && d.mental.speech) &&
           (!isEmergencyMedicineCase() || (hasCompletedAmt(d) && (d.mental.cognitive.cdtUnable || d.mental.cognitive.cdt !== "") && (!d.mental.mood.gdsPerformed || calculateGds(d.mental.mood).complete)));
       case "physical":
-        return !!((d.physical.powerGroup.pending || d.physical.powerGroup.limbMovement || (d.physical.powerGroup.tone && d.physical.powerGroup.coordination)) &&
+        return !!((d.physical.powerGroup.pending || d.physical.powerGroup.limbMovement || ((isEmergencyMedicineCase() || d.physical.powerGroup.tone) && d.physical.powerGroup.coordination)) &&
           (d.physical.balance.sitting.pending || d.physical.balance.sitting.levels.length) &&
           (d.physical.balance.standing.pending || d.physical.balance.standing.levels.length) &&
           (d.physical.transfer.lyeToSit.pending || d.physical.transfer.lyeToSit.levels.length) &&
           (d.physical.transfer.sitToStand.pending || d.physical.transfer.sitToStand.levels.length) &&
           (d.physical.transfer.ambulation.pending || d.physical.transfer.ambulation.levels.length) &&
-          d.physical.visual.status && d.physical.hearing.status && d.physical.pressure.status && d.physical.contracture.status);
+          d.physical.visual.status && d.physical.hearing.status && d.physical.pressure.status && d.physical.contracture.status &&
+          (!isEmergencyMedicineCase() || d.physical.pain.choices.length));
       case "functional":
         return BANK.biOrder.every((key) => {
           const activeKey = key === "mobility" ? d.functional.mobilityMode : key;
@@ -5208,7 +5277,8 @@
       greenBox: formatGreenBox(record.data),
       common,
       problem: formatProblem(record.data),
-      recommendation: formatPlanRecommendation(record.data)
+      recommendation: formatPlanRecommendation(record.data),
+      remarks: [formatHeelProtectorRemarks(record), formatTedStockingFittingRemarks(record)].filter(Boolean).join("\n")
     });
   }
 
@@ -5270,6 +5340,23 @@
 
   function formInputDateLabel(record) {
     return formatDate(record && record.assessmentDate) || "__";
+  }
+
+  function formatHeelProtectorRemarks(record) {
+    if (!hasHeelProtectorsFitted(record)) return "";
+    const plan = record.data.plan;
+    const regime = commaList(plan.heelProtectorRegimes.map((item) => pressureRemarkLabel(item, plan.heelProtectorRegimeRemarks)));
+    const fitted = `Heel protectors were fitted on ${formInputDateLabel(record)}${regime ? ` with ${regime}` : ""}`;
+    const previousRemark = plan.treatmentRemarks["Heel protectors fitted"];
+    return [fitted, previousRemark].filter(Boolean).join("\n");
+  }
+
+  function formatTedStockingFittingRemarks(record) {
+    if (!hasTedStockingFitted(record)) return "";
+    const stocking = record.data.plan.tedStocking;
+    const size = stocking.size ? ` (${stocking.size})` : "";
+    const regime = commaList(tedRegimeLabels(stocking));
+    return `TED stocking${size} was fitted on ${formInputDateLabel(record)}${regime ? ` with ${regime}` : ""}`;
   }
 
   function formatPressureInjuryRemarks(record) {
@@ -6117,14 +6204,18 @@
     if (p.powerGroup.limbMovement) {
       lines.push(`Power: ${p.powerGroup.limbMovement}.`);
     } else if (p.powerGroup.pending) {
-      lines.push(`Power, tone and coordination: ${formatPendingText(p.powerGroup)}.`);
+      lines.push(`${isEmergencyMedicineCase() ? "Power and coordination" : "Power, tone and coordination"}: ${formatPendingText(p.powerGroup)}.`);
     } else {
       const powerRows = formatPowerRows(p.powerGroup.power || {});
       if (powerRows.length) {
         lines.push(`Power:\n${powerRows.join("\n")}`);
       }
-      if (p.powerGroup.tone) lines.push(`Tone: ${p.powerGroup.tone === "Others" && p.powerGroup.toneOther ? p.powerGroup.toneOther : p.powerGroup.tone}.`);
+      if (!isEmergencyMedicineCase() && p.powerGroup.tone) lines.push(`Tone: ${p.powerGroup.tone === "Others" && p.powerGroup.toneOther ? p.powerGroup.toneOther : p.powerGroup.tone}.`);
       if (p.powerGroup.coordination) lines.push(`Coordination: ${p.powerGroup.coordination === "Others" && p.powerGroup.coordinationOther ? p.powerGroup.coordinationOther : p.powerGroup.coordination}.`);
+    }
+    if (isEmergencyMedicineCase() && p.pain.choices.length) {
+      const pain = p.pain.choices.map((item) => p.pain.remarks[item] ? `${item}, present in ${p.pain.remarks[item]}` : item);
+      lines.push(`Pain: ${pain.join("; ")}.`);
     }
     const balance = formatSummaryGroupLine("Balance", [
       ["Sitting", p.balance.sitting],
@@ -6138,8 +6229,8 @@
     if (transfer) lines.push(transfer);
     const ambulation = formatAmbulationLine(p.transfer.ambulation, p.transfer.notTestReason);
     if (ambulation) lines.push(ambulation);
-    if (p.visual.status) lines.push(`Visual: ${p.visual.status}${p.visual.status === "Impaired" && p.visual.side ? ` (${p.visual.side})` : ""}.`);
-    if (p.hearing.status) lines.push(`Hearing: ${p.hearing.status}${p.hearing.status === "Impaired" && p.hearing.side ? ` (${p.hearing.side})` : ""}.`);
+    if (p.visual.status) lines.push(`Visual: ${p.visual.status}${p.visual.status === "Impaired" && p.visual.side ? ` (${p.visual.side})` : p.visual.status === "Others" && p.visual.remarks ? ` (${p.visual.remarks})` : ""}.`);
+    if (p.hearing.status) lines.push(`Hearing: ${p.hearing.status}${p.hearing.status === "Impaired" && p.hearing.side ? ` (${p.hearing.side})` : p.hearing.status === "Others" && p.hearing.remarks ? ` (${p.hearing.remarks})` : ""}.`);
     if (p.pressure.status) lines.push(`Pressure Injury: ${p.pressure.status}${p.pressure.status === "Yes" && p.pressure.site ? `, site: ${p.pressure.site}` : ""}.`);
     if (p.contracture.status) lines.push(`Contracture: ${p.contracture.status}${p.contracture.status === "Yes" && p.contracture.site ? `, site: ${p.contracture.site}` : ""}.`);
     if (p.otherInfo) lines.push(`Others: ${withSentencePeriod(p.otherInfo)}`);
@@ -6376,6 +6467,7 @@
       return `${group.label} - Rating: ${rating}  [${details}]`;
     });
     factorLines.push(`Level of Readiness: ${result.level ? `Level ${result.level} (${result.levelLabel})` : "Pending"}`);
+    if (hdrs.dischargeDestination) factorLines.push(`Potential discharge destination: ${hdrs.dischargeDestination}.`);
     return factorLines.join("\n");
   }
 
@@ -6591,9 +6683,8 @@
 
   function formatOtComment(data) {
     const lines = [];
-    if (data.otComment.majorObservation) lines.push(`Major observation: ${data.otComment.majorObservation}.`);
     const adlRemark = data.otComment.adlRemark ? ` ${data.otComment.adlRemark}.` : "";
-    lines.push(`ADL: ${formatBiLinkedText(calculateBI())}.${adlRemark}`);
+    lines.push(`ADL: ${otCommentAdlSummary(data)}.${adlRemark}`);
     const lawton = calculateLawton(data.functional.lawton);
     if (isEmergencyMedicineCase() && lawton.complete) {
       lines.push(`IADL: Lawton ${lawton.total}/27.${data.otComment.iadlRemark ? ` ${data.otComment.iadlRemark}.` : ""}`);
@@ -6651,6 +6742,7 @@
   function formatSelectedTreatment(data) {
     const allowedTreatment = completedTreatmentOptions().map((item) => item.value);
     return (data.plan.treatmentChoices || []).filter((item) => allowedTreatment.includes(item)).map((item) => {
+      if (item === "Heel protectors fitted") return item;
       const remark = data.plan.treatmentRemarks && data.plan.treatmentRemarks[item];
       if (item === "Other" || item === "Others") return remark || "";
       const program = data.plan.treatmentPrograms[item];

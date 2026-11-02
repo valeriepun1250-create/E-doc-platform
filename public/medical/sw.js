@@ -1,4 +1,4 @@
-const CACHE_NAME = "ot-documentation-v122";
+const CACHE_NAME = "ot-documentation-v123";
 const OFFLINE_FILES = [
   "./",
   "./index.html",

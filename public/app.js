@@ -6295,6 +6295,10 @@
     let remarks = '';
     if (isNsInitial) {
       const remarkLines = [];
+      const ted = tedStockingState(answers);
+      if (String(ted.right || '').trim() && String(ted.left || '').trim() && !String(ted.size || '').trim()) {
+        remarkLines.push('Bilateral TED stocking available, not for prescription.');
+      }
       const keptLines = [];
       initialRecommendation.split('\n').forEach(line => {
         const text = line.trim();
@@ -6548,6 +6552,20 @@
       if (suggestion) add(`Suggestion: ${suggestion}`);
     }
 
+    if (form && form.id === 'ns-initial-assessment.json') {
+      const treatments = Array.isArray(answers.treatment_done) ? answers.treatment_done : [];
+      const followUps = [
+        ['Pre-op assessment done', 'Post-op assessment'],
+        ['Pre-LP assessment done', 'Post-LP assessment'],
+      ].filter(([treatment]) => treatments.includes(treatment));
+      if (followUps.length) {
+        const assessmentLabel = followUps.map(([treatment]) => treatment).join('; ');
+        const existingContent = parts.join('; ').trim().replace(/[;\s]+$/, '');
+        const sentenceEnd = /[.!?]$/.test(existingContent) ? '' : '.';
+        const plan = followUps.map(([, nextAssessment]) => nextAssessment).join('; ');
+        return normalizeReportSymbols(`${assessmentLabel}: ${existingContent}${sentenceEnd} Plan: ${plan}`);
+      }
+    }
     return normalizeReportSymbols(parts.join('; '));
   }
 
